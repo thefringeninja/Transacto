@@ -2,12 +2,13 @@ using System;
 
 namespace Transacto.Domain {
     public struct AccountName : IEquatable<AccountName> {
+        public const int MaxLength = 256;
         private readonly string _value;
 
         public AccountName(string value) {
             if (value == null)
                 throw new ArgumentNullException(nameof(value));
-            if (value.Length == 0 || value.Length > 256) {
+            if (value.Length == 0 || value.Length > MaxLength) {
                 throw new ArgumentException();
             }
 

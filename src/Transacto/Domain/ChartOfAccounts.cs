@@ -8,10 +8,21 @@ namespace Transacto.Domain {
         public static readonly Func<ChartOfAccounts> Factory = () => new ChartOfAccounts();
 
         private readonly HashSet<AccountNumber> _accountNumbers;
-
+        private readonly HashSet<AccountNumber> _deactivatedAccountNumbers;
         private ChartOfAccounts() {
             _accountNumbers = new HashSet<AccountNumber>();
+            _deactivatedAccountNumbers = new HashSet<AccountNumber>();
             Register<AccountDefined>(e => _accountNumbers.Add(new AccountNumber(e.AccountNumber)));
+            Register<AccountDeactivated>(e => {
+                var accountNumber = new AccountNumber(e.AccountNumber);
+                _accountNumbers.Remove(accountNumber);
+                _deactivatedAccountNumbers.Add(accountNumber);
+            });
+            Register<AccountReactivated>(e => {
+                var accountNumber = new AccountNumber(e.AccountNumber);
+                _accountNumbers.Add(accountNumber);
+                _deactivatedAccountNumbers.Remove(accountNumber);
+            });
         }
 
         public void DefineAccount(AccountName accountName, AccountNumber accountNumber) {
@@ -26,6 +37,10 @@ namespace Transacto.Domain {
         public void DeactivateAccount(AccountNumber accountNumber) {
             MustContainAccountNumber(accountNumber);
 
+            if (!IsActive(accountNumber)) {
+                return;
+            }
+
             Apply(new AccountDeactivated {
                 AccountNumber = accountNumber.ToInt32()
             });
@@ -33,6 +48,10 @@ namespace Transacto.Domain {
 
         public void ReactivateAccount(AccountNumber accountNumber) {
             MustContainAccountNumber(accountNumber);
+
+            if (IsActive(accountNumber)) {
+                return;
+            }
 
             Apply(new AccountReactivated {
                 AccountNumber = accountNumber.ToInt32()
@@ -49,7 +68,7 @@ namespace Transacto.Domain {
         }
 
         private void MustNotContainAccountNumber(AccountNumber accountNumber) {
-            if (!_accountNumbers.Contains(accountNumber)) {
+            if (!IsActive(accountNumber) && !IsUnactive(accountNumber)) {
                 return;
             }
 
@@ -57,11 +76,15 @@ namespace Transacto.Domain {
         }
 
         private void MustContainAccountNumber(AccountNumber accountNumber) {
-            if (_accountNumbers.Contains(accountNumber)) {
+            if (IsActive(accountNumber) || IsUnactive(accountNumber)) {
                 return;
             }
 
             throw new InvalidOperationException();
         }
+
+        private bool IsUnactive(AccountNumber accountNumber) => _deactivatedAccountNumbers.Contains(accountNumber);
+
+        private bool IsActive(AccountNumber accountNumber) => _accountNumbers.Contains(accountNumber);
     }
 }

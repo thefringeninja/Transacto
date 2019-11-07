@@ -11,6 +11,8 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "SomeCompany", "SomeCompany"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SomeCompany", "src\SomeCompany\SomeCompany.csproj", "{05A5E01D-D393-4A9C-8E7F-EB5A6C8EF928}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "EventStore.Grpc", "..\EventStore\src\EventStore.Grpc\EventStore.Grpc.csproj", "{3387B01D-2E3A-43F9-9358-B89BA3ECD596}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -60,6 +62,18 @@ Global
 		{05A5E01D-D393-4A9C-8E7F-EB5A6C8EF928}.Release|x64.Build.0 = Release|Any CPU
 		{05A5E01D-D393-4A9C-8E7F-EB5A6C8EF928}.Release|x86.ActiveCfg = Release|Any CPU
 		{05A5E01D-D393-4A9C-8E7F-EB5A6C8EF928}.Release|x86.Build.0 = Release|Any CPU
+		{3387B01D-2E3A-43F9-9358-B89BA3ECD596}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{3387B01D-2E3A-43F9-9358-B89BA3ECD596}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{3387B01D-2E3A-43F9-9358-B89BA3ECD596}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{3387B01D-2E3A-43F9-9358-B89BA3ECD596}.Debug|x64.Build.0 = Debug|Any CPU
+		{3387B01D-2E3A-43F9-9358-B89BA3ECD596}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{3387B01D-2E3A-43F9-9358-B89BA3ECD596}.Debug|x86.Build.0 = Debug|Any CPU
+		{3387B01D-2E3A-43F9-9358-B89BA3ECD596}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{3387B01D-2E3A-43F9-9358-B89BA3ECD596}.Release|Any CPU.Build.0 = Release|Any CPU
+		{3387B01D-2E3A-43F9-9358-B89BA3ECD596}.Release|x64.ActiveCfg = Release|Any CPU
+		{3387B01D-2E3A-43F9-9358-B89BA3ECD596}.Release|x64.Build.0 = Release|Any CPU
+		{3387B01D-2E3A-43F9-9358-B89BA3ECD596}.Release|x86.ActiveCfg = Release|Any CPU
+		{3387B01D-2E3A-43F9-9358-B89BA3ECD596}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
 		{05A5E01D-D393-4A9C-8E7F-EB5A6C8EF928} = {E5A31333-78A4-4357-9144-469FB4C40195}

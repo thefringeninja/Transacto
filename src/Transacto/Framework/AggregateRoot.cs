@@ -13,20 +13,30 @@ namespace Transacto.Framework {
             _router = new Dictionary<Type, Action<object>>();
         }
 
-        public async ValueTask LoadFromHistory(IAsyncEnumerable<object> events) {
+        public async ValueTask<int> LoadFromHistory(IAsyncEnumerable<object> events) {
+            int i = 0;
+
             await foreach (var e in events) {
                 Apply(e);
+                i++;
             }
 
             MarkChangesAsCommitted();
+
+            return i;
         }
 
-        public void LoadFromHistory(IEnumerable<object> events) {
+        public int LoadFromHistory(IEnumerable<object> events) {
+            int i = 0;
+
             foreach (var e in events) {
                 Apply(e);
+                i++;
             }
 
             MarkChangesAsCommitted();
+
+            return i;
         }
 
         public void MarkChangesAsCommitted() => _history.Clear();
@@ -38,6 +48,7 @@ namespace Transacto.Framework {
             if (_router.TryGetValue(e.GetType(), out var handle)) {
                 handle(e);
             }
+
             _history.Add(e);
         }
     }

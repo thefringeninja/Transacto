@@ -3,4 +3,11 @@
     <PropertyGroup>
         <TargetFramework>netcoreapp3.0</TargetFramework>
     </PropertyGroup>
+
+    <ItemGroup>
+      <ProjectReference Include="..\..\..\EventStore\src\EventStore.Grpc\EventStore.Grpc.csproj" />
+    </ItemGroup>
+    <ItemGroup>
+        <PackageReference Include="LibLog" Version="5.0.6" />
+    </ItemGroup>
 </Project>

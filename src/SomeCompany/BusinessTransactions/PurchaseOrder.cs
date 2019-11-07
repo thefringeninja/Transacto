@@ -6,10 +6,10 @@ using Transacto.Domain;
 
 namespace SomeCompany.BusinessTransactions {
     public partial class PurchaseOrder : IBusinessTransaction {
-        public GeneralLedgerEntry GetGeneralLedgerEntry() {
+        public GeneralLedgerEntry GetGeneralLedgerEntry(PeriodIdentifier period, DateTimeOffset createdOn) {
             var entry = GeneralLedgerEntry.Create(
                 new GeneralLedgerEntryIdentifier(Guid.Parse(PurchaseOrderId)),
-                new GeneralLedgerEntryNumber($"purchaseorder-{PurchaseOrderNumber}"), DateTimeOffset.Now);
+                new GeneralLedgerEntryNumber($"purchaseorder-{PurchaseOrderNumber}"), period, createdOn);
 
             var (accountsPayable, inventory) = Items.Aggregate(
                 (new Credit(new AccountNumber(2150), Money.Zero), new Debit(new AccountNumber(1400), Money.Zero)),

@@ -9,23 +9,28 @@ namespace Transacto.Domain {
         private bool _posted;
         private Money _balance;
 
-        public GeneralLedgerEntryIdentifier Identifier => _identifier;
+        public GeneralLedgerEntryIdentifier GeneralLedgerEntryIdentifier => _identifier;
 
         private GeneralLedgerEntry() {
-            Register<GeneralLedgerEntryCreated>(e => _identifier = new GeneralLedgerEntryIdentifier(e.Id));
+            Register<GeneralLedgerEntryCreated>(e => _identifier = new GeneralLedgerEntryIdentifier(e.GeneralLedgerEntryId));
             Register<CreditApplied>(e => _balance += new Money(e.Amount));
             Register<DebitApplied>(e => _balance -= new Money(e.Amount));
             Register<GeneralLedgerEntryPosted>(_ => _posted = true);
         }
 
         public static GeneralLedgerEntry Create(GeneralLedgerEntryIdentifier identifier,
-            GeneralLedgerEntryNumber number, DateTimeOffset createdOn) {
+            GeneralLedgerEntryNumber number, PeriodIdentifier period, DateTimeOffset createdOn) {
+            if (!period.Contains(createdOn)) {
+                throw new InvalidOperationException();
+            }
+
             var entry = Factory();
 
             entry.Apply(new GeneralLedgerEntryCreated {
-                Id = identifier.ToGuid(),
+                GeneralLedgerEntryId = identifier.ToGuid(),
                 Number = number.ToString(),
-                CreatedOn = createdOn
+                CreatedOn = createdOn,
+                Period = period.ToDto()
             });
 
             return entry;
