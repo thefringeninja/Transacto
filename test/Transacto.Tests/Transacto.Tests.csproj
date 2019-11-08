@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
     <PropertyGroup>
-        <TargetFramework>netcoreapp3.0</TargetFramework>
+        <TargetFramework>netcoreapp3.1</TargetFramework>
         <RootNamespace>Transacto</RootNamespace>
         <IsPackable>false</IsPackable>
     </PropertyGroup>
@@ -16,10 +16,6 @@
 
     <ItemGroup>
       <ProjectReference Include="..\..\src\Transacto\Transacto.csproj" />
-    </ItemGroup>
-
-    <ItemGroup>
-      <Folder Include="ChartOfAccounts" />
     </ItemGroup>
 
 </Project>

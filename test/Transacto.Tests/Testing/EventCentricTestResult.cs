@@ -1,13 +1,11 @@
 ﻿using System;
 using Transacto.Framework;
 
-namespace Transacto.Testing
-{
+namespace Transacto.Testing {
     /// <summary>
     /// The result of an event centric test specification.
     /// </summary>
-    public class EventCentricTestResult
-    {
+    public class EventCentricTestResult {
         readonly EventCentricTestSpecification _specification;
         readonly TestResultState _state;
         readonly Optional<Fact[]> _actualEvents;
@@ -21,8 +19,7 @@ namespace Transacto.Testing
         /// <param name="actualEvents">The actual events.</param>
         /// <param name="actualException">The actual exception.</param>
         internal EventCentricTestResult(EventCentricTestSpecification specification, TestResultState state,
-                                        Optional<Fact[]> actualEvents, Optional<Exception> actualException)
-        {
+            Optional<Fact[]> actualEvents, Optional<Exception> actualException) {
             _specification = specification;
             _state = state;
             _actualEvents = actualEvents;
@@ -35,8 +32,7 @@ namespace Transacto.Testing
         /// <value>
         /// The test specification.
         /// </value>
-        public EventCentricTestSpecification Specification
-        {
+        public EventCentricTestSpecification Specification {
             get { return _specification; }
         }
 
@@ -46,8 +42,7 @@ namespace Transacto.Testing
         /// <value>
         ///   <c>true</c> if passed; otherwise, <c>false</c>.
         /// </value>
-        public bool Passed
-        {
+        public bool Passed {
             get { return _state == TestResultState.Passed; }
         }
 
@@ -57,8 +52,7 @@ namespace Transacto.Testing
         /// <value>
         ///   <c>true</c> if failed; otherwise, <c>false</c>.
         /// </value>
-        public bool Failed
-        {
+        public bool Failed {
             get { return _state == TestResultState.Failed; }
         }
 
@@ -68,8 +62,7 @@ namespace Transacto.Testing
         /// <value>
         /// The events.
         /// </value>
-        public Optional<Fact[]> ButEvents
-        {
+        public Optional<Fact[]> ButEvents {
             get { return _actualEvents; }
         }
 
@@ -79,8 +72,7 @@ namespace Transacto.Testing
         /// <value>
         /// The exception.
         /// </value>
-        public Optional<Exception> ButException
-        {
+        public Optional<Exception> ButException {
             get { return _actualException; }
         }
     }

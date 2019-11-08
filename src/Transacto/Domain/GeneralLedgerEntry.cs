@@ -10,6 +10,7 @@ namespace Transacto.Domain {
         private Money _balance;
 
         public GeneralLedgerEntryIdentifier GeneralLedgerEntryIdentifier => _identifier;
+        public bool IsInBalance => _balance == Money.Zero;
 
         private GeneralLedgerEntry() {
             Register<GeneralLedgerEntryCreated>(e => _identifier = new GeneralLedgerEntryIdentifier(e.GeneralLedgerEntryId));
@@ -59,12 +60,13 @@ namespace Transacto.Domain {
         public void ApplyTransaction(IBusinessTransaction transaction) {
             MustNotBePosted();
 
-            foreach (var x in transaction.Transaction) {
+            foreach (var x in transaction.GetAdditionalChanges()) {
                 Apply(x);
             }
         }
 
         public void Post() {
+            MustNotBePosted();
             MustBeInBalance();
 
             Apply(new GeneralLedgerEntryPosted {

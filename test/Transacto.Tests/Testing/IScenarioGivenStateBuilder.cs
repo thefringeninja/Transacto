@@ -1,10 +1,8 @@
-﻿namespace Transacto.Testing
-{
+﻿namespace Transacto.Testing {
     /// <summary>
     /// The given state within the test specification building process.
     /// </summary>
-    public interface IScenarioGivenStateBuilder
-    {
+    public interface IScenarioGivenStateBuilder {
         /// <summary>
         /// Given the following facts occured.
         /// </summary>

@@ -15,7 +15,7 @@ namespace Transacto.Testing.Comparers {
         /// <param name="logic">The comparer.</param>
         /// <exception cref="System.ArgumentNullException">Thrown when the <paramref name="logic">comparer</paramref> is <c>null</c>.</exception>
         public CompareNetObjectsBasedFactComparer(ICompareLogic logic) {
-            if (logic == null) throw new ArgumentNullException("logic");
+            if (logic == null) throw new ArgumentNullException(nameof(logic));
             _logic = logic;
         }
 

@@ -80,8 +80,7 @@ namespace Transacto.Application {
                 .Assert(_handler, _facts);
 
         [Theory, AutoTransactoData]
-        public Task deactivating_an_account(AccountName accountName, AccountNumber accountNumber,
-            AccountName secondAccountName) =>
+        public Task deactivating_an_account(AccountName accountName, AccountNumber accountNumber) =>
             new Scenario()
                 .Given(string.Empty, new AccountDefined {
                     AccountName = accountName.ToString(),
@@ -169,8 +168,7 @@ namespace Transacto.Application {
                 .Assert(_handler, _facts);
 
         [Theory, AutoTransactoData]
-        public Task deactivating_an_account_when_no_account_defined_throws(AccountName accountName,
-            AccountNumber accountNumber) =>
+        public Task deactivating_an_account_when_no_account_defined_throws(AccountNumber accountNumber) =>
             new Scenario()
                 .GivenNone()
                 .When(new DeactivateAccount {
@@ -194,8 +192,7 @@ namespace Transacto.Application {
                 .Assert(_handler, _facts);
 
         [Theory, AutoTransactoData]
-        public Task reactivating_an_account_when_no_account_defined_throws(AccountName accountName,
-            AccountNumber accountNumber) =>
+        public Task reactivating_an_account_when_no_account_defined_throws(AccountNumber accountNumber) =>
             new Scenario()
                 .GivenNone()
                 .When(new ReactivateAccount {

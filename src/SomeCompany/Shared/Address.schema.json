@@ -1,0 +1,31 @@
+{
+  "$schema": "https://json-schema.org/draft/2019-09/hyper-schema",
+  "$id": "http://somecompany.com/Address.json",
+  "type": "object",
+  "title": "Address",
+  "additionalProperties": false,
+  "required": [
+    "name",
+    "street",
+    "city",
+    "country"
+  ],
+  "properties": {
+    "name": {
+      "type": "string",
+      "title": "Name"
+    },
+    "street": {
+      "type": "string",
+      "title": "Street"
+    },
+    "city": {
+      "type": "string",
+      "title": "City"
+    },
+    "country": {
+      "type": "string",
+      "title": "Country"
+    }
+  }
+}

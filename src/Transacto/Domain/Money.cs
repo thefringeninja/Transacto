@@ -23,5 +23,7 @@ namespace Transacto.Domain {
         public static bool operator >=(Money left, Money right) => left._value >= right._value;
         public static Money operator +(Money left, Money right) => new Money(left._value + right._value);
         public static Money operator -(Money left, Money right) => new Money(left._value - right._value);
+        public static Money operator +(Money left, decimal right) => new Money(left._value + right);
+        public static Money operator -(Money left, decimal right) => new Money(left._value - right);
     }
 }

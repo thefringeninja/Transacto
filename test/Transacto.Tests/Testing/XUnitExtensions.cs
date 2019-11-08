@@ -6,7 +6,7 @@ using KellermanSoftware.CompareNetObjects;
 using Transacto.Testing.Comparers;
 
 namespace Transacto.Testing {
-    internal static class Extensions {
+    internal static class XUnitExtensions {
         static IExceptionComparer CreateExceptionComparer() =>
             new CompareNetObjectsBasedExceptionComparer(new CompareLogic(new ComparisonConfig {
                 MembersToIgnore = {nameof(Exception.Source), nameof(Exception.StackTrace), nameof(Exception.TargetSite)}

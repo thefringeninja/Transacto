@@ -1,10 +1,8 @@
-﻿namespace Transacto.Testing
-{
+﻿namespace Transacto.Testing {
     /// <summary>
     /// The then state within the test specification building process.
     /// </summary>
-    public interface IScenarioThenStateBuilder : IEventCentricTestSpecificationBuilder
-    {
+    public interface IScenarioThenStateBuilder : IEventCentricTestSpecificationBuilder {
         /// <summary>
         /// Then facts should have occurred.
         /// </summary>

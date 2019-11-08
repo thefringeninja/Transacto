@@ -5,8 +5,11 @@ namespace Transacto.Domain {
         public Money Amount { get; }
         public AccountNumber AccountNumber { get; }
 
+        public Debit(AccountNumber accountNumber) : this(accountNumber, Money.Zero) {
+        }
+
         public Debit(AccountNumber accountNumber, Money amount) {
-            if (amount <= Money.Zero) {
+            if (amount < Money.Zero) {
                 throw new ArgumentOutOfRangeException(nameof(amount));
             }
 
@@ -26,5 +29,7 @@ namespace Transacto.Domain {
         public static bool operator !=(Debit left, Debit right) => !left.Equals(right);
         public static Debit operator +(Debit left, Money right) => new Debit(left.AccountNumber, left.Amount + right);
         public static Debit operator -(Debit left, Money right) => new Debit(left.AccountNumber, left.Amount - right);
+        public static Debit operator +(Debit left, decimal right) => new Debit(left.AccountNumber, left.Amount + right);
+        public static Debit operator -(Debit left, decimal right) => new Debit(left.AccountNumber, left.Amount - right);
     }
 }

@@ -1,0 +1,98 @@
+{
+  "$schema": "https://json-schema.org/draft/2019-09/hyper-schema",
+  "$id": "http://somecompany.com/ReceiptOfGoods.json",
+  "$ref": "#/definitions/receipt-of-goods",
+  "definitions": {
+    "receipt-of-goods": {
+      "type": "object",
+      "title": "Receipt Of Goods",
+      "additionalProperties": false,
+      "properties": {
+        "receipt-of-goods-id": {
+          "title": "Receipt of Goods Id",
+          "$ref": "#/definitions/uuid",
+          "x-schema-form": {
+            "key": "receipt-of-goods-id",
+            "type": "uuid"
+          }
+        },
+        "receipt-of-goods-number" : {
+          "title": "Purchase Order Number",
+          "type": "integer"
+        },
+        "purchase-order-id": {
+          "title": "Purchase Order Id",
+          "$ref": "#/definitions/uuid",
+          "x-schema-form": {
+            "key": "purchase-order-id",
+            "type": "uuid"
+          }
+        },
+        "purchase-order-reference" : {
+          "title": "Reference Number",
+          "type": "string"
+        },
+        "purchase-order-number" : {
+          "title": "Purchase Order Number",
+          "type": "integer"
+        },
+        "vendor-id": {
+          "title": "Vendor Id",
+          "$ref": "#/definitions/uuid",
+          "x-schema-form": {
+            "key": "vendor-id",
+            "type": "uuid"
+          }
+        },
+        "shipping-address": {
+          "description": "Shipping Address",
+          "$ref": "../Shared/Address.schema.json"
+        },
+        "receipt-of-goods-items": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/receipt-of-goods-item"
+          }
+        }
+      }
+    },
+    "receipt-of-goods-item": {
+      "type": "object",
+      "title": "Item",
+      "additionalProperties": false,
+      "required": [
+        "sku",
+        "item-id",
+        "quantity",
+        "unit-price"
+      ],
+      "properties": {
+        "sku": {
+          "type": "string",
+          "title": "SKU"
+        },
+        "item-id": {
+          "title": "Item Id",
+          "$ref": "#/definitions/uuid",
+          "x-schema-form": {
+            "key": "item-id",
+            "type": "uuid"
+          }
+        },
+        "quantity": {
+          "type": "number",
+          "title": "Quantity"
+        },
+        "unit-price": {
+          "type": "number",
+          "title": "Unit Price"
+        }
+      }
+
+    },
+    "uuid": {
+      "type": "string",
+      "pattern": "^[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{12}$"
+    }
+  }
+}

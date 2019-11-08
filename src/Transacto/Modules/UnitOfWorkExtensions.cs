@@ -27,12 +27,12 @@ namespace Transacto.Modules {
                 if (!expectedVersion.HasValue) {
                     await eventStore.AppendToStreamAsync(streamName,
                         AnyStreamRevision.NoStream,
-                        aggregateRoot.GetChanges().Select(e => new EventData(Uuid.NewUuid(), e.GetType().FullName,
+                        aggregateRoot.GetChanges().Select(e => new EventData(Guid.NewGuid(), e.GetType().FullName,
                             JsonSerializer.SerializeToUtf8Bytes(e, options))), cancellationToken: ct);
                 } else {
                     await eventStore.AppendToStreamAsync(streamName,
                         new StreamRevision(Convert.ToUInt64(expectedVersion.Value)),
-                        aggregateRoot.GetChanges().Select(e => new EventData(Uuid.NewUuid(), e.GetType().FullName,
+                        aggregateRoot.GetChanges().Select(e => new EventData(Guid.NewGuid(), e.GetType().FullName,
                             JsonSerializer.SerializeToUtf8Bytes(e, options))), cancellationToken: ct);
                 }
             });

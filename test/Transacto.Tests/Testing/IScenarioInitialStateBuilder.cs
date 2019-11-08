@@ -1,10 +1,8 @@
-﻿namespace Transacto.Testing
-{
+﻿namespace Transacto.Testing {
     /// <summary>
     /// The initial state within the test specification building process.
     /// </summary>
-    public interface IScenarioInitialStateBuilder
-    {
+    public interface IScenarioInitialStateBuilder {
         /// <summary>
         /// Given no events occured.
         /// </summary>

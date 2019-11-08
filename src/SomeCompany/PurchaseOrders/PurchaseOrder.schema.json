@@ -1,0 +1,99 @@
+{
+  "$schema": "https://json-schema.org/draft/2019-09/hyper-schema",
+  "$id": "http://somecompany.com/PurchaseOrder.json",
+  "$ref": "#/definitions/purchase-order",
+  "definitions": {
+    "purchase-order": {
+      "type": "object",
+      "title": "Purchase Order",
+      "additionalProperties": false,
+      "required": [
+        "vendor-id",
+        "shipping-address",
+        "billing-address",
+        "items",
+        "purchase-order-reference",
+        "purchase-order-number",
+        "purchase-order-id"
+      ],
+      "properties": {
+        "purchase-order-id": {
+          "title": "Purchase Order Id",
+          "$ref": "#/definitions/uuid",
+          "x-schema-form": {
+            "key": "purchase-order-id",
+            "type": "uuid"
+          }
+        },
+        "purchase-order-reference" : {
+          "title": "Reference Number",
+          "type": "string"
+        },
+        "purchase-order-number" : {
+          "title": "Purchase Order Number",
+          "type": "integer"
+        },
+        "vendor-id": {
+          "title": "Vendor Id",
+          "$ref": "#/definitions/uuid",
+          "x-schema-form": {
+            "key": "vendor-id",
+            "type": "uuid"
+          }
+        },
+        "billing-address": {
+          "title": "Billing Address",
+          "$ref": "../Shared/Address.schema.json"
+        },
+        "shipping-address": {
+          "title": "Shipping Address",
+          "$ref": "../Shared/Address.schema.json"
+        },
+        "purchase-order-items": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/purchase-order-item"
+          }
+        }
+      }
+    },
+    "purchase-order-item": {
+      "type": "object",
+      "title": "Item",
+      "additionalProperties": false,
+      "required": [
+        "sku",
+        "item-id",
+        "quantity",
+        "unit-price"
+      ],
+      "properties": {
+        "sku": {
+          "type": "string",
+          "title": "SKU"
+        },
+        "item-id": {
+          "title": "Item Id",
+          "$ref": "#/definitions/uuid",
+          "x-schema-form": {
+            "key": "item-id",
+            "type": "uuid"
+          }
+        },
+        "quantity": {
+          "type": "number",
+          "title": "Quantity"
+        },
+        "unit-price": {
+          "type": "number",
+          "title": "Unit Price"
+        }
+      }
+
+    },
+    "uuid": {
+      "type": "string",
+      "pattern": "^[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{12}$"
+    }
+  }
+}

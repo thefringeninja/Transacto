@@ -1,29 +1,102 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
     <PropertyGroup>
-        <TargetFramework>netcoreapp3.0</TargetFramework>
+        <TargetFramework>netcoreapp3.1</TargetFramework>
+        <OutputType>exe</OutputType>
     </PropertyGroup>
 
     <ItemGroup>
-        <PackageReference Include="NSwag.MSBuild" Version="13.1.3">
+        <PackageReference Include="Dapper" Version="2.0.30" />
+        <PackageReference Include="Inflector.NetStandard" Version="1.2.2" />
+        <PackageReference Include="Microsoft.AspNetCore.Server.Kestrel" Version="2.2.0" />
+        <PackageReference Include="Microsoft.AspNetCore.Routing" Version="2.2.2" />
+        <PackageReference Include="Microsoft.Extensions.Configuration.Binder" Version="2.2.4" />
+        <PackageReference Include="Microsoft.Extensions.Configuration.CommandLine" Version="2.2.0" />
+        <PackageReference Include="NSwag.MSBuild" Version="13.1.5">
             <PrivateAssets>all</PrivateAssets>
             <IncludeAssets>runtime; build; native; contentfiles; analyzers</IncludeAssets>
         </PackageReference>
+        <PackageReference Include="Npgsql" Version="4.1.2" />
+        <PackageReference Include="Projac" Version="0.1.0" />
+        <PackageReference Include="Projac.Sql" Version="0.1.0" />
+        <PackageReference Include="Serilog" Version="2.9.0" />
+        <PackageReference Include="Serilog.AspNetCore" Version="3.2.0" />
+        <PackageReference Include="Serilog.Sinks.Console" Version="3.1.1" />
     </ItemGroup>
 
     <ItemGroup>
+        <ProjectReference Include="..\..\..\Projac\src\Projac.Npgsql\Projac.Npgsql.csproj" />
         <ProjectReference Include="..\Transacto\Transacto.csproj" />
     </ItemGroup>
 
     <ItemGroup>
-      <None Include="BusinessTransactions\**\*.schema.json" />
+        <EmbeddedResource Include="**\*.sql" />
     </ItemGroup>
-    <Target Name="NSwag" BeforeTargets="Build">
+
+    <!--<Target Name="GenerateClasses" BeforeTargets="CoreCompile">
+        <PropertyGroup>
+            <JsonSchema>dotnet "$(PkgMicrosoft_Json_Schema_ToDotNet)/tools/netcoreapp2.0/Microsoft.Json.Schema.ToDotNet.Cli.dll"</JsonSchema>
+        </PropertyGroup>
         <ItemGroup>
-          <SchemaFiles Include="$(MSBuildProjectDirectory)\BusinessTransactions\*.json" />
+            <SchemaFiles Include="$(MSBuildProjectDirectory)\BusinessTransactions\*.json" />
         </ItemGroup>
-        <Copy SourceFiles="@(ReferencePath)" DestinationFolder="$(OutDir)References" />
-        <Exec Command="$(NSwagExe_Core30) jsonschema2csclient /input:%(SchemaFiles.FullPath) /output:%(RelativeDir)\%(SchemaFiles.Filename).g.cs /name:%(SchemaFiles.Filename) /namespace:$(RootNamespace).BusinessTransactions /variables:Configuration=$(Configuration)" />
-        <RemoveDir Directories="$(OutDir)References" />
+        <Exec Command="$(JsonSchema) -schema-file-path %(SchemaFiles.FullPath) -output-directory $(MSBuildProjectDirectory)/BusinessTransactions/%(SchemaFiles.Filename) -force-overwrite -namespace-name $(RootNamespace).BusinessTransactions -schema-name %(SchemaFiles.Filename) -root-class-name %(SchemaFiles.Filename)" />
+    </Target>-->
+    <UsingTask TaskName="JSONSchema2CSharp" TaskFactory="RoslynCodeTaskFactory" AssemblyFile="$(MSBuildToolsPath)\Microsoft.Build.Tasks.Core.dll">
+        <ParameterGroup>
+            <SchemaFiles ParameterType="Microsoft.Build.Framework.ITaskItem[]" Required="true" />
+            <MSBuildProjectDirectory ParameterType="System.String" Required="true" />
+            <RootNamespace ParameterType="System.String" Required="true" />
+            <NSwagPath ParameterType="System.String" Required="true" />
+        </ParameterGroup>
+        <Task>
+            <Using Namespace="System" />
+            <Using Namespace="System.Diagnostics" />
+            <Using Namespace="System.IO" />
+            <Using Namespace="System.Linq" />
+            <Code Type="Fragment" Language="cs">
+                <![CDATA[
+var arguments = NSwagPath.Split(new[]{' '}, 2)[1];
+foreach (var file in SchemaFiles) {
+    
+    var inputFile = file.ToString();
+    var rootClassName = inputFile.Split(Path.DirectorySeparatorChar).Last().Split('.')[0];
+    var @namespace = $"{RootNamespace}.{inputFile.Remove(0, MSBuildProjectDirectory.Length + 1)}";
+    @namespace = @namespace.Substring(0, @namespace.Length - (rootClassName.Length + ".schema.json".Length + 1));
+    var outputFile = inputFile.Split('.').First();
+    
+    using (var process = new Process {
+        StartInfo = {
+            FileName = "dotnet",
+            Arguments = $"{arguments} jsonschema2csclient /input:{inputFile} /output:{outputFile}.g.cs /name:{rootClassName} /namespace:{@namespace}"
+        }
+    }) {
+        Log.LogMessageFromText($"{process.StartInfo.FileName} {process.StartInfo.Arguments}", MessageImportance.High);
+        process.Start();
+        process.WaitForExit();
+    }
+
+    using (var process = new Process {
+        StartInfo = {
+            FileName = "dotnet",
+            Arguments = $"{arguments} jsonschema2tsclient /input:{inputFile} /output:{outputFile}.ts /name:{rootClassName} /namespace:{@namespace}"
+        }
+    }) {
+        Log.LogMessageFromText($"{process.StartInfo.FileName} {process.StartInfo.Arguments}", MessageImportance.High);
+        process.Start();
+        process.WaitForExit();
+    }
+
+}
+]]>
+            </Code>
+        </Task>
+    </UsingTask>
+    <Target Name="NSwag" BeforeTargets="CoreCompile">
+        <ItemGroup>
+            <SchemaFiles Include="$(MSBuildProjectDirectory)\**\*.schema.json" />
+        </ItemGroup>
+        <JSONSchema2CSharp SchemaFiles="@(SchemaFiles)" MSBuildProjectDirectory="$(MSBuildProjectDirectory)" NSwagPath="$(NSwagExe_Core30)" RootNamespace="$(RootNamespace)" />
+        <!--<Exec Command="$(NSwagExe_Core30) jsonschema2csclient /input:%(SchemaFile.FullPath) /output:%(RelativeDir)%(SchemaFile.Filename).g.cs /name:@(_Name) /namespace:@(_Namespace) /variables:Configuration=$(Configuration)"/>-->
     </Target>
 </Project>

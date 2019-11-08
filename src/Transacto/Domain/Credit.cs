@@ -5,8 +5,12 @@ namespace Transacto.Domain {
         public AccountNumber AccountNumber { get; }
         public Money Amount { get; }
 
+
+        public Credit(AccountNumber accountNumber) : this(accountNumber, Money.Zero) {
+        }
+
         public Credit(AccountNumber accountNumber, Money amount) {
-            if (amount <= Money.Zero) {
+            if (amount < Money.Zero) {
                 throw new ArgumentOutOfRangeException(nameof(amount));
             }
 
@@ -30,5 +34,12 @@ namespace Transacto.Domain {
 
         public static Credit operator -(Credit left, Money right) =>
             new Credit(left.AccountNumber, left.Amount - right);
+
+        public static Credit operator +(Credit left, decimal right) =>
+            new Credit(left.AccountNumber, left.Amount + right);
+
+        public static Credit operator -(Credit left, decimal right) =>
+            new Credit(left.AccountNumber, left.Amount - right);
+
     }
 }

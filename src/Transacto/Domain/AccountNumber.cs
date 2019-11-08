@@ -15,7 +15,7 @@ namespace Transacto.Domain {
                 var x when x >= 5000 && x < 6000 => Type.CostOfGoodsSold,
                 var x when x >= 6000 && x < 7000 => Type.Expenses,
                 var x when x >= 7000 && x < 8000 => Type.OtherIncome,
-                var x when x >= 2800 && x < 9000 => Type.OtherExpenses,
+                var x when x >= 8000 && x < 9000 => Type.OtherExpenses,
                 _ => throw new ArgumentOutOfRangeException(nameof(value))
             };
 

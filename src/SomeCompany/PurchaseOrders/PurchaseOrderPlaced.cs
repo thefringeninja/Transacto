@@ -1,6 +1,6 @@
 using System;
 
-namespace Newtonsoft.Json.Messages {
+namespace SomeCompany.PurchaseOrders {
     public class PurchaseOrderPlaced {
         public Guid PurchaseOrderId { get; set; }
         public int PurchaseOrderNumber { get; set; }
@@ -8,7 +8,7 @@ namespace Newtonsoft.Json.Messages {
 
         public class PurchaseOrderItem {
             public Guid InventoryItemId { get; set; }
-            public double Quantity { get; set; }
+            public decimal Quantity { get; set; }
             public decimal UnitPrice { get; set; }
         }
     }
