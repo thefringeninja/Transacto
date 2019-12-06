@@ -1,82 +1,107 @@
 {
   "$schema": "https://json-schema.org/draft/2019-09/hyper-schema",
-  "$id": "http://somecompany.com/PurchaseOrder.json",
-  "$ref": "#/definitions/purchase-order",
+  "type": "object",
+  "title": "Purchase Order",
+  "additionalProperties": false,
+  "required": [
+    "vendorId",
+    "shippingAddress",
+    "billingAddress",
+    "items",
+    "purchaseOrderReference",
+    "purchaseOrderNumber",
+    "purchaseOrderId"
+  ],
+  "properties": {
+    "purchaseOrderId": {
+      "title": "Purchase Order Id",
+      "$ref": "#/definitions/uuid",
+      "x-schema-form": {
+        "key": "purchaseOrderId",
+        "type": "uuid"
+      }
+    },
+    "purchaseOrderReference": {
+      "title": "Reference Number",
+      "type": "string"
+    },
+    "purchaseOrderNumber": {
+      "title": "Purchase Order Number",
+      "type": "integer"
+    },
+    "vendorId": {
+      "title": "Vendor Id",
+      "$ref": "#/definitions/uuid",
+      "x-schema-form": {
+        "key": "vendorId",
+        "type": "uuid"
+      }
+    },
+    "shippingAddress": {
+      "description": "Shipping Address",
+      "$ref": "#/definitions/address"
+    },
+    "billingAddress": {
+      "description": "Billing Address",
+      "$ref": "#/definitions/address"
+    },
+    "purchaseOrderItems": {
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/PurchaseOrderItem"
+      }
+    }
+  },
   "definitions": {
-    "purchase-order": {
+    "address": {
       "type": "object",
-      "title": "Purchase Order",
+      "title": "Address",
       "additionalProperties": false,
       "required": [
-        "vendor-id",
-        "shipping-address",
-        "billing-address",
-        "items",
-        "purchase-order-reference",
-        "purchase-order-number",
-        "purchase-order-id"
+        "name",
+        "street",
+        "city",
+        "country"
       ],
       "properties": {
-        "purchase-order-id": {
-          "title": "Purchase Order Id",
-          "$ref": "#/definitions/uuid",
-          "x-schema-form": {
-            "key": "purchase-order-id",
-            "type": "uuid"
-          }
+        "name": {
+          "type": "string",
+          "title": "Name"
         },
-        "purchase-order-reference" : {
-          "title": "Reference Number",
-          "type": "string"
+        "street": {
+          "type": "string",
+          "title": "Street"
         },
-        "purchase-order-number" : {
-          "title": "Purchase Order Number",
-          "type": "integer"
+        "city": {
+          "type": "string",
+          "title": "City"
         },
-        "vendor-id": {
-          "title": "Vendor Id",
-          "$ref": "#/definitions/uuid",
-          "x-schema-form": {
-            "key": "vendor-id",
-            "type": "uuid"
-          }
-        },
-        "billing-address": {
-          "title": "Billing Address",
-          "$ref": "../Shared/Address.schema.json"
-        },
-        "shipping-address": {
-          "title": "Shipping Address",
-          "$ref": "../Shared/Address.schema.json"
-        },
-        "purchase-order-items": {
-          "type": "array",
-          "items": {
-            "$ref": "#/definitions/purchase-order-item"
-          }
+        "country": {
+          "type": "string",
+          "title": "Country"
         }
       }
     },
-    "purchase-order-item": {
+    "PurchaseOrderItem": {
       "type": "object",
       "title": "Item",
       "additionalProperties": false,
       "required": [
         "sku",
-        "item-id",
+        "itemId",
         "quantity",
-        "unit-price"
+        "unitPrice"
       ],
       "properties": {
         "sku": {
           "type": "string",
           "title": "SKU"
         },
-        "item-id": {
+        "itemId": {
           "title": "Item Id",
           "$ref": "#/definitions/uuid",
           "x-schema-form": {
-            "key": "item-id",
+            "key": "itemId",
             "type": "uuid"
           }
         },
@@ -84,12 +109,11 @@
           "type": "number",
           "title": "Quantity"
         },
-        "unit-price": {
+        "unitPrice": {
           "type": "number",
           "title": "Unit Price"
         }
       }
-
     },
     "uuid": {
       "type": "string",

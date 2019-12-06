@@ -1,25 +1,25 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
-  <PropertyGroup>
-    <TargetFramework>netcoreapp3.1</TargetFramework>
-
-    <IsPackable>false</IsPackable>
-    <RootNamespace>SomeCompany</RootNamespace>
-      <LangVersion>8.0</LangVersion>
-  </PropertyGroup>
+    <PropertyGroup>
+        <TargetFramework>netcoreapp3.1</TargetFramework>
+        <IsPackable>false</IsPackable>
+        <RootNamespace>SomeCompany</RootNamespace>
+        <LangVersion>8.0</LangVersion>
+        <RestoreSources>$(RestoreSources);../../packages;https://api.nuget.org/v3/index.json</RestoreSources>
+    </PropertyGroup>
 
     <ItemGroup>
-        <PackageReference Include="AutoFixture.Xunit2" Version="4.11.0" />
-        <PackageReference Include="CompareNETObjects" Version="4.63.0" />
-        <PackageReference Include="Inflector.NetStandard" Version="1.2.2" />
-        <PackageReference Include="Microsoft.NET.Test.Sdk" Version="16.4.0" />
-        <PackageReference Include="xunit" Version="2.4.1" />
-        <PackageReference Include="xunit.runner.visualstudio" Version="2.4.1" />
+        <PackageReference Include="AutoFixture.Xunit2" Version="4.11.0"/>
+        <PackageReference Include="CompareNETObjects" Version="4.63.0"/>
+        <PackageReference Include="Inflector.NetStandard" Version="1.2.2"/>
+        <PackageReference Include="Microsoft.NET.Test.Sdk" Version="16.4.0"/>
+        <PackageReference Include="xunit" Version="2.4.1"/>
+        <PackageReference Include="xunit.runner.visualstudio" Version="2.4.1"/>
     </ItemGroup>
 
     <ItemGroup>
-      <ProjectReference Include="..\..\..\Projac\src\Projac.Npgsql\Projac.Npgsql.csproj" />
-      <ProjectReference Include="..\..\src\SomeCompany\SomeCompany.csproj" />
-      <ProjectReference Include="..\Transacto.Tests\Transacto.Tests.csproj" />
+        <ProjectReference Include="..\..\..\Projac\src\Projac.Npgsql\Projac.Npgsql.csproj"/>
+        <ProjectReference Include="..\..\src\SomeCompany\SomeCompany.csproj"/>
+        <ProjectReference Include="..\Transacto.Tests\Transacto.Tests.csproj"/>
     </ItemGroup>
 </Project>

@@ -12,7 +12,7 @@ namespace SomeCompany.PurchaseOrders {
         public PurchaseOrderRepository(IStreamStore streamStore) {
             if (streamStore == null) throw new ArgumentNullException(nameof(streamStore));
             _inner = new SqlStreamStoreBusinessTransactionRepository<PurchaseOrder>(streamStore,
-                order => GetStreamName(Guid.Parse((string) order.PurchaseOrderId)), new JsonSerializerOptions());
+                order => GetStreamName(Guid.Parse(order.PurchaseOrderId)), new JsonSerializerOptions());
         }
 
         private static string GetStreamName(Guid purchaseOrderId) => $"purchaseorder-{purchaseOrderId:n}";

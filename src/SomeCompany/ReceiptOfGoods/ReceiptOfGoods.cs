@@ -21,7 +21,7 @@ namespace SomeCompany.ReceiptOfGoods {
             return entry;
         }
 
-        private static (Credit, Debit) Accumulate((Credit, Debit) _, ReceiptOfGoodsItems item) {
+        private static (Credit, Debit) Accumulate((Credit, Debit) _, ReceiptOfGoodsItem item) {
             var (inventoryInTransit, inventoryOnHand) = _;
             return (inventoryInTransit + item.Total, inventoryOnHand + item.Total);
         }

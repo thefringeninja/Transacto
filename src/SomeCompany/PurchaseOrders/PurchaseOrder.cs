@@ -21,7 +21,7 @@ namespace SomeCompany.PurchaseOrders {
             return entry;
         }
 
-        private static (Credit, Debit) Accumulate((Credit, Debit) _, PurchaseOrderItems item) {
+        private static (Credit, Debit) Accumulate((Credit, Debit) _, PurchaseOrderItem item) {
             var (accountsPayable, inventoryInTransit) = _;
             return (accountsPayable + item.Total, inventoryInTransit + item.Total);
         }

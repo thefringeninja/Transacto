@@ -1,81 +1,107 @@
 {
   "$schema": "https://json-schema.org/draft/2019-09/hyper-schema",
   "$id": "http://somecompany.com/ReceiptOfGoods.json",
-  "$ref": "#/definitions/receipt-of-goods",
+  "type": "object",
+  "title": "Receipt Of Goods",
+  "additionalProperties": false,
+  "properties": {
+    "receiptOfGoodsId": {
+      "title": "Receipt of Goods Id",
+      "$ref": "#/definitions/uuid",
+      "x-schema-form": {
+        "key": "receiptOfGoodsId",
+        "type": "uuid"
+      }
+    },
+    "receiptOfGoodsNumber" : {
+      "title": "Receipt Of Goods Number",
+      "type": "integer"
+    },
+    "purchaseOrderId": {
+      "title": "Purchase Order Id",
+      "$ref": "#/definitions/uuid",
+      "x-schema-form": {
+        "key": "purchaseOrderId",
+        "type": "uuid"
+      }
+    },
+    "purchaseOrderReference" : {
+      "title": "Reference Number",
+      "type": "string"
+    },
+    "purchaseOrderNumber" : {
+      "title": "Purchase Order Number",
+      "type": "integer"
+    },
+    "vendorId": {
+      "title": "Vendor Id",
+      "$ref": "#/definitions/uuid",
+      "x-schema-form": {
+        "key": "vendorId",
+        "type": "uuid"
+      }
+    },
+    "shippingAddress": {
+      "description": "Shipping Address",
+      "$ref": "#/definitions/address"
+    },
+    "receiptOfGoodsItems": {
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/receiptOfGoodsItem"
+      }
+    }
+  },
   "definitions": {
-    "receipt-of-goods": {
+    "address": {
       "type": "object",
-      "title": "Receipt Of Goods",
+      "title": "Address",
       "additionalProperties": false,
+      "required": [
+        "name",
+        "street",
+        "city",
+        "country"
+      ],
       "properties": {
-        "receipt-of-goods-id": {
-          "title": "Receipt of Goods Id",
-          "$ref": "#/definitions/uuid",
-          "x-schema-form": {
-            "key": "receipt-of-goods-id",
-            "type": "uuid"
-          }
+        "name": {
+          "type": "string",
+          "title": "Name"
         },
-        "receipt-of-goods-number" : {
-          "title": "Purchase Order Number",
-          "type": "integer"
+        "street": {
+          "type": "string",
+          "title": "Street"
         },
-        "purchase-order-id": {
-          "title": "Purchase Order Id",
-          "$ref": "#/definitions/uuid",
-          "x-schema-form": {
-            "key": "purchase-order-id",
-            "type": "uuid"
-          }
+        "city": {
+          "type": "string",
+          "title": "City"
         },
-        "purchase-order-reference" : {
-          "title": "Reference Number",
-          "type": "string"
-        },
-        "purchase-order-number" : {
-          "title": "Purchase Order Number",
-          "type": "integer"
-        },
-        "vendor-id": {
-          "title": "Vendor Id",
-          "$ref": "#/definitions/uuid",
-          "x-schema-form": {
-            "key": "vendor-id",
-            "type": "uuid"
-          }
-        },
-        "shipping-address": {
-          "description": "Shipping Address",
-          "$ref": "../Shared/Address.schema.json"
-        },
-        "receipt-of-goods-items": {
-          "type": "array",
-          "items": {
-            "$ref": "#/definitions/receipt-of-goods-item"
-          }
+        "country": {
+          "type": "string",
+          "title": "Country"
         }
       }
     },
-    "receipt-of-goods-item": {
+    "receiptOfGoodsItem": {
       "type": "object",
       "title": "Item",
       "additionalProperties": false,
       "required": [
         "sku",
-        "item-id",
+        "itemId",
         "quantity",
-        "unit-price"
+        "unitPrice"
       ],
       "properties": {
         "sku": {
           "type": "string",
           "title": "SKU"
         },
-        "item-id": {
+        "itemId": {
           "title": "Item Id",
           "$ref": "#/definitions/uuid",
           "x-schema-form": {
-            "key": "item-id",
+            "key": "itemId",
             "type": "uuid"
           }
         },
@@ -83,7 +109,7 @@
           "type": "number",
           "title": "Quantity"
         },
-        "unit-price": {
+        "unitPrice": {
           "type": "number",
           "title": "Unit Price"
         }
