@@ -10,7 +10,8 @@
     "items",
     "purchaseOrderReference",
     "purchaseOrderNumber",
-    "purchaseOrderId"
+    "purchaseOrderId",
+    "purchaseOrderItems"
   ],
   "properties": {
     "purchaseOrderId": {
@@ -39,11 +40,11 @@
     },
     "shippingAddress": {
       "description": "Shipping Address",
-      "$ref": "#/definitions/address"
+      "$ref": "#/definitions/Address"
     },
     "billingAddress": {
       "description": "Billing Address",
-      "$ref": "#/definitions/address"
+      "$ref": "#/definitions/Address"
     },
     "purchaseOrderItems": {
       "type": "array",
@@ -53,7 +54,7 @@
     }
   },
   "definitions": {
-    "address": {
+    "Address": {
       "type": "object",
       "title": "Address",
       "additionalProperties": false,

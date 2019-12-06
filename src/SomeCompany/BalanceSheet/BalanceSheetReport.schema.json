@@ -1,0 +1,79 @@
+{
+  "$schema": "https://json-schema.org/draft/2019-09/hyper-schema",
+  "type": "object",
+  "title": "Balance Sheet Report",
+  "additionalProperties": false,
+  "required": [
+    "thru",
+    "lineItemGroupings"
+  ],
+  "properties": {
+    "thru": {
+      "$ref": "#/definitions/date",
+      "title": "Thru"
+    },
+    "lineItemGroupings": {
+      "type": "array",
+      "title": "Groupings",
+      "items": {
+        "$ref": "#/definitions/LineItemGrouping"
+      }
+    }
+  },
+  "definitions": {
+    "LineItem": {
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "name",
+        "number",
+        "balance"
+      ],
+      "properties": {
+        "name": {
+          "type": "string",
+          "title": "Account Name"
+        },
+        "accountNumber": {
+          "type": "number",
+          "title": "Account Number"
+        },
+        "balance": {
+          "type": "number",
+          "title": "Balance"
+        }
+      }
+    },
+    "LineItemGrouping": {
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "name",
+        "lineItems",
+        "lineItemGroupings"
+      ],
+      "properties": {
+        "name": {
+          "type": "string",
+          "title": "Name"
+        },
+        "lineItems": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/LineItem"
+          }
+        },
+        "lineItemGroupings": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/LineItemGrouping"
+          }
+        }
+      }
+    },
+    "date": {
+      "type": "string",
+      "pattern": "^\\d{4}(-\\d\\d(-\\d\\d(T\\d\\d:\\d\\d(:\\d\\d)?(\\.\\d+)?(([+-]\\d\\d:\\d\\d)|Z)?)?)?)?$"
+    }
+  }
+}

@@ -2,7 +2,7 @@
     <UsingTask TaskName="GenerateCSharpTask" AssemblyFile="$(MSBuildThisFileDirectory)..\tools\$(TargetFramework)\Transacto.Tasks.dll" />
     <Target Name="GenerateCodeFromJsonSchema" BeforeTargets="BeforeBuild">
         <ItemGroup>
-            <SchemaFiles Include="$(MSBuildProjectDirectory)\**\*.schema.json" />
+            <SchemaFiles Include="$(MSBuildProjectDirectory)\**\*.schema.json" Exclude="$(MSBuildProjectDirectory)\node_modules\**" />
             <EmbeddedResource Include="@(SchemaFiles)" Visible="false" />
             <Compile Include="$(IntermediateOutputPath)\Transacto\**\*.cs" Visible="false" />
         </ItemGroup>

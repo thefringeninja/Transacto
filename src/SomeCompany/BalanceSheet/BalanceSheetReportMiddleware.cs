@@ -1,5 +1,4 @@
 using System;
-using System.Net.Http;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
 using SomeCompany.BalanceSheet;
@@ -15,8 +14,7 @@ namespace Microsoft.AspNetCore.Builder {
             BalanceSheetReportResource resource) {
             if (builder == null) throw new ArgumentNullException(nameof(builder));
             if (resource == null) throw new ArgumentNullException(nameof(resource));
-            return builder.MapWhen(context => new HttpMethod(context.Request.Method) == HttpMethod.Get,
-                inner => inner.Use(Get(resource)));
+            return builder.UseRouter(router => router.MapMiddlewareGet("{thru}", inner => inner.Use(Get(resource))));
         }
 
         private static MidFunc Get(BalanceSheetReportResource resource) => async (context, next) => {

@@ -32,6 +32,8 @@
 
     <ItemGroup>
         <EmbeddedResource Include="**\*.sql" />
+        <None Remove="node_modules\**" />
+        <EmbeddedResource Remove="node_modules\**" />
+        <Compile Remove="node_modules\**" />
     </ItemGroup>
-
 </Project>

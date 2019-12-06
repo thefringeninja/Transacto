@@ -74,10 +74,8 @@ namespace SomeCompany {
             .BuildServiceProvider();
 
         public void Configure(IApplicationBuilder app) =>
-            app.UseRouter(router => router
-                .MapMiddlewareRoute(
-                    "reports/balance-sheet/{thru}",
-                    inner => inner.UseBalanceSheet(new BalanceSheetReportResource(_getConnection,
-                        "standard_reports"))));
+            app.Map("reports", inner => inner.Map("balance-sheet", bs => bs.UseBalanceSheet(
+                new BalanceSheetReportResource(_getConnection,
+                    "standard_reports"))));
     }
 }
