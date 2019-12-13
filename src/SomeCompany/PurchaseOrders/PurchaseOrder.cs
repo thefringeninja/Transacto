@@ -26,20 +26,8 @@ namespace SomeCompany.PurchaseOrders {
             return (accountsPayable + item.Total, inventoryInTransit + item.Total);
         }
 
-        public IEnumerable<object> GetAdditionalChanges()
-        {
-            yield return new PurchaseOrderPlaced
-            {
-                PurchaseOrderId = Guid.Parse(PurchaseOrderId),
-                PurchaseOrderNumber = PurchaseOrderNumber,
-                Items = PurchaseOrderItems.Select(item =>
-                    new PurchaseOrderPlaced.PurchaseOrderItem
-                    {
-                        Quantity = Convert.ToDecimal(item.Quantity),
-                        UnitPrice = Convert.ToDecimal(item.UnitPrice),
-                        InventoryItemId = Guid.Parse(item.ItemId)
-                    }).ToArray()
-            };
+        public IEnumerable<object> GetAdditionalChanges() {
+            yield return this;
         }
     }
 }

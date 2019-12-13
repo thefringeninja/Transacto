@@ -21,12 +21,8 @@ namespace SomeCompany.Inventory {
                     InventoryItemId = item.InventoryItemId,
                     Sku = item.Sku
                 }))
-                .Given(new PurchaseOrderPlaced {
-                    Items = Array.ConvertAll(inventoryItems, item => new PurchaseOrderPlaced.PurchaseOrderItem {
-                        InventoryItemId = item.InventoryItemId,
-                        Quantity = item.Quantity,
-                        UnitPrice = item.UnitPrice
-                    })
+                .Given(new PurchaseOrder {
+                    PurchaseOrderItems = Array.ConvertAll(inventoryItems, ConverToPurchaseOrderItem)
                 })
                 .Then(_schema, "inventory_ledger", Array.ConvertAll(inventoryItems, item => new InventoryLedgerItem {
                     InventoryItemId = item.InventoryItemId,
@@ -34,6 +30,14 @@ namespace SomeCompany.Inventory {
                     OnOrder = item.Quantity
                 }))
                 .Assert();
+
+        private static PurchaseOrderItem ConverToPurchaseOrderItem(InventoryItem item) {
+            return new PurchaseOrderItem {
+                ItemId = item.InventoryItemId.ToString(),
+                Quantity = Convert.ToDouble(item.Quantity),
+                UnitPrice = Convert.ToDouble(item.UnitPrice)
+            };
+        }
 
         [Theory, AutoSomeCompanyData]
         public Task when_goods_are_received(InventoryItem[] inventoryItems) =>
@@ -43,12 +47,8 @@ namespace SomeCompany.Inventory {
                     InventoryItemId = item.InventoryItemId,
                     Sku = item.Sku
                 }))
-                .Given(new PurchaseOrderPlaced {
-                    Items = Array.ConvertAll(inventoryItems, item => new PurchaseOrderPlaced.PurchaseOrderItem {
-                        InventoryItemId = item.InventoryItemId,
-                        Quantity = item.Quantity,
-                        UnitPrice = item.UnitPrice
-                    })
+                .Given(new PurchaseOrder {
+                    PurchaseOrderItems = Array.ConvertAll(inventoryItems, ConverToPurchaseOrderItem)
                 }, new GoodsReceived {
                     Items = Array.ConvertAll(inventoryItems, item => new GoodsReceived.ReceiptItem {
                         Quantity = item.Quantity,

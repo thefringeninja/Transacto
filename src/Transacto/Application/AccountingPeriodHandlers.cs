@@ -1,4 +1,3 @@
-using System;
 using System.Threading;
 using System.Threading.Tasks;
 using Transacto.Domain;
@@ -9,12 +8,11 @@ namespace Transacto.Application {
         private readonly IAccountingPeriodRepository _accountingPeriods;
 
         public AccountingPeriodHandlers(IAccountingPeriodRepository accountingPeriods) {
-            if (accountingPeriods == null) throw new ArgumentNullException(nameof(accountingPeriods));
             _accountingPeriods = accountingPeriods;
         }
 
         public ValueTask Handle(OpenAccountingPeriod command, CancellationToken cancellationToken = default) {
-            var accountingPeriod = AccountingPeriod.Open(PeriodIdentifier.FromDto(command.Period));
+            var accountingPeriod = AccountingPeriod.Open(PeriodIdentifier.FromDto(command.Period!));
 
             _accountingPeriods.Add(accountingPeriod);
 
@@ -23,7 +21,7 @@ namespace Transacto.Application {
 
         public async ValueTask Handle(CloseAccountingPeriod command, CancellationToken cancellationToken = default) {
             var accountingPeriod =
-                await _accountingPeriods.Get(PeriodIdentifier.FromDto(command.Period), cancellationToken);
+                await _accountingPeriods.Get(PeriodIdentifier.FromDto(command.Period!), cancellationToken);
 
             accountingPeriod.Close();
         }

@@ -1,7 +1,7 @@
 using System;
 
 namespace Transacto.Domain {
-    public struct AccountNumber : IEquatable<AccountNumber> {
+    public readonly struct AccountNumber : IEquatable<AccountNumber> {
         public int Value { get; }
         public Type AccountType { get; }
 
@@ -24,7 +24,7 @@ namespace Transacto.Domain {
 
 
         public bool Equals(AccountNumber other) => Value == other.Value;
-        public override bool Equals(object obj) => obj is AccountNumber other && Equals(other);
+        public override bool Equals(object? obj) => obj is AccountNumber other && Equals(other);
         public override int GetHashCode() => Value.GetHashCode();
         public static bool operator ==(AccountNumber left, AccountNumber right) => left.Equals(right);
         public static bool operator !=(AccountNumber left, AccountNumber right) => !left.Equals(right);

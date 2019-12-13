@@ -2,19 +2,21 @@ using System;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.Extensions.Logging;
 using Npgsql;
 using Serilog;
 using Serilog.Events;
+using SqlStreamStore;
 
 namespace SomeCompany {
     internal class Program : IDisposable {
         private readonly IWebHost _host;
         private readonly CancellationTokenSource _exitedSource;
+        private readonly IStreamStore _streamStore;
 
         private Program(SomeCompanyConfiguration configuration) {
             Dapper.DefaultTypeMap.MatchNamesWithUnderscores = true;
             Log.Logger = new LoggerConfiguration()
-                .MinimumLevel.Is(LogEventLevel.Information)
                 //.MinimumLevel.Override("Microsoft.AspNetCore", LogEventLevel.Warning)
                 .Enrich.FromLogContext()
                 .WriteTo.Console(
@@ -29,9 +31,10 @@ namespace SomeCompany {
             _host = new WebHostBuilder()
                 .SuppressStatusMessages(true)
                 .UseKestrel()
-                .UseStartup(new Startup(connectionStringBuilder))
+                .UseStartup(new Startup(_streamStore, connectionStringBuilder))
                 .UseSerilog()
                 .Build();
+            _streamStore = new InMemoryStreamStore();
 
             Console.CancelKeyPress += (_, e) => _exitedSource.Cancel();
         }
@@ -57,6 +60,7 @@ namespace SomeCompany {
         public void Dispose() {
             _exitedSource.Dispose();
             _host.Dispose();
+            _streamStore.Dispose();
         }
     }
 }

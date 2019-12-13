@@ -7,13 +7,13 @@ namespace Transacto.Framework {
     /// Tracks changes of attached aggregates.
     /// </summary>
     public class UnitOfWork {
-        private readonly IDictionary<string, (AggregateRoot aggregate, Optional<int> expectedVersion)> _aggregates;
+        private readonly IDictionary<string, (AggregateRoot aggregate, Optional<ulong> expectedVersion)> _aggregates;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="UnitOfWork"/> class.
         /// </summary>
         public UnitOfWork() {
-            _aggregates = new Dictionary<string, (AggregateRoot, Optional<int>)>();
+            _aggregates = new Dictionary<string, (AggregateRoot, Optional<ulong>)>();
         }
 
         /// <summary>
@@ -21,11 +21,9 @@ namespace Transacto.Framework {
         /// </summary>
         /// <param name="streamName">The identifier.</param>
         /// <param name="aggregate">The aggregate.</param>
+        /// <param name="expectedVersion">The expected version.</param>
         /// <exception cref="System.ArgumentNullException">Thrown when the <paramref name="aggregate"/> is null.</exception>
-        public void Attach(string streamName, AggregateRoot aggregate, Optional<int> expectedVersion = default) {
-            if (streamName == null) throw new ArgumentNullException(nameof(streamName));
-            if (aggregate == null)
-                throw new ArgumentNullException(nameof(aggregate));
+        public void Attach(string streamName, AggregateRoot aggregate, Optional<ulong> expectedVersion = default) {
             if (_aggregates.ContainsKey(streamName))
                 throw new ArgumentException();
             _aggregates.Add(streamName, (aggregate, expectedVersion));
@@ -37,8 +35,8 @@ namespace Transacto.Framework {
         /// <param name="streamName">The aggregate identifier.</param>
         /// <param name="aggregate">The aggregate if found, otherwise <c>null</c>.</param>
         /// <returns><c>true</c> if the aggregate was found, otherwise <c>false</c>.</returns>
-        public bool TryGet(string streamName, out AggregateRoot aggregate) {
-            aggregate = default;
+        public bool TryGet(string streamName, out AggregateRoot? aggregate) {
+            aggregate = null;
             if (!_aggregates.TryGetValue(streamName, out var x)) {
                 return false;
             }
@@ -59,8 +57,7 @@ namespace Transacto.Framework {
         /// Gets the aggregates with state changes.
         /// </summary>
         /// <returns>An enumeration of <see cref="AggregateRoot"/>.</returns>
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1024:UsePropertiesWhereAppropriate")]
-        public IEnumerable<(string streamName, AggregateRoot aggregate, Optional<int> expectedVersion)> GetChanges() =>
+        public IEnumerable<(string streamName, AggregateRoot aggregate, Optional<ulong> expectedVersion)> GetChanges() =>
             _aggregates.Where(_ => _.Value.aggregate.HasChanges).Select(_ => (_.Key, _.Value.aggregate, _.Value.expectedVersion));
     }
 }

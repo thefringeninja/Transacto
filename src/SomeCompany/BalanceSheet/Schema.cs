@@ -2,7 +2,7 @@ using System.Globalization;
 
 namespace SomeCompany.BalanceSheet {
     internal static class Schema {
-        internal static readonly Inflector.Inflector Inflector = new Inflector.Inflector(CultureInfo.GetCultureInfo("en-US"));
+        private static readonly Inflector.Inflector Inflector = new Inflector.Inflector(CultureInfo.GetCultureInfo("en-US"));
 
         public static class BalanceSheetReport {
             public static readonly string Table = Inflector.Underscore(nameof(BalanceSheetReport));

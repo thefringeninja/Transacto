@@ -11,7 +11,7 @@ namespace Transacto.Domain {
         public PeriodIdentifier Period => _period;
 
         private AccountingPeriod() {
-            Register<AccountingPeriodOpened>(e => _period = PeriodIdentifier.FromDto(e.Period));
+            Register<AccountingPeriodOpened>(e => _period = PeriodIdentifier.FromDto(e.Period!));
             Register<AccountingPeriodClosed>(_ => _closed = true);
         }
 

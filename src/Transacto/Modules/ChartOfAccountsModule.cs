@@ -7,47 +7,52 @@ using Transacto.Messages;
 
 namespace Transacto.Modules {
     public class ChartOfAccountsModule : CommandHandlerModule {
-        public ChartOfAccountsModule(EventStoreGrpcClient eventStore, JsonSerializerOptions serializerOptions) {
+        public ChartOfAccountsModule(EventStoreGrpcClient eventStore, IMessageTypeMapper messageTypeMapper,
+            JsonSerializerOptions serializerOptions) {
             Build<DefineAccount>()
                 .Log()
-                .UnitOfWork(eventStore, serializerOptions)
+                .UnitOfWork(eventStore, messageTypeMapper, serializerOptions)
                 .Handle((_, ct) => {
                     var (unitOfWork, command) = _;
                     var handlers =
-                        new ChartOfAccountsHandlers(new ChartOfAccountsEventStoreRepository(eventStore, unitOfWork));
+                        new ChartOfAccountsHandlers(
+                            new ChartOfAccountsEventStoreRepository(eventStore, messageTypeMapper, unitOfWork));
 
                     return handlers.Handle(command, ct);
                 });
 
             Build<DeactivateAccount>()
                 .Log()
-                .UnitOfWork(eventStore, serializerOptions)
+                .UnitOfWork(eventStore, messageTypeMapper, serializerOptions)
                 .Handle((_, ct) => {
                     var (unitOfWork, command) = _;
                     var handlers =
-                        new ChartOfAccountsHandlers(new ChartOfAccountsEventStoreRepository(eventStore, unitOfWork));
+                        new ChartOfAccountsHandlers(
+                            new ChartOfAccountsEventStoreRepository(eventStore, messageTypeMapper, unitOfWork));
 
                     return handlers.Handle(command, ct);
                 });
 
             Build<ReactivateAccount>()
                 .Log()
-                .UnitOfWork(eventStore, serializerOptions)
+                .UnitOfWork(eventStore, messageTypeMapper, serializerOptions)
                 .Handle((_, ct) => {
                     var (unitOfWork, command) = _;
                     var handlers =
-                        new ChartOfAccountsHandlers(new ChartOfAccountsEventStoreRepository(eventStore, unitOfWork));
+                        new ChartOfAccountsHandlers(
+                            new ChartOfAccountsEventStoreRepository(eventStore, messageTypeMapper, unitOfWork));
 
                     return handlers.Handle(command, ct);
                 });
 
             Build<RenameAccount>()
                 .Log()
-                .UnitOfWork(eventStore, serializerOptions)
+                .UnitOfWork(eventStore, messageTypeMapper, serializerOptions)
                 .Handle((_, ct) => {
                     var (unitOfWork, command) = _;
                     var handlers =
-                        new ChartOfAccountsHandlers(new ChartOfAccountsEventStoreRepository(eventStore, unitOfWork));
+                        new ChartOfAccountsHandlers(
+                            new ChartOfAccountsEventStoreRepository(eventStore, messageTypeMapper, unitOfWork));
 
                     return handlers.Handle(command, ct);
                 });

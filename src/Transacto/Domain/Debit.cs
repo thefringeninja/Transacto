@@ -1,7 +1,7 @@
 using System;
 
 namespace Transacto.Domain {
-    public struct Debit {
+    public readonly struct Debit {
         public Money Amount { get; }
         public AccountNumber AccountNumber { get; }
 
@@ -17,14 +17,9 @@ namespace Transacto.Domain {
             AccountNumber = accountNumber;
         }
 
-        public override int GetHashCode() {
-            unchecked {
-                return (Amount.GetHashCode() * 397) ^ AccountNumber.GetHashCode();
-            }
-        }
-
+        public override int GetHashCode() => HashCode.Combine(Amount, AccountNumber);
         public bool Equals(Debit other) => Amount.Equals(other.Amount) && AccountNumber.Equals(other.AccountNumber);
-        public override bool Equals(object obj) => obj is Debit other && Equals(other);
+        public override bool Equals(object? obj) => obj is Debit other && Equals(other);
         public static bool operator ==(Debit left, Debit right) => left.Equals(right);
         public static bool operator !=(Debit left, Debit right) => !left.Equals(right);
         public static Debit operator +(Debit left, Money right) => new Debit(left.AccountNumber, left.Amount + right);

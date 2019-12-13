@@ -9,10 +9,11 @@ namespace Transacto.Infrastructure {
     public class GeneralLedgerEntryEventStoreRepository : IGeneralLedgerEntryRepository {
         private readonly EventStoreRepository<GeneralLedgerEntry, GeneralLedgerEntryIdentifier> _inner;
 
-        public GeneralLedgerEntryEventStoreRepository(EventStoreGrpcClient eventStore, UnitOfWork unitOfWork) {
+        public GeneralLedgerEntryEventStoreRepository(EventStoreGrpcClient eventStore,
+            IMessageTypeMapper messageTypeMapper, UnitOfWork unitOfWork) {
             _inner = new EventStoreRepository<GeneralLedgerEntry, GeneralLedgerEntryIdentifier>(eventStore, unitOfWork,
                 GeneralLedgerEntry.Factory, period => period.GeneralLedgerEntryIdentifier,
-                identifier => $"generalLedgerEntry-{identifier.ToString()}");
+                identifier => $"generalLedgerEntry-{identifier.ToString()}", messageTypeMapper);
         }
 
         public async ValueTask<GeneralLedgerEntry> Get(GeneralLedgerEntryIdentifier identifier,

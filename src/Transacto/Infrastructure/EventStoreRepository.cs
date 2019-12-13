@@ -18,6 +18,7 @@ namespace Transacto.Infrastructure {
         private readonly Func<TAggregateRoot> _factory;
         private readonly Func<TAggregateRoot, TIdentifier> _getIdentifier;
         private readonly Func<TIdentifier, string> _getStreamName;
+        private readonly IMessageTypeMapper _messageTypeMapper;
         private readonly JsonSerializerOptions _serializerOptions;
 
         public EventStoreRepository(
@@ -26,16 +27,14 @@ namespace Transacto.Infrastructure {
             Func<TAggregateRoot> factory,
             Func<TAggregateRoot, TIdentifier> getIdentifier,
             Func<TIdentifier, string> getStreamName,
-            JsonSerializerOptions serializerOptions = default) {
-            if (eventStore == null) throw new ArgumentNullException(nameof(eventStore));
-            if (unitOfWork == null) throw new ArgumentNullException(nameof(unitOfWork));
-            if (getIdentifier == null) throw new ArgumentNullException(nameof(getIdentifier));
-            if (getStreamName == null) throw new ArgumentNullException(nameof(getStreamName));
+            IMessageTypeMapper messageTypeMapper,
+            JsonSerializerOptions? serializerOptions = null) {
             _eventStore = eventStore;
             _unitOfWork = unitOfWork;
             _factory = factory;
             _getIdentifier = getIdentifier;
             _getStreamName = getStreamName;
+            _messageTypeMapper = messageTypeMapper;
             _serializerOptions = serializerOptions ?? DefaultOptions;
         }
 
@@ -54,7 +53,7 @@ namespace Transacto.Infrastructure {
 
                 var version = await aggregate.LoadFromHistory(events.Select(e =>
                     JsonSerializer.Deserialize(e.OriginalEvent.Data,
-                        typeof(AccountingPeriod).Assembly.GetType(e.OriginalEvent.EventType),
+                        _messageTypeMapper.Map(e.OriginalEvent.EventType),
                         _serializerOptions)));
 
                 _unitOfWork.Attach(streamName, aggregate, version);

@@ -47,7 +47,7 @@ namespace SomeCompany {
         private class CommandLine : CommandLineConfigurationProvider {
             public CommandLine(
                 IEnumerable<string> args,
-                IDictionary<string, string> switchMappings = null)
+                IDictionary<string, string>? switchMappings = null)
                 : base(args, switchMappings) {
             }
 

@@ -9,7 +9,6 @@ namespace Transacto.Application {
         private readonly IGeneralLedgerEntryRepository _generalLedgerEntries;
 
         public GeneralLedgerEntryHandlers(IGeneralLedgerEntryRepository generalLedgerEntries) {
-            if (generalLedgerEntries == null) throw new ArgumentNullException(nameof(generalLedgerEntries));
             _generalLedgerEntries = generalLedgerEntries;
         }
 

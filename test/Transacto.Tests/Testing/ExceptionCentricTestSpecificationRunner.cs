@@ -31,7 +31,7 @@ namespace Transacto.Testing {
                            parameters[1].ParameterType == typeof(CancellationToken);
                 });
 
-            ValueTask Handler(object o, CancellationToken ct) => (ValueTask)methodInfo.Invoke(_handler, new[] {o, ct});
+            ValueTask Handler(object o, CancellationToken ct) => (ValueTask)methodInfo.Invoke(_handler, new[] {o, ct})!;
 
             _factRecorder.Record(specification.Givens);
 
@@ -43,7 +43,7 @@ namespace Transacto.Testing {
                 optionalException = ex;
             }
 
-            var then = _factRecorder.GetFacts().Skip(specification.Givens.Length).ToArray();
+            var then = await _factRecorder.GetFacts().Skip(specification.Givens.Length).ToArrayAsync();
             return new ExceptionCentricTestResult(specification,
                 optionalException.HasValue &&
                 !_comparer.Compare(specification.Throws, optionalException.Value).Any()

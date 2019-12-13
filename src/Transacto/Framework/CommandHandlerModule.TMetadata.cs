@@ -5,41 +5,30 @@ using System.Threading;
 using System.Threading.Tasks;
 
 namespace Transacto.Framework {
-    public abstract class CommandHandlerModule<TMetadata> : IEnumerable<CommandHandler<TMetadata>> {
-        private readonly List<CommandHandler<TMetadata>> _handlers;
+	public abstract class CommandHandlerModule<TMetadata> : IEnumerable<CommandHandler<TMetadata>> {
+		private readonly List<CommandHandler<TMetadata>> _handlers;
 
-        protected CommandHandlerModule() {
-            _handlers = new List<CommandHandler<TMetadata>>();
-        }
+		protected CommandHandlerModule() {
+			_handlers = new List<CommandHandler<TMetadata>>();
+		}
 
-        protected ICommandHandlerBuilder<TCommand, TMetadata> Build<TCommand>() {
-            return new CommandHandlerBuilder<TCommand, TMetadata>(handler => {
-                _handlers.Add(new CommandHandler<TMetadata>(typeof(TCommand),
-                    (command, metadata, token) => handler((TCommand)command, metadata, token)));
-            });
-        }
+		protected ICommandHandlerBuilder<TCommand, TMetadata> Build<TCommand>() =>
+			new CommandHandlerBuilder<TCommand, TMetadata>(handler => {
+				_handlers.Add(new CommandHandler<TMetadata>(typeof(TCommand),
+					(command, metadata, token) => handler((TCommand)command, metadata, token)));
+			});
 
-        protected void Handle<TCommand>(Func<TCommand, TMetadata, CancellationToken, ValueTask> handler) {
-            if (handler == null) {
-                throw new ArgumentNullException(nameof(handler));
-            }
+		protected void Handle<TCommand>(Func<TCommand, TMetadata, CancellationToken, ValueTask> handler) =>
+			_handlers.Add(new CommandHandler<TMetadata>(typeof(TCommand),
+				(command, metadata, token) => handler((TCommand)command, metadata, token)));
 
-            _handlers.Add(new CommandHandler<TMetadata>(typeof(TCommand),
-                (command, metadata, token) => handler((TCommand)command, metadata, token)));
-        }
+		public CommandHandler<TMetadata>[] Handlers => _handlers.ToArray();
 
-        public CommandHandler<TMetadata>[] Handlers => _handlers.ToArray();
+		public CommandHandlerEnumerator<TMetadata> GetEnumerator() => new CommandHandlerEnumerator<TMetadata>(Handlers);
 
-        public CommandHandlerEnumerator<TMetadata> GetEnumerator() {
-            return new CommandHandlerEnumerator<TMetadata>(Handlers);
-        }
+		IEnumerator<CommandHandler<TMetadata>> IEnumerable<CommandHandler<TMetadata>>.GetEnumerator() =>
+			GetEnumerator();
 
-        IEnumerator<CommandHandler<TMetadata>> IEnumerable<CommandHandler<TMetadata>>.GetEnumerator() {
-            return GetEnumerator();
-        }
-
-        IEnumerator IEnumerable.GetEnumerator() {
-            return GetEnumerator();
-        }
-    }
+		IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
+	}
 }

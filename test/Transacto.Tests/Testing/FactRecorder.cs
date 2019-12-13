@@ -18,8 +18,9 @@ namespace Transacto.Testing {
         public void Record(IEnumerable<Fact> facts) => _recordedFacts.AddRange(facts);
         public void Record(string identifier, AggregateRoot aggregate) => _aggregates[identifier] = aggregate;
 
-        public IEnumerable<Fact> GetFacts() =>
-            _recordedFacts.AsEnumerable()
-                .Concat(_aggregates.SelectMany(x => x.Value.GetChanges().Select(e => new Fact(x.Key, e))));
+        public IAsyncEnumerable<Fact> GetFacts() =>
+            _recordedFacts.ToAsyncEnumerable()
+                .Concat(_aggregates.SelectMany(x => x.Value.GetChanges().Select(e => new Fact(x.Key, e)))
+	                .ToAsyncEnumerable());
     }
 }

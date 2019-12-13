@@ -9,10 +9,11 @@ namespace Transacto.Infrastructure {
     public class AccountingPeriodEventStoreRepository : IAccountingPeriodRepository {
         private readonly EventStoreRepository<AccountingPeriod, PeriodIdentifier> _inner;
 
-        public AccountingPeriodEventStoreRepository(EventStoreGrpcClient eventStore, UnitOfWork unitOfWork) {
+        public AccountingPeriodEventStoreRepository(EventStoreGrpcClient eventStore,
+            IMessageTypeMapper messageTypeMapper, UnitOfWork unitOfWork) {
             _inner = new EventStoreRepository<AccountingPeriod, PeriodIdentifier>(eventStore, unitOfWork,
                 AccountingPeriod.Factory, period => period.Period,
-                identifier => $"accountingPeriod-{identifier.ToString()}");
+                identifier => $"accountingPeriod-{identifier.ToString()}", messageTypeMapper);
         }
 
         public async ValueTask<AccountingPeriod> Get(PeriodIdentifier period,

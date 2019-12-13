@@ -6,6 +6,6 @@ namespace Transacto.Testing {
         void Record(string identifier, IEnumerable<object> events);
         void Record(IEnumerable<Fact> facts);
         void Record(string identifier, AggregateRoot aggregate);
-        IEnumerable<Fact> GetFacts();
+        IAsyncEnumerable<Fact> GetFacts();
     }
 }

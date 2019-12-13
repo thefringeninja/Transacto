@@ -12,7 +12,7 @@ namespace Transacto.Framework {
             _handlers = new List<CommandHandler>();
         }
 
-        protected ICommandHandlerBuilder<TCommand> Build<TCommand>() {
+        protected ICommandHandlerBuilder<TCommand> Build<TCommand>() where TCommand : class {
             return new CommandHandlerBuilder<TCommand>(handler => {
                 _handlers.Add(new CommandHandler(typeof(TCommand),
                     (command, token) => handler((TCommand)command, token)));

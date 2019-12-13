@@ -1,5 +1,5 @@
 namespace Transacto.Messages {
     public class OpenAccountingPeriod {
-        public PeriodDto Period { get; set; }
+        public PeriodDto? Period { get; set; }
     }
 }

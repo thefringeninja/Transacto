@@ -14,15 +14,18 @@ namespace Transacto.Application {
             _factRecorder = factRecorder;
         }
 
-        public ValueTask<Optional<ChartOfAccounts>> GetOptional(CancellationToken cancellationToken = default) {
-            var facts = _factRecorder.GetFacts().Where(x => x.Identifier == string.Empty).ToArray();
+        public async ValueTask<Optional<ChartOfAccounts>> GetOptional(CancellationToken cancellationToken = default) {
+	        var facts = await _factRecorder.GetFacts().Where(x => x.Identifier == string.Empty)
+		        .ToArrayAsync(cancellationToken);
 
-            if (facts.Length == 0) return default;
+	        if (facts.Length == 0) {
+		        return Optional<ChartOfAccounts>.Empty;
+	        }
 
             var chartOfAccounts = ChartOfAccounts.Factory();
-            chartOfAccounts.LoadFromHistory(facts.Select(x => x.Event));
+            await chartOfAccounts.LoadFromHistory(facts.Select(x => x.Event).ToAsyncEnumerable());
             _factRecorder.Record(string.Empty, chartOfAccounts);
-            return new ValueTask<Optional<ChartOfAccounts>>(chartOfAccounts);
+            return chartOfAccounts;
         }
 
         public async ValueTask<ChartOfAccounts> Get(CancellationToken cancellationToken = default) {

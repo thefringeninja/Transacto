@@ -18,9 +18,6 @@ namespace Transacto.Infrastructure {
             IStreamStore streamStore,
             Func<TBusinessTransaction, string> getStreamName,
             JsonSerializerOptions serializerOptions) {
-            if (streamStore == null) throw new ArgumentNullException(nameof(streamStore));
-            if (getStreamName == null) throw new ArgumentNullException(nameof(getStreamName));
-            if (serializerOptions == null) throw new ArgumentNullException(nameof(serializerOptions));
             _streamStore = streamStore;
             _getStreamName = getStreamName;
             _serializerOptions = serializerOptions;

@@ -1,4 +1,3 @@
-using System;
 using System.Threading;
 using System.Threading.Tasks;
 using Transacto.Domain;
@@ -9,7 +8,6 @@ namespace Transacto.Application {
         private readonly IChartOfAccountsRepository _chartOfAccounts;
 
         public ChartOfAccountsHandlers(IChartOfAccountsRepository chartOfAccounts) {
-            if (chartOfAccounts == null) throw new ArgumentNullException(nameof(chartOfAccounts));
             _chartOfAccounts = chartOfAccounts;
         }
 
@@ -18,7 +16,7 @@ namespace Transacto.Application {
 
             var chart = optionalChart.HasValue ? optionalChart.Value : ChartOfAccounts.Factory();
 
-            chart.DefineAccount(new AccountName(command.AccountName), new AccountNumber(command.AccountNumber));
+            chart.DefineAccount(new AccountName(command.AccountName!), new AccountNumber(command.AccountNumber));
 
             if (!optionalChart.HasValue) {
                 _chartOfAccounts.Add(chart);
@@ -28,7 +26,7 @@ namespace Transacto.Application {
         public async ValueTask Handle(RenameAccount command, CancellationToken cancellationToken = default) {
             var chart = await _chartOfAccounts.Get(cancellationToken);
 
-            chart.RenameAccount(new AccountNumber(command.AccountNumber), new AccountName(command.NewAccountName));
+            chart.RenameAccount(new AccountNumber(command.AccountNumber), new AccountName(command.NewAccountName!));
         }
 
         public async ValueTask Handle(DeactivateAccount command, CancellationToken cancellationToken = default) {

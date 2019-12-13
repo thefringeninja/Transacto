@@ -1,7 +1,7 @@
 using System;
 
 namespace Transacto.Domain {
-    public struct Credit : IEquatable<Credit> {
+    public readonly struct Credit : IEquatable<Credit> {
         public AccountNumber AccountNumber { get; }
         public Money Amount { get; }
 
@@ -18,14 +18,10 @@ namespace Transacto.Domain {
             AccountNumber = accountNumber;
         }
 
-        public override int GetHashCode() {
-            unchecked {
-                return (Amount.GetHashCode() * 397) ^ AccountNumber.GetHashCode();
-            }
-        }
+        public override int GetHashCode() => HashCode.Combine(Amount, AccountNumber);
 
         public bool Equals(Credit other) => Amount.Equals(other.Amount) && AccountNumber.Equals(other.AccountNumber);
-        public override bool Equals(object obj) => obj is Credit other && Equals(other);
+        public override bool Equals(object? obj) => obj is Credit other && Equals(other);
         public static bool operator ==(Credit left, Credit right) => left.Equals(right);
         public static bool operator !=(Credit left, Credit right) => !left.Equals(right);
 

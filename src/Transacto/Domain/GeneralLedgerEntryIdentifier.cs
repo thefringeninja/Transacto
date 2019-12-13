@@ -6,14 +6,14 @@ namespace Transacto.Domain {
 
         public GeneralLedgerEntryIdentifier(Guid value) {
             if (value == Guid.Empty) {
-                throw new InvalidOperationException();
+                throw new ArgumentException();
             }
 
             _value = value;
         }
 
         public bool Equals(GeneralLedgerEntryIdentifier other) => _value.Equals(other._value);
-        public override bool Equals(object obj) => obj is GeneralLedgerEntryIdentifier other && Equals(other);
+        public override bool Equals(object? obj) => obj is GeneralLedgerEntryIdentifier other && Equals(other);
         public override int GetHashCode() => _value.GetHashCode();
 
         public static bool operator ==(GeneralLedgerEntryIdentifier left, GeneralLedgerEntryIdentifier right) =>

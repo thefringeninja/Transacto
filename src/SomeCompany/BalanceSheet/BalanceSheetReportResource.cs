@@ -1,10 +1,5 @@
 using System;
-using System.Collections.Generic;
 using System.Data;
-using System.IO;
-using System.Net;
-using System.Net.Http.Headers;
-using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using Dapper;
@@ -22,7 +17,7 @@ namespace SomeCompany.BalanceSheet {
             _schema = schema;
         }
 
-        public async Task<SomeCompany.Framework.Http.Response> Get(DateTime thru, CancellationToken cancellationToken = default) {
+        public async Task<Response> Get(DateTime thru, CancellationToken cancellationToken = default) {
             using var connection = _connectionFactory();
 
             var results = await connection.QueryAsync<Item>($@"
@@ -32,7 +27,7 @@ FROM {_schema}.{Schema.BalanceSheetReport.Table}
 WHERE date ({Schema.BalanceSheetReport.Columns.PeriodYear} || '-' ||{Schema.BalanceSheetReport.Columns.PeriodMonth} || '-01') <= @thru
 GROUP BY {Schema.BalanceSheetReport.Columns.AccountNumber}", new {thru});
 
-            return new Response(results);
+            return new JsonResponse(results);
         }
 
         private class Item {
@@ -40,16 +35,5 @@ GROUP BY {Schema.BalanceSheetReport.Columns.AccountNumber}", new {thru});
             public decimal Balance { get; set; }
         }
 
-        private class Response : SomeCompany.Framework.Http.Response {
-            private readonly IEnumerable<Item> _items;
-
-            public Response(IEnumerable<Item> items) : base(HttpStatusCode.OK,
-                new MediaTypeHeaderValue("application/json")) {
-                _items = items;
-            }
-
-            public override Task WriteBody(Stream stream, CancellationToken cancellationToken = default) =>
-                JsonSerializer.SerializeAsync(stream, _items, new JsonSerializerOptions(), cancellationToken);
-        }
     }
 }

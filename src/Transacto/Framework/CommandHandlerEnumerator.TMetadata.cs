@@ -8,14 +8,12 @@ namespace Transacto.Framework {
         private int _index;
 
         public CommandHandlerEnumerator(CommandHandler<TMetadata>[] handlers) {
-            _handlers = handlers ?? throw new ArgumentNullException(nameof(handlers));
+            _handlers = handlers;
             _index = -1;
         }
 
-        public bool MoveNext() {
-            return _index < _handlers.Length &&
-                   ++_index < _handlers.Length;
-        }
+        public bool MoveNext() => _index < _handlers.Length &&
+                                  ++_index < _handlers.Length;
 
         public void Reset() {
             _index = -1;

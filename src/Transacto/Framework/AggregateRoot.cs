@@ -6,50 +6,37 @@ using System.Threading.Tasks;
 namespace Transacto.Framework {
     public abstract class AggregateRoot {
         private readonly IDictionary<Type, Action<object>> _router;
-        private readonly IList<object> _history;
+        private readonly IList<object> _changes;
 
         protected AggregateRoot() {
-            _history = new List<object>();
+            _changes = new List<object>();
             _router = new Dictionary<Type, Action<object>>();
         }
 
-        public async ValueTask<int> LoadFromHistory(IAsyncEnumerable<object> events) {
-            int i = 0;
+        public async ValueTask<ulong> LoadFromHistory(IAsyncEnumerable<object> events) {
+            var i = 0UL;
 
             await foreach (var e in events) {
-                Apply(e);
+                Apply(e, true);
                 i++;
             }
-
-            MarkChangesAsCommitted();
 
             return i;
         }
 
-        public int LoadFromHistory(IEnumerable<object> events) {
-            int i = 0;
-
-            foreach (var e in events) {
-                Apply(e);
-                i++;
-            }
-
-            MarkChangesAsCommitted();
-
-            return i;
-        }
-
-        public void MarkChangesAsCommitted() => _history.Clear();
-        public IEnumerable<object> GetChanges() => _history.AsEnumerable();
+        public void MarkChangesAsCommitted() => _changes.Clear();
+        public IEnumerable<object> GetChanges() => _changes.AsEnumerable();
         protected void Register<T>(Action<T> apply) => _router.Add(typeof(T), e => apply((T)e));
-        public bool HasChanges => _history.Count > 0;
+        public bool HasChanges => _changes.Count > 0;
 
-        protected void Apply(object e) {
+        protected void Apply(object e, bool historical = false) {
             if (_router.TryGetValue(e.GetType(), out var handle)) {
                 handle(e);
             }
 
-            _history.Add(e);
+            if (!historical) {
+	            _changes.Add(e);
+            }
         }
     }
 }

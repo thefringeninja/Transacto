@@ -11,7 +11,7 @@ namespace SomeCompany.Framework.Http {
         public HttpStatusCode StatusCode { get; }
         public IDictionary<string, string[]> Headers { get; }
 
-        protected Response(HttpStatusCode statusCode, MediaTypeHeaderValue mediaType = null)
+        protected Response(HttpStatusCode statusCode, MediaTypeHeaderValue? mediaType = null)
         {
             StatusCode = statusCode;
             Headers = new Dictionary<string, string[]>(StringComparer.OrdinalIgnoreCase)

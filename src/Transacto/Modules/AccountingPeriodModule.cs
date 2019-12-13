@@ -7,25 +7,28 @@ using Transacto.Messages;
 
 namespace Transacto.Modules {
     public class AccountingPeriodModule : CommandHandlerModule {
-        public AccountingPeriodModule(EventStoreGrpcClient eventStore, JsonSerializerOptions serializerOptions) {
+        public AccountingPeriodModule(EventStoreGrpcClient eventStore,
+            IMessageTypeMapper messageTypeMapper, JsonSerializerOptions serializerOptions) {
             Build<OpenAccountingPeriod>()
                 .Log()
-                .UnitOfWork(eventStore, serializerOptions)
+                .UnitOfWork(eventStore, messageTypeMapper, serializerOptions)
                 .Handle((_, ct) => {
                     var (unitOfWork, command) = _;
                     var handlers =
-                        new AccountingPeriodHandlers(new AccountingPeriodEventStoreRepository(eventStore, unitOfWork));
+                        new AccountingPeriodHandlers(
+                            new AccountingPeriodEventStoreRepository(eventStore, messageTypeMapper, unitOfWork));
 
                     return handlers.Handle(command, ct);
                 });
 
             Build<CloseAccountingPeriod>()
                 .Log()
-                .UnitOfWork(eventStore, serializerOptions)
+                .UnitOfWork(eventStore, messageTypeMapper, serializerOptions)
                 .Handle((_, ct) => {
                     var (unitOfWork, command) = _;
                     var handlers =
-                        new AccountingPeriodHandlers(new AccountingPeriodEventStoreRepository(eventStore, unitOfWork));
+                        new AccountingPeriodHandlers(
+                            new AccountingPeriodEventStoreRepository(eventStore, messageTypeMapper, unitOfWork));
 
                     return handlers.Handle(command, ct);
                 });

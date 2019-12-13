@@ -2,7 +2,7 @@ using System;
 using Transacto.Messages;
 
 namespace Transacto.Domain {
-    public struct PeriodIdentifier : IEquatable<PeriodIdentifier> {
+    public readonly struct PeriodIdentifier : IEquatable<PeriodIdentifier> {
         public static readonly PeriodIdentifier Empty = default;
         public int Month { get; }
         public int Year { get; }
@@ -25,16 +25,12 @@ namespace Transacto.Domain {
             dateTimeOffset.Month == Month && dateTimeOffset.Year == Year;
 
         public bool Equals(PeriodIdentifier other) => Month == other.Month && Year == other.Year;
-        public override bool Equals(object obj) => obj is PeriodIdentifier other && Equals(other);
+        public override bool Equals(object? obj) => obj is PeriodIdentifier other && Equals(other);
         public static bool operator ==(PeriodIdentifier left, PeriodIdentifier right) => left.Equals(right);
         public static bool operator !=(PeriodIdentifier left, PeriodIdentifier right) => !left.Equals(right);
         public override string ToString() => $"{Month:D2}/{Year:D4}";
         public PeriodDto ToDto() => new PeriodDto {Month = Month, Year = Year};
 
-        public override int GetHashCode() {
-            unchecked {
-                return (Month * 397) ^ Year;
-            }
-        }
+        public override int GetHashCode() => HashCode.Combine(Month, Year);
     }
 }
