@@ -1,7 +1,7 @@
 using System;
 
 namespace Transacto.Domain {
-    public struct GeneralLedgerEntryIdentifier : IEquatable<GeneralLedgerEntryIdentifier> {
+    public readonly struct GeneralLedgerEntryIdentifier : IEquatable<GeneralLedgerEntryIdentifier> {
         private readonly Guid _value;
 
         public GeneralLedgerEntryIdentifier(Guid value) {
@@ -23,5 +23,6 @@ namespace Transacto.Domain {
             !left.Equals(right);
 
         public Guid ToGuid() => _value;
+        public override string ToString() => _value.ToString("n");
     }
 }

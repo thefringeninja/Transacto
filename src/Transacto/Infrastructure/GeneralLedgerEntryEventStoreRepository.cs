@@ -1,7 +1,7 @@
 using System;
 using System.Threading;
 using System.Threading.Tasks;
-using EventStore.Grpc;
+using EventStore.Client;
 using Transacto.Domain;
 using Transacto.Framework;
 
@@ -9,7 +9,7 @@ namespace Transacto.Infrastructure {
     public class GeneralLedgerEntryEventStoreRepository : IGeneralLedgerEntryRepository {
         private readonly EventStoreRepository<GeneralLedgerEntry, GeneralLedgerEntryIdentifier> _inner;
 
-        public GeneralLedgerEntryEventStoreRepository(EventStoreGrpcClient eventStore,
+        public GeneralLedgerEntryEventStoreRepository(EventStoreClient eventStore,
             IMessageTypeMapper messageTypeMapper, UnitOfWork unitOfWork) {
             _inner = new EventStoreRepository<GeneralLedgerEntry, GeneralLedgerEntryIdentifier>(eventStore, unitOfWork,
                 GeneralLedgerEntry.Factory, period => period.GeneralLedgerEntryIdentifier,

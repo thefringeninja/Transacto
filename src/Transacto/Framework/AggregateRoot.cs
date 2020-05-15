@@ -13,15 +13,15 @@ namespace Transacto.Framework {
             _router = new Dictionary<Type, Action<object>>();
         }
 
-        public async ValueTask<ulong> LoadFromHistory(IAsyncEnumerable<object> events) {
-            var i = 0UL;
+        public async ValueTask<Optional<long>> LoadFromHistory(IAsyncEnumerable<object> events) {
+            var i = -1;
 
             await foreach (var e in events) {
                 Apply(e, true);
                 i++;
             }
 
-            return i;
+            return i == -1 ? Optional<long>.Empty : i;
         }
 
         public void MarkChangesAsCommitted() => _changes.Clear();

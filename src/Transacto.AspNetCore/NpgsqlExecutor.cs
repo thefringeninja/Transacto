@@ -13,8 +13,6 @@ namespace SomeCompany.Infrastructure {
         private readonly int _commandTimeout;
 
         public NpgsqlExecutor(Func<NpgsqlConnection> connectionFactory, int commandTimeout = 30) {
-            if (connectionFactory == null)
-                throw new ArgumentNullException(nameof(connectionFactory));
             _connectionFactory = connectionFactory;
             _commandTimeout = commandTimeout;
         }
@@ -39,11 +37,8 @@ namespace SomeCompany.Infrastructure {
                 dbCommand.CommandText = command.Text;
                 dbCommand.Parameters.AddRange(command.Parameters);
                 await dbCommand.ExecuteNonQueryAsync(cancellationToken);
-            } catch {
-                throw;
-            }
-            finally {
-                dbConnection.Close();
+            } finally {
+                await dbConnection.CloseAsync();
             }
         }
 

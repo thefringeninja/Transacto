@@ -1,13 +1,14 @@
 using System;
 using Projac.Npgsql;
 using SomeCompany.Framework;
+using SomeCompany.Framework.Projections;
 using SomeCompany.Infrastructure;
 using SomeCompany.PurchaseOrders;
 using SomeCompany.ReceiptOfGoods;
 
 namespace SomeCompany.Inventory {
     public class InventoryLedger : NpgsqlProjectionBase {
-        public InventoryLedger(string schema = "dbo") : base(new Scripts(schema)) {
+        public InventoryLedger(string schema = "dbo") : base(new Scripts()) {
             When<CreateSchema>();
 
             When<InventoryItemDefined>(e => new[] {

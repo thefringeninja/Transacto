@@ -82,7 +82,7 @@ namespace Transacto.Domain {
         }
 
         private void MustBeInBalance() {
-            if (_balance != Money.Zero)
+            if (_balance == Money.Zero)
                 return;
 
             throw new InvalidOperationException();

@@ -8,52 +8,56 @@ using Transacto.Domain;
 using Transacto.Framework;
 
 namespace Transacto.Infrastructure {
-    public class SqlStreamStoreBusinessTransactionRepository<TBusinessTransaction>
-        where TBusinessTransaction : IBusinessTransaction {
-        private readonly IStreamStore _streamStore;
-        private readonly Func<TBusinessTransaction, string> _getStreamName;
-        private readonly JsonSerializerOptions _serializerOptions;
+	public class SqlStreamStoreBusinessTransactionRepository<TBusinessTransaction>
+		where TBusinessTransaction : IBusinessTransaction {
+		private readonly IStreamStore _streamStore;
+		private readonly Func<TBusinessTransaction, string> _getStreamName;
+		private readonly System.Text.Json.JsonSerializerOptions _serializerOptions;
 
-        public SqlStreamStoreBusinessTransactionRepository(
-            IStreamStore streamStore,
-            Func<TBusinessTransaction, string> getStreamName,
-            JsonSerializerOptions serializerOptions) {
-            _streamStore = streamStore;
-            _getStreamName = getStreamName;
-            _serializerOptions = serializerOptions;
-        }
+		public SqlStreamStoreBusinessTransactionRepository(
+			IStreamStore streamStore,
+			Func<TBusinessTransaction, string> getStreamName,
+			System.Text.Json.JsonSerializerOptions serializerOptions) {
+			_streamStore = streamStore;
+			_getStreamName = getStreamName;
+			_serializerOptions = serializerOptions;
+		}
 
-        public async ValueTask<Optional<TBusinessTransaction>> GetOptional(string id,
-            CancellationToken cancellationToken = default) {
-            var page = await _streamStore.ReadStreamBackwards(id, StreamVersion.End, 1,
-                cancellationToken: cancellationToken);
+		public async ValueTask<Optional<TBusinessTransaction>> GetOptional(string id,
+			CancellationToken cancellationToken = default) {
+			var page = await _streamStore.ReadStreamBackwards(id, StreamVersion.End, 1,
+				cancellationToken: cancellationToken);
 
-            if (page.Messages.Length == 0) {
-                return Optional<TBusinessTransaction>.Empty;
-            }
+			if (page.Messages.Length == 0) {
+				return Optional<TBusinessTransaction>.Empty;
+			}
 
-            var data = await page.Messages[0].GetJsonData(cancellationToken);
+			var document = page.Messages[0];
 
-            return JsonSerializer.Deserialize<TBusinessTransaction>(data);
-        }
+			var data = await document.GetJsonData(cancellationToken);
 
-        public async ValueTask<TBusinessTransaction> Get(string id, CancellationToken cancellationToken = default) {
-            var optionalTransaction = await GetOptional(id, cancellationToken);
-            if (!optionalTransaction.HasValue) {
-                throw new InvalidOperationException();
-            }
+			return JsonSerializer.Deserialize<TBusinessTransaction>(data).WithVersion(document.StreamVersion);
+		}
 
-            return optionalTransaction.Value;
-        }
+		public async ValueTask<TBusinessTransaction> Get(string id, CancellationToken cancellationToken = default) {
+			var optionalTransaction = await GetOptional(id, cancellationToken);
+			if (!optionalTransaction.HasValue) {
+				throw new InvalidOperationException();
+			}
 
-        public ValueTask Save(TBusinessTransaction transaction, CancellationToken cancellationToken = default) {
-            if (transaction == null) throw new ArgumentNullException(nameof(transaction));
+			return optionalTransaction.Value;
+		}
 
-            var streamName = _getStreamName(transaction);
-            var data = JsonSerializer.Serialize(transaction, _serializerOptions);
+		public ValueTask Save(TBusinessTransaction transaction, CancellationToken cancellationToken = default) {
+			if (transaction == null) throw new ArgumentNullException(nameof(transaction));
 
-            return new ValueTask(_streamStore.AppendToStream(streamName, ExpectedVersion.Any,
-                new NewStreamMessage(Guid.NewGuid(), typeof(TBusinessTransaction).Name, data), cancellationToken));
-        }
-    }
+			var streamName = _getStreamName(transaction);
+			var data = JsonSerializer.Serialize(transaction, _serializerOptions);
+
+			return new ValueTask(_streamStore.AppendToStream(streamName, transaction.Version.HasValue
+					? transaction.Version.Value
+					: ExpectedVersion.NoStream,
+				new NewStreamMessage(Guid.NewGuid(), typeof(TBusinessTransaction).Name, data), cancellationToken));
+		}
+	}
 }

@@ -7,13 +7,13 @@ namespace Transacto.Framework {
     /// Tracks changes of attached aggregates.
     /// </summary>
     public class UnitOfWork {
-        private readonly IDictionary<string, (AggregateRoot aggregate, Optional<ulong> expectedVersion)> _aggregates;
+        private readonly IDictionary<string, (AggregateRoot aggregate, Optional<long> expectedVersion)> _aggregates;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="UnitOfWork"/> class.
         /// </summary>
         public UnitOfWork() {
-            _aggregates = new Dictionary<string, (AggregateRoot, Optional<ulong>)>();
+            _aggregates = new Dictionary<string, (AggregateRoot, Optional<long>)>();
         }
 
         /// <summary>
@@ -23,7 +23,7 @@ namespace Transacto.Framework {
         /// <param name="aggregate">The aggregate.</param>
         /// <param name="expectedVersion">The expected version.</param>
         /// <exception cref="System.ArgumentNullException">Thrown when the <paramref name="aggregate"/> is null.</exception>
-        public void Attach(string streamName, AggregateRoot aggregate, Optional<ulong> expectedVersion = default) {
+        public void Attach(string streamName, AggregateRoot aggregate, Optional<long> expectedVersion = default) {
             if (_aggregates.ContainsKey(streamName))
                 throw new ArgumentException();
             _aggregates.Add(streamName, (aggregate, expectedVersion));
@@ -57,7 +57,7 @@ namespace Transacto.Framework {
         /// Gets the aggregates with state changes.
         /// </summary>
         /// <returns>An enumeration of <see cref="AggregateRoot"/>.</returns>
-        public IEnumerable<(string streamName, AggregateRoot aggregate, Optional<ulong> expectedVersion)> GetChanges() =>
+        public IEnumerable<(string streamName, AggregateRoot aggregate, Optional<long> expectedVersion)> GetChanges() =>
             _aggregates.Where(_ => _.Value.aggregate.HasChanges).Select(_ => (_.Key, _.Value.aggregate, _.Value.expectedVersion));
     }
 }

@@ -1,125 +1,126 @@
 {
-  "$schema": "https://json-schema.org/draft/2019-09/hyper-schema",
-  "type": "object",
-  "title": "Purchase Order",
-  "additionalProperties": false,
-  "required": [
-    "vendorId",
-    "shippingAddress",
-    "billingAddress",
-    "items",
-    "purchaseOrderReference",
-    "purchaseOrderNumber",
-    "purchaseOrderId",
-    "purchaseOrderItems"
-  ],
-  "properties": {
-    "purchaseOrderId": {
-      "title": "Purchase Order Id",
-      "$ref": "#/definitions/uuid",
-      "x-schema-form": {
-        "key": "purchaseOrderId",
-        "type": "uuid"
-      }
-    },
-    "purchaseOrderReference": {
-      "title": "Reference Number",
-      "type": "string"
-    },
-    "purchaseOrderNumber": {
-      "title": "Purchase Order Number",
-      "type": "integer"
-    },
-    "vendorId": {
-      "title": "Vendor Id",
-      "$ref": "#/definitions/uuid",
-      "x-schema-form": {
-        "key": "vendorId",
-        "type": "uuid"
-      }
-    },
-    "shippingAddress": {
-      "description": "Shipping Address",
-      "$ref": "#/definitions/Address"
-    },
-    "billingAddress": {
-      "description": "Billing Address",
-      "$ref": "#/definitions/Address"
-    },
-    "purchaseOrderItems": {
-      "type": "array",
-      "items": {
-        "$ref": "#/definitions/PurchaseOrderItem"
-      }
-    }
-  },
-  "definitions": {
-    "Address": {
-      "type": "object",
-      "title": "Address",
-      "additionalProperties": false,
-      "required": [
-        "name",
-        "street",
-        "city",
-        "country"
-      ],
-      "properties": {
-        "name": {
-          "type": "string",
-          "title": "Name"
-        },
-        "street": {
-          "type": "string",
-          "title": "Street"
-        },
-        "city": {
-          "type": "string",
-          "title": "City"
-        },
-        "country": {
-          "type": "string",
-          "title": "Country"
-        }
-      }
-    },
-    "PurchaseOrderItem": {
-      "type": "object",
-      "title": "Item",
-      "additionalProperties": false,
-      "required": [
-        "sku",
-        "itemId",
-        "quantity",
-        "unitPrice"
-      ],
-      "properties": {
-        "sku": {
-          "type": "string",
-          "title": "SKU"
-        },
-        "itemId": {
-          "title": "Item Id",
-          "$ref": "#/definitions/uuid",
-          "x-schema-form": {
-            "key": "itemId",
-            "type": "uuid"
-          }
-        },
-        "quantity": {
-          "type": "number",
-          "title": "Quantity"
-        },
-        "unitPrice": {
-          "type": "number",
-          "title": "Unit Price"
-        }
-      }
-    },
-    "uuid": {
-      "type": "string",
-      "pattern": "^[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{12}$",
-      "format": "uuid"
-    }
-  }
+	"$schema": "https://json-schema.org/draft/2019-09/hyper-schema",
+	"type": "object",
+	"title": "Purchase Order",
+	"additionalProperties": false,
+	"required": [
+		"vendorId",
+		"shippingAddress",
+		"billingAddress",
+		"items",
+		"purchaseOrderReference",
+		"purchaseOrderNumber",
+		"purchaseOrderId",
+		"purchaseOrderItems"
+	],
+	"properties": {
+		"purchaseOrderId": {
+			"title": "Purchase Order Id",
+			"$ref": "#/definitions/uuid",
+			"format": "uuid",
+			"x-schema-form": {
+				"key": "purchaseOrderId",
+				"type": "uuid"
+			}
+		},
+		"purchaseOrderReference": {
+			"title": "Reference Number",
+			"type": "string"
+		},
+		"purchaseOrderNumber": {
+			"title": "Purchase Order Number",
+			"type": "integer"
+		},
+		"vendorId": {
+			"title": "Vendor Id",
+			"$ref": "#/definitions/uuid",
+			"x-schema-form": {
+				"key": "vendorId",
+				"type": "uuid"
+			}
+		},
+		"shippingAddress": {
+			"description": "Shipping Address",
+			"$ref": "#/definitions/Address"
+		},
+		"billingAddress": {
+			"description": "Billing Address",
+			"$ref": "#/definitions/Address"
+		},
+		"purchaseOrderItems": {
+			"type": "array",
+			"items": {
+				"$ref": "#/definitions/PurchaseOrderItem"
+			}
+		}
+	},
+	"definitions": {
+		"Address": {
+			"type": "object",
+			"title": "Address",
+			"additionalProperties": false,
+			"required": [
+				"name",
+				"street",
+				"city",
+				"country"
+			],
+			"properties": {
+				"name": {
+					"type": "string",
+					"title": "Name"
+				},
+				"street": {
+					"type": "string",
+					"title": "Street"
+				},
+				"city": {
+					"type": "string",
+					"title": "City"
+				},
+				"country": {
+					"type": "string",
+					"title": "Country"
+				}
+			}
+		},
+		"PurchaseOrderItem": {
+			"type": "object",
+			"title": "Item",
+			"additionalProperties": false,
+			"required": [
+				"sku",
+				"itemId",
+				"quantity",
+				"unitPrice"
+			],
+			"properties": {
+				"sku": {
+					"type": "string",
+					"title": "SKU"
+				},
+				"itemId": {
+					"title": "Item Id",
+					"$ref": "#/definitions/uuid",
+					"x-schema-form": {
+						"key": "itemId",
+						"type": "uuid"
+					}
+				},
+				"quantity": {
+					"type": "number",
+					"title": "Quantity"
+				},
+				"unitPrice": {
+					"type": "number",
+					"title": "Unit Price"
+				}
+			}
+		},
+		"uuid": {
+			"type": "string",
+			"pattern": "^[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{12}$",
+			"format": "uuid"
+		}
+	}
 }

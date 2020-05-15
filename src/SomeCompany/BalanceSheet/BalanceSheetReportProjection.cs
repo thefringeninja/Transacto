@@ -1,11 +1,12 @@
 using System;
 using SomeCompany.Framework;
+using SomeCompany.Framework.Projections;
 using SomeCompany.Infrastructure;
 using Transacto.Messages;
 
 namespace SomeCompany.BalanceSheet {
     public class BalanceSheetReportProjection : NpgsqlProjectionBase {
-        public BalanceSheetReportProjection(string schema) : base(new Scripts(schema)) {
+        public BalanceSheetReportProjection(string schema) : base(new Scripts()) {
             When<CreateSchema>();
 
             When<GeneralLedgerEntryCreated>(e => new[] {

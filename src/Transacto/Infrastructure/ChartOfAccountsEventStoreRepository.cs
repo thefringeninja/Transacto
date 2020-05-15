@@ -1,7 +1,7 @@
 using System;
 using System.Threading;
 using System.Threading.Tasks;
-using EventStore.Grpc;
+using EventStore.Client;
 using Transacto.Domain;
 using Transacto.Framework;
 
@@ -9,7 +9,7 @@ namespace Transacto.Infrastructure {
 	public class ChartOfAccountsEventStoreRepository : IChartOfAccountsRepository {
 		private readonly EventStoreRepository<ChartOfAccounts, string> _inner;
 
-		public ChartOfAccountsEventStoreRepository(EventStoreGrpcClient eventStore,
+		public ChartOfAccountsEventStoreRepository(EventStoreClient eventStore,
 			IMessageTypeMapper messageTypeMapper, UnitOfWork unitOfWork) {
 			_inner = new EventStoreRepository<ChartOfAccounts, string>(eventStore, unitOfWork,
 				ChartOfAccounts.Factory, _ => string.Empty, _ => "chartOfAccounts", messageTypeMapper);

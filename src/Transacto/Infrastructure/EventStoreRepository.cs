@@ -3,8 +3,7 @@ using System.Linq;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
-using EventStore.Grpc;
-using Transacto.Domain;
+using EventStore.Client;
 using Transacto.Framework;
 
 namespace Transacto.Infrastructure {
@@ -13,7 +12,7 @@ namespace Transacto.Infrastructure {
             PropertyNamingPolicy = JsonNamingPolicy.CamelCase
         };
 
-        private readonly EventStoreGrpcClient _eventStore;
+        private readonly EventStoreClient _eventStore;
         private readonly UnitOfWork _unitOfWork;
         private readonly Func<TAggregateRoot> _factory;
         private readonly Func<TAggregateRoot, TIdentifier> _getIdentifier;
@@ -22,7 +21,7 @@ namespace Transacto.Infrastructure {
         private readonly JsonSerializerOptions _serializerOptions;
 
         public EventStoreRepository(
-            EventStoreGrpcClient eventStore,
+            EventStoreClient eventStore,
             UnitOfWork unitOfWork,
             Func<TAggregateRoot> factory,
             Func<TAggregateRoot, TIdentifier> getIdentifier,
@@ -46,13 +45,13 @@ namespace Transacto.Infrastructure {
             }
 
             try {
-                var events = _eventStore.ReadStreamForwardsAsync(
-                    streamName, StreamRevision.Start, int.MaxValue, cancellationToken: cancellationToken);
+                var events = _eventStore.ReadStreamAsync(Direction.Forwards,
+                    streamName, StreamPosition.Start, int.MaxValue, cancellationToken: cancellationToken);
 
                 aggregate = _factory();
 
                 var version = await aggregate.LoadFromHistory(events.Select(e =>
-                    JsonSerializer.Deserialize(e.OriginalEvent.Data,
+                    JsonSerializer.Deserialize(e.OriginalEvent.Data.Span,
                         _messageTypeMapper.Map(e.OriginalEvent.EventType),
                         _serializerOptions)));
 

@@ -1,33 +1,40 @@
 using System;
-using System.Text.Json;
+using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
+using Dapper;
+using Npgsql;
 using SqlStreamStore;
+using Transacto.Framework;
 using Transacto.Infrastructure;
+using JsonSerializerOptions = System.Text.Json.JsonSerializerOptions;
 
 namespace SomeCompany.PurchaseOrders {
-    public class PurchaseOrderRepository {
-        private readonly SqlStreamStoreBusinessTransactionRepository<PurchaseOrder> _inner;
+	public class PurchaseOrderRepository {
+		private readonly string _schema;
+		private readonly Func<CancellationToken, Task<NpgsqlConnection>> _connectionFactory;
+		private readonly SqlStreamStoreBusinessTransactionRepository<PurchaseOrder> _inner;
 
-        public PurchaseOrderRepository(IStreamStore streamStore) {
-            if (streamStore == null) throw new ArgumentNullException(nameof(streamStore));
-            _inner = new SqlStreamStoreBusinessTransactionRepository<PurchaseOrder>(streamStore,
-                order => GetStreamName(Guid.Parse(order.PurchaseOrderId)), new JsonSerializerOptions());
-        }
+		public PurchaseOrderRepository(IStreamStore streamStore, string schema,
+			Func<CancellationToken, Task<NpgsqlConnection>> connectionFactory) {
+			_schema = schema;
+			_connectionFactory = connectionFactory;
+			_inner = new SqlStreamStoreBusinessTransactionRepository<PurchaseOrder>(streamStore,
+				order => GetStreamName(order.PurchaseOrderId), new JsonSerializerOptions());
+		}
 
-        private static string GetStreamName(Guid purchaseOrderId) => $"purchaseorder-{purchaseOrderId:n}";
+		private static string GetStreamName(Guid purchaseOrderId) => $"purchaseorder-{purchaseOrderId:n}";
 
-        public async ValueTask<PurchaseOrder> Get(Guid purchaseOrderId, CancellationToken cancellationToken = default) {
-            var optionalPurchaseOrder = await _inner.GetOptional(GetStreamName(purchaseOrderId), cancellationToken);
+		public ValueTask<Optional<PurchaseOrder>> Get(Guid purchaseOrderId,
+			CancellationToken cancellationToken = default) =>
+			_inner.GetOptional(GetStreamName(purchaseOrderId), cancellationToken);
 
-            return optionalPurchaseOrder.HasValue
-                ? optionalPurchaseOrder.Value
-                : new PurchaseOrder {
-                    PurchaseOrderId = purchaseOrderId.ToString()
-                };
-        }
+		public async ValueTask<IEnumerable<PurchaseOrder>> List(CancellationToken cancellationToken) {
+			await using var connection = await _connectionFactory(cancellationToken);
+			return await connection.QueryAsync<PurchaseOrder>($"SELECT * FROM {_schema}.purchase_orders");
+		}
 
-        public ValueTask Save(PurchaseOrder purchaseOrder, CancellationToken cancellationToken = default) =>
-            _inner.Save(purchaseOrder, cancellationToken);
-    }
+		public ValueTask Save(PurchaseOrder purchaseOrder, CancellationToken cancellationToken = default) =>
+			_inner.Save(purchaseOrder, cancellationToken);
+	}
 }

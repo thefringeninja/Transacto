@@ -12,11 +12,18 @@ namespace Transacto.Application {
             _generalLedgerEntries = generalLedgerEntries;
         }
 
-        public async ValueTask Handle(PostGeneralLedgerEntry command, CancellationToken cancellationToken = default) {
-            var entry = await _generalLedgerEntries.Get(new GeneralLedgerEntryIdentifier(command.GeneralLedgerEntryId),
-                cancellationToken);
+        public ValueTask Handle(PostGeneralLedgerEntry command, CancellationToken cancellationToken = default) {
+	        if (command.BusinessTransaction == null) {
+		        throw new Exception();
+	        }
+	        var entry = command.BusinessTransaction.GetGeneralLedgerEntry(PeriodIdentifier.FromDto(command.Period),
+		        command.CreatedOn);
 
             entry.Post();
+
+            _generalLedgerEntries.Add(entry);
+
+            return new ValueTask(Task.CompletedTask);
         }
     }
 }

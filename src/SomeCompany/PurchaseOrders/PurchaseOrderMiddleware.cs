@@ -1,71 +1,76 @@
 using System;
-using System.Data;
-using System.Threading;
-using System.Threading.Tasks;
-using Dapper;
+using System.Collections.Generic;
+using System.Linq;
+using System.Net;
+using Hallo;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
 using SomeCompany.Framework.Http;
-using SqlStreamStore;
-using MidFunc = System.Func<Microsoft.AspNetCore.Http.HttpContext, System.Func<System.Threading.Tasks.Task>,
-    System.Threading.Tasks.Task>;
 
 namespace SomeCompany.PurchaseOrders {
-    public static class PurchaseOrderMiddleware {
-        public static IApplicationBuilder UsePurchaseOrders(this IApplicationBuilder builder,
-            PurchaseOrderResource purchaseOrders,
-            PurchaseOrderListResource purchaseOrderList) {
-            return builder.UseRouter(
-                router => router
-                    .MapMiddlewareGet("list", inner => inner.Use(Get(purchaseOrderList)))
-                    .MapMiddlewareGet("{purchaseOrderId:guid}", inner => inner.Use(Get(purchaseOrders)))
-            );
-        }
+	public static class PurchaseOrderMiddleware {
+		public static void UsePurchaseOrders(this IEndpointRouteBuilder builder,
+			PurchaseOrderRepository purchaseOrders) {
+			builder
+				.MapGet(string.Empty, async context => {
+					var orders = await purchaseOrders.List(context.RequestAborted);
 
-        private static MidFunc Get(PurchaseOrderResource purchaseOrders) => async (context, next) => {
-            var response = await purchaseOrders.Get(Guid.Parse(context.GetRouteValue("purchaseOrderId").ToString()),
-                context.RequestAborted);
+					return new HalResponse(PurchaseOrderListRepresentation.Instance, orders);
+				})
+				.MapPost(string.Empty, async (HttpContext context, PurchaseOrder purchaseOrder) => {
+					if (purchaseOrder.PurchaseOrderId == Guid.Empty) {
+						purchaseOrder.PurchaseOrderId = Guid.NewGuid();
+					}
 
-            await context.WriteResponse(response);
-        };
+					await purchaseOrders.Save(purchaseOrder, context.RequestAborted);
 
-        private static MidFunc Get(PurchaseOrderListResource purchaseOrderList) => async (context, next) => {
-            var response = await purchaseOrderList.Get(context.RequestAborted);
-            await context.WriteResponse(response);
-        };
-    }
+					return new HalResponse(PurchaseOrderRepresentation.Instance, purchaseOrder) {
+						StatusCode = HttpStatusCode.Created,
+						Headers = {
+							("location", purchaseOrder.PurchaseOrderId.ToString())
+						}
+					};
+				})
+				.MapGet("{purchaseOrderId:guid}", async context => {
+					if (!context.TryParseGuid(nameof(PurchaseOrder.PurchaseOrderId), out var purchaseOrderId)) {
+						return new HalResponse(PurchaseOrderRepresentation.Instance) {
+							StatusCode = HttpStatusCode.NotFound
+						};
+					}
 
-    public class PurchaseOrderResource {
-        private readonly IStreamStore _streamStore;
+					var order = await purchaseOrders.Get(purchaseOrderId, context.RequestAborted);
 
-        public PurchaseOrderResource(IStreamStore streamStore) {
-            _streamStore = streamStore;
-        }
+					return new HalResponse(PurchaseOrderRepresentation.Instance, order) {
+						StatusCode = order.HasValue ? HttpStatusCode.OK : HttpStatusCode.NotFound
+					};
+				})
+				.MapPut("{purchaseOrderId:guid}", async (HttpContext context, PurchaseOrder purchaseOrder) => {
+					if (!context.TryParseGuid(nameof(purchaseOrder.PurchaseOrderId), out var purchaseOrderId)) {
+						return new HalResponse(PurchaseOrderRepresentation.Instance) {
+							StatusCode = HttpStatusCode.NotFound
+						};
+					}
 
-        public async Task<Response> Get(Guid purchaseOrderId, CancellationToken cancellationToken) {
-            var purchaseOrder = await _streamStore.ReadStreamBackwards($"purchaseOrder-{purchaseOrderId:n}",
-                int.MaxValue, 1, true, cancellationToken);
+					purchaseOrder.PurchaseOrderId = purchaseOrderId;
 
-            return new JsonResponse(purchaseOrder);
-        }
-    }
+					await purchaseOrders.Save(purchaseOrder, context.RequestAborted);
 
-    public class PurchaseOrderListResource {
-        private readonly Func<IDbConnection> _connectionFactory;
-        private readonly string _schema;
+					return new HalResponse(PurchaseOrderRepresentation.Instance, purchaseOrder);
+				})
+				.MapBusinessTransaction<PurchaseOrder>("{purchaseOrderId:guid}");
+		}
 
-        public PurchaseOrderListResource(Func<IDbConnection> connectionFactory, string schema) {
-            _connectionFactory = connectionFactory;
-            _schema = schema;
-        }
 
-        public async Task<Response> Get(CancellationToken cancellationToken) {
-            using var connection = _connectionFactory();
+		private class PurchaseOrderListRepresentation : Hal<IEnumerable<PurchaseOrder>>,
+			IHalState<IEnumerable<PurchaseOrder>> {
+			public static readonly PurchaseOrderListRepresentation Instance = new PurchaseOrderListRepresentation();
+			public object StateFor(IEnumerable<PurchaseOrder> resource) => resource.ToArray();
+		}
 
-            var results = await connection.QueryAsync<PurchaseOrder>($"SELECT * FROM {_schema}.purchase_orders");
-
-            return new JsonResponse(results);
-        }
-    }
+		private class PurchaseOrderRepresentation : Hal<PurchaseOrder>, IHalState<PurchaseOrder> {
+			public object StateFor(PurchaseOrder resource) => resource;
+			public static readonly PurchaseOrderRepresentation Instance = new PurchaseOrderRepresentation();
+		}
+	}
 }
