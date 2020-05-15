@@ -3,7 +3,7 @@ using Inflector;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.DependencyInjection;
-using Transaction.AspNetCore;
+using Transacto;
 using Transacto.Framework;
 
 #nullable enable

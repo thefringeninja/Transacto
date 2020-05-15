@@ -6,9 +6,8 @@ using EventStore.Client;
 using Npgsql;
 using Projac.Npgsql;
 using Projac.Sql;
-using SomeCompany.Infrastructure;
 
-namespace SomeCompany.Framework.Projections {
+namespace Transacto {
 	public abstract class NpgsqlProjectionBase : SqlProjection {
 		protected NpgsqlScripts Scripts { get; }
 		public string Schema { set => Scripts.Schema = value; }

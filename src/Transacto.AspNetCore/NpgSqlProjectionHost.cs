@@ -9,13 +9,10 @@ using Npgsql;
 using Projac.Sql;
 using Projac.Sql.Executors;
 using Serilog;
-using SomeCompany.Framework.Projections;
-using SomeCompany.Infrastructure;
 using Transacto.Framework;
 using Transacto.Infrastructure;
 
-#nullable enable
-namespace SomeCompany {
+namespace Transacto {
 	public class NpgSqlProjectionHost : IHostedService {
 		private readonly EventStoreClient _eventStore;
 		private readonly IMessageTypeMapper _messageTypeMap;

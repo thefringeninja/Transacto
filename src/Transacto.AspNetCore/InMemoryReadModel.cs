@@ -2,7 +2,7 @@ using System;
 using System.Collections;
 using System.Collections.Concurrent;
 
-namespace Transaction.AspNetCore {
+namespace Transacto {
 	public class InMemoryReadModel {
 		private readonly ConcurrentDictionary<string, object> _readModels;
 
@@ -12,7 +12,7 @@ namespace Transaction.AspNetCore {
 
 		public void Update<T>(string key, Action<T> action, Func<T> factory = null) {
 			factory ??= Activator.CreateInstance<T>;
-			var maybeTarget = _readModels.GetOrAdd(key, _ => factory());
+			var maybeTarget = _readModels.GetOrAdd(key, _ => factory()!);
 
 			if (!(maybeTarget is T target)) {
 				return;
@@ -31,7 +31,7 @@ namespace Transaction.AspNetCore {
 
 		public bool TryGet<T, TTransformed>(string key, Func<T, TTransformed> transform, out TTransformed target) {
 			if (!_readModels.TryGetValue(key, out var maybeTarget) || !(maybeTarget is T value)) {
-				target = default;
+				target = default!;
 				return false;
 			}
 

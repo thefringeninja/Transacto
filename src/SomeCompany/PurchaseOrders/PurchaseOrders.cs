@@ -6,7 +6,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Npgsql;
 using SqlStreamStore;
-using Transaction.AspNetCore;
+using Transacto;
 using Transacto.Framework;
 
 namespace SomeCompany.PurchaseOrders {

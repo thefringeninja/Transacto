@@ -9,7 +9,7 @@ using Microsoft.Extensions.Hosting;
 using Npgsql;
 using Serilog;
 using SqlStreamStore;
-using Transaction.AspNetCore;
+using Transacto;
 
 namespace SomeCompany {
 	internal class Program : IDisposable {

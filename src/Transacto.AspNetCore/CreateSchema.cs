@@ -1,4 +1,4 @@
-namespace SomeCompany.Infrastructure {
+namespace Transacto {
     public class CreateSchema {
     }
 }

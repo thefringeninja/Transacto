@@ -3,7 +3,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Transacto.Framework;
 
-namespace Transaction.AspNetCore {
+namespace Transacto {
 	internal class CommandDispatcher {
 		private readonly CommandHandlerResolver _resolver;
 

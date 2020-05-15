@@ -1,6 +1,6 @@
 using Projac.Npgsql;
-using SomeCompany.Framework.Projections;
 using SomeCompany.Infrastructure;
+using Transacto;
 
 namespace SomeCompany.PurchaseOrders {
     public class PurchaseOrderListProjection : NpgsqlProjectionBase {
