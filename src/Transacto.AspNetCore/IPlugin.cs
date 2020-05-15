@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace Transaction.AspNetCore {
+namespace Transacto {
 	public interface IPlugin {
 		public string Name { get; }
 		public void Configure(IEndpointRouteBuilder builder) { }

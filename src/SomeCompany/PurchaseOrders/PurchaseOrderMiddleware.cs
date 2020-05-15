@@ -6,7 +6,7 @@ using Hallo;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
-using SomeCompany.Framework.Http;
+using Transacto;
 
 namespace SomeCompany.PurchaseOrders {
 	public static class PurchaseOrderMiddleware {

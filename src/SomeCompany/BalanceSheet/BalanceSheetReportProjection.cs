@@ -1,7 +1,5 @@
 using System;
-using SomeCompany.Framework;
-using SomeCompany.Framework.Projections;
-using SomeCompany.Infrastructure;
+using Transacto;
 using Transacto.Messages;
 
 namespace SomeCompany.BalanceSheet {

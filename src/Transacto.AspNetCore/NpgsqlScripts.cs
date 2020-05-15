@@ -3,14 +3,14 @@ using System.Collections.Concurrent;
 using System.IO;
 using System.Reflection;
 
-namespace SomeCompany.Infrastructure {
+namespace Transacto {
 	public abstract class NpgsqlScripts {
 		private Assembly s_assembly => GetType().Assembly;
 
 		private readonly ConcurrentDictionary<string, string> _scripts
 			= new ConcurrentDictionary<string, string>();
 
-		public string Schema { get; set; }
+		public string Schema { get; set; } = null!;
 
 		public string this[Type eventType] => GetScript(eventType.Name);
 

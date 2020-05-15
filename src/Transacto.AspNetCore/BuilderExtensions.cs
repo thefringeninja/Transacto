@@ -7,14 +7,12 @@ using System.Reflection;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
-using Hallo;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.AspNetCore.Routing.Template;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Net.Http.Headers;
-using SomeCompany.Framework.Http;
-using Transaction.AspNetCore;
+using Transacto;
 using Transacto.Domain;
 using Transacto.Framework;
 using Transacto.Infrastructure;
@@ -23,16 +21,6 @@ using Transacto.Messages;
 // ReSharper disable CheckNamespace
 namespace Microsoft.AspNetCore.Builder {
 	// ReSharper restore CheckNamespace
-
-	internal class ChartOfAccountRepresentation : Hal<SortedDictionary<string, string>>,
-		IHalLinks<SortedDictionary<string, string>>,
-		IHalState<SortedDictionary<string, string>> {
-		public IEnumerable<Link> LinksFor(SortedDictionary<string, string> resource) {
-			yield break;
-		}
-
-		public object StateFor(SortedDictionary<string, string> resource) => resource;
-	}
 
 	public static class BuilderExtensions {
 		public static IApplicationBuilder UseTransacto(this IApplicationBuilder builder) {
@@ -71,7 +59,7 @@ namespace Microsoft.AspNetCore.Builder {
 				throw new Exception();
 			}
 
-			return builder.MapGet<object>(route, values => null, (_, ct) => getResponse(ct));
+			return builder.MapGet<object>(route, values => null!, (_, ct) => getResponse(ct));
 		}
 
 		public static IEndpointRouteBuilder MapGet(this IEndpointRouteBuilder builder, string route,
@@ -138,7 +126,7 @@ namespace Microsoft.AspNetCore.Builder {
 				              mi.IsGenericMethod &&
 				              mi.GetGenericArguments().Length == argumentCount);
 
-			return builder.MapGet(route, values => (T)createDtoMethod.Invoke(null, values), getResponse);
+			return builder.MapGet(route, values => (T)createDtoMethod.Invoke(null, values)!, getResponse);
 		}
 
 		public static IEndpointRouteBuilder MapCommands(this IEndpointRouteBuilder builder, string route,

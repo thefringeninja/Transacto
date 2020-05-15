@@ -1,10 +1,8 @@
 using System;
 using Projac.Npgsql;
-using SomeCompany.Framework;
-using SomeCompany.Framework.Projections;
-using SomeCompany.Infrastructure;
 using SomeCompany.PurchaseOrders;
 using SomeCompany.ReceiptOfGoods;
+using Transacto;
 
 namespace SomeCompany.Inventory {
     public class InventoryLedger : NpgsqlProjectionBase {

@@ -7,12 +7,11 @@ using EventStore.Client;
 using Microsoft.Extensions.Hosting;
 using Projac;
 using Serilog;
-using Transaction.AspNetCore;
 using Transacto.Framework;
 using Transacto.Infrastructure;
 
 #nullable enable
-namespace SomeCompany {
+namespace Transacto {
 	public class InMemoryProjectionHost : IHostedService {
 		private readonly EventStoreClient _eventStore;
 		private readonly IMessageTypeMapper _messageTypeMapper;

@@ -1,13 +1,12 @@
 using System;
 using System.Collections.Generic;
-using System.Data.SqlClient;
 using System.Threading;
 using System.Threading.Tasks;
 using Npgsql;
 using Projac.Sql;
 using Projac.Sql.Executors;
 
-namespace SomeCompany.Infrastructure {
+namespace Transacto {
     public class NpgsqlExecutor : IAsyncSqlNonQueryCommandExecutor {
         private readonly Func<NpgsqlConnection> _connectionFactory;
         private readonly int _commandTimeout;
