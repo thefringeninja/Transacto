@@ -1,4 +1,4 @@
-INSERT INTO __schema__.purchase_orders
+INSERT INTO purchase_orders
 (purchase_order_id,
  purchase_order_number,
  vendor_id)

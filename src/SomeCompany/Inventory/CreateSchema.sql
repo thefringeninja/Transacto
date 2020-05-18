@@ -1,4 +1,4 @@
-CREATE TABLE IF NOT EXISTS __schema__.inventory_ledger (
+CREATE TABLE IF NOT EXISTS inventory_ledger (
     inventory_item_id UUID NOT NULL,
     sku VARCHAR(256) NOT NULL,
     on_hand DECIMAL NOT NULL,
@@ -10,4 +10,4 @@ CREATE TABLE IF NOT EXISTS __schema__.inventory_ledger (
 
 
 CREATE UNIQUE INDEX IF NOT EXISTS ix_inventory_ledger_sku
-ON __schema__.inventory_ledger (sku);
+ON inventory_ledger (sku);

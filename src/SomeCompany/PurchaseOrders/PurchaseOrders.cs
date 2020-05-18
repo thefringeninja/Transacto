@@ -1,9 +1,7 @@
 using System;
 using System.Collections.Generic;
-using EventStore.Client;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
 using Npgsql;
 using SqlStreamStore;
 using Transacto;
@@ -24,12 +22,11 @@ namespace SomeCompany.PurchaseOrders {
 				}));
 		}
 
-		public void ConfigureServices(IServiceCollection services)
-			=> services.AddSingleton<IHostedService>(provider => new NpgSqlProjectionHost(
-				provider.GetRequiredService<EventStoreClient>(),
-				provider.GetRequiredService<IMessageTypeMapper>(),
-				provider.GetRequiredService<Func<NpgsqlConnection>>()));
+		public void ConfigureServices(IServiceCollection services) => services
+			.AddNpgSqlProjection<PurchaseOrderListProjection>()
+			.AddSingleton<StreamStoreProjection>(provider =>
+				new PurchaseOrderFeed(provider.GetRequiredService<IMessageTypeMapper>()));
 
-		public IEnumerable<Type> MessageTypes { get { yield return typeof(PurchaseOrder); } }
+		public IEnumerable<Type> MessageTypes { get { yield return typeof(PurchaseOrderPlaced); } }
 	}
 }

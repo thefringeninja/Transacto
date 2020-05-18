@@ -24,7 +24,7 @@ namespace SomeCompany.BalanceSheet {
 
         [Theory, AutoSomeCompanyData]
         public Task when_a_general_ledger_entry_was_created(GeneralLedgerEntryIdentifier generalLedgerEntryIdentifier,
-            PeriodIdentifier period) => new NpgsqlProjectionScenario(new BalanceSheetReportProjection(_schema))
+            PeriodIdentifier period) => new NpgsqlProjectionScenario(new BalanceSheetReportProjection())
             .Given(new CreateSchema())
             .Given(new GeneralLedgerEntryCreated {
                 GeneralLedgerEntryId = generalLedgerEntryIdentifier.ToGuid(),
@@ -44,7 +44,7 @@ namespace SomeCompany.BalanceSheet {
         public Task when_a_credit_was_applied(
             GeneralLedgerEntryIdentifier generalLedgerEntryIdentifier,
             PeriodIdentifier period,
-            Credit credit) => new NpgsqlProjectionScenario(new BalanceSheetReportProjection(_schema))
+            Credit credit) => new NpgsqlProjectionScenario(new BalanceSheetReportProjection())
             .Given(new CreateSchema())
             .Given(new GeneralLedgerEntryCreated {
                 GeneralLedgerEntryId = generalLedgerEntryIdentifier.ToGuid(),
@@ -73,7 +73,7 @@ namespace SomeCompany.BalanceSheet {
         public Task when_a_debit_was_applied(
             GeneralLedgerEntryIdentifier generalLedgerEntryIdentifier,
             PeriodIdentifier period,
-            Credit credit) => new NpgsqlProjectionScenario(new BalanceSheetReportProjection(_schema))
+            Credit credit) => new NpgsqlProjectionScenario(new BalanceSheetReportProjection())
             .Given(new CreateSchema())
             .Given(new GeneralLedgerEntryCreated {
                 GeneralLedgerEntryId = generalLedgerEntryIdentifier.ToGuid(),
@@ -105,7 +105,7 @@ namespace SomeCompany.BalanceSheet {
             AccountNumber credit,
             AccountNumber debit,
             Money amount,
-            int iterations) => new NpgsqlProjectionScenario(new BalanceSheetReportProjection(_schema))
+            int iterations) => new NpgsqlProjectionScenario(new BalanceSheetReportProjection())
             .Given(new CreateSchema())
             .Given(new GeneralLedgerEntryCreated {
                 GeneralLedgerEntryId = generalLedgerEntryIdentifier.ToGuid(),

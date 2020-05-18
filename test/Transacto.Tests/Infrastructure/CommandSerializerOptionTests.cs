@@ -84,13 +84,10 @@ namespace Transacto.Infrastructure {
 	internal class TestBusinessTransaction : IBusinessTransaction {
 		public Guid TransactionId { get; set; }
 
-		public GeneralLedgerEntry GetGeneralLedgerEntry(PeriodIdentifier period, DateTimeOffset createdOn) {
-			var entry = GeneralLedgerEntry.Create(new GeneralLedgerEntryIdentifier(TransactionId),
-				new GeneralLedgerEntryNumber(), period, createdOn);
+		public GeneralLedgerEntryNumber ReferenceNumber { get; }
 
-			entry.ApplyTransaction(this);
-
-			return entry;
+		public void Apply(GeneralLedgerEntry generalLedgerEntry) {
+			generalLedgerEntry.ApplyTransaction(this);
 		}
 
 		public IEnumerable<object> GetAdditionalChanges() {

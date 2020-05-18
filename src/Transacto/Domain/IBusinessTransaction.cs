@@ -1,10 +1,10 @@
-using System;
 using System.Collections.Generic;
 using Transacto.Framework;
 
 namespace Transacto.Domain {
 	public interface IBusinessTransaction {
-		public GeneralLedgerEntry GetGeneralLedgerEntry(PeriodIdentifier period, DateTimeOffset createdOn);
+		public GeneralLedgerEntryNumber ReferenceNumber { get; }
+		public void Apply(GeneralLedgerEntry generalLedgerEntry);
 		IEnumerable<object> GetAdditionalChanges();
 		int? Version { get; set; }
 	}

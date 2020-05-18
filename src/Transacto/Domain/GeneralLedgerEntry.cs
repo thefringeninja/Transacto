@@ -3,89 +3,83 @@ using Transacto.Framework;
 using Transacto.Messages;
 
 namespace Transacto.Domain {
-    public class GeneralLedgerEntry : AggregateRoot {
-        public static readonly Func<GeneralLedgerEntry> Factory = () => new GeneralLedgerEntry();
-        private GeneralLedgerEntryIdentifier _identifier;
-        private bool _posted;
-        private Money _balance;
+	public class GeneralLedgerEntry : AggregateRoot {
+		public static readonly Func<GeneralLedgerEntry> Factory = () => new GeneralLedgerEntry();
+		private GeneralLedgerEntryIdentifier _identifier;
+		private Money _balance;
+		private bool _posted;
 
-        public GeneralLedgerEntryIdentifier GeneralLedgerEntryIdentifier => _identifier;
-        public bool IsInBalance => _balance == Money.Zero;
+		public GeneralLedgerEntryIdentifier GeneralLedgerEntryIdentifier => _identifier;
+		public bool IsInBalance => _balance == Money.Zero;
 
-        private GeneralLedgerEntry() {
-            Register<GeneralLedgerEntryCreated>(e => _identifier = new GeneralLedgerEntryIdentifier(e.GeneralLedgerEntryId));
-            Register<CreditApplied>(e => _balance += new Money(e.Amount));
-            Register<DebitApplied>(e => _balance -= new Money(e.Amount));
-            Register<GeneralLedgerEntryPosted>(_ => _posted = true);
-        }
+		internal GeneralLedgerEntry(GeneralLedgerEntryIdentifier identifier,
+			GeneralLedgerEntryNumber number, PeriodIdentifier period, DateTimeOffset createdOn) : this() {
+			Apply(new GeneralLedgerEntryCreated {
+				GeneralLedgerEntryId = identifier.ToGuid(),
+				Number = number.ToString(),
+				CreatedOn = createdOn,
+				Period = period.ToDto()
+			});
+		}
 
-        public static GeneralLedgerEntry Create(GeneralLedgerEntryIdentifier identifier,
-            GeneralLedgerEntryNumber number, PeriodIdentifier period, DateTimeOffset createdOn) {
-            if (!period.Contains(createdOn)) {
-                throw new InvalidOperationException();
-            }
+		private GeneralLedgerEntry() {
+			Register<GeneralLedgerEntryCreated>(e =>
+				_identifier = new GeneralLedgerEntryIdentifier(e.GeneralLedgerEntryId));
+			Register<CreditApplied>(e => _balance += new Money(e.Amount));
+			Register<DebitApplied>(e => _balance -= new Money(e.Amount));
+			Register<GeneralLedgerEntryPosted>(_ => _posted = true);
+		}
 
-            var entry = Factory();
+		public void ApplyCredit(Credit credit) {
+			MustNotBePosted();
 
-            entry.Apply(new GeneralLedgerEntryCreated {
-                GeneralLedgerEntryId = identifier.ToGuid(),
-                Number = number.ToString(),
-                CreatedOn = createdOn,
-                Period = period.ToDto()
-            });
+			Apply(new CreditApplied {
+				GeneralLedgerEntryId = _identifier.ToGuid(),
+				Amount = credit.Amount.ToDecimal(),
+				AccountNumber = credit.AccountNumber.ToInt32()
+			});
+		}
 
-            return entry;
-        }
+		public void ApplyDebit(Debit debit) {
+			MustNotBePosted();
 
-        public void ApplyCredit(Credit credit) {
-            MustNotBePosted();
+			Apply(new DebitApplied {
+				GeneralLedgerEntryId = _identifier.ToGuid(),
+				Amount = debit.Amount.ToDecimal(),
+				AccountNumber = debit.AccountNumber.ToInt32()
+			});
+		}
 
-            Apply(new CreditApplied {
-                GeneralLedgerEntryId = _identifier.ToGuid(),
-                Amount = credit.Amount.ToDecimal(),
-                AccountNumber = credit.AccountNumber.ToInt32()
-            });
-        }
+		public void ApplyTransaction(IBusinessTransaction transaction) {
+			MustNotBePosted();
 
-        public void ApplyDebit(Debit debit) {
-            MustNotBePosted();
+			foreach (var x in transaction.GetAdditionalChanges()) {
+				Apply(x);
+			}
+		}
 
-            Apply(new DebitApplied {
-                GeneralLedgerEntryId = _identifier.ToGuid(),
-                Amount = debit.Amount.ToDecimal(),
-                AccountNumber = debit.AccountNumber.ToInt32()
-            });
-        }
+		public void Post() {
+			if (_posted) {
+				return;
+			}
+			MustBeInBalance();
 
-        public void ApplyTransaction(IBusinessTransaction transaction) {
-            MustNotBePosted();
+			Apply(new GeneralLedgerEntryPosted {
+				GeneralLedgerEntryId = _identifier.ToGuid()
+			});
+		}
 
-            foreach (var x in transaction.GetAdditionalChanges()) {
-                Apply(x);
-            }
-        }
+		private void MustNotBePosted() {
+			if (!_posted) return;
 
-        public void Post() {
-            MustNotBePosted();
-            MustBeInBalance();
+			throw new InvalidOperationException();
+		}
 
-            Apply(new GeneralLedgerEntryPosted {
-                GeneralLedgerEntryId = _identifier.ToGuid()
-            });
-        }
 
-        private void MustNotBePosted() {
-            if (!_posted)
-                return;
+		private void MustBeInBalance() {
+			if (_balance == Money.Zero) return;
 
-            throw new InvalidOperationException();
-        }
-
-        private void MustBeInBalance() {
-            if (_balance == Money.Zero)
-                return;
-
-            throw new InvalidOperationException();
-        }
-    }
+			throw new InvalidOperationException();
+		}
+	}
 }

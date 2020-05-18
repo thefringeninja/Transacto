@@ -6,12 +6,12 @@ using Xunit;
 
 namespace Transacto.Application {
     public class AccountingPeriodTests {
-        private readonly AccountingPeriodHandlers _handler;
+        private readonly GeneralLedgerHandlers _handler;
         private readonly IFactRecorder _facts;
 
         public AccountingPeriodTests() {
             _facts = new FactRecorder();
-            _handler = new AccountingPeriodHandlers(new AccountingPeriodTestRepository(_facts));
+            _handler = new GeneralLedgerHandlers(new GeneralLedgerTestRepository(_facts));
         }
 
         [Theory, AutoTransactoData]
@@ -21,7 +21,7 @@ namespace Transacto.Application {
                 .When(new OpenAccountingPeriod {
                     Period = period.ToDto()
                 })
-                .Then(period.ToString(), new AccountingPeriodOpened {
+                .Then(period.ToString(), new GeneralLedgerOpened {
                     Period = period.ToDto()
                 })
                 .Assert(_handler, _facts);
@@ -29,13 +29,13 @@ namespace Transacto.Application {
         [Theory, AutoTransactoData]
         public Task closing_an_open_period(PeriodIdentifier period) =>
             new Scenario()
-                .Given(period.ToString(), new AccountingPeriodOpened {
+                .Given(period.ToString(), new GeneralLedgerOpened {
                     Period = period.ToDto()
                 })
                 .When(new CloseAccountingPeriod {
                     Period = period.ToDto()
                 })
-                .Then(period.ToString(), new AccountingPeriodClosed {
+                .Then(period.ToString(), new AccountingPeriodClosing {
                     Period = period.ToDto()
                 })
                 .Assert(_handler, _facts);
@@ -43,9 +43,9 @@ namespace Transacto.Application {
         [Theory, AutoTransactoData]
         public Task closing_a_closed_period(PeriodIdentifier period) =>
             new Scenario()
-                .Given(period.ToString(), new AccountingPeriodOpened {
+                .Given(period.ToString(), new GeneralLedgerOpened {
                     Period = period.ToDto()
-                }, new AccountingPeriodClosed {
+                }, new AccountingPeriodClosing {
                     Period = period.ToDto()
                 })
                 .When(new CloseAccountingPeriod {

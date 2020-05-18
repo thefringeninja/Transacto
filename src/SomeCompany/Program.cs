@@ -39,8 +39,7 @@ namespace SomeCompany {
 					.UseKestrel()
 					.ConfigureServices(services => services
 						.AddEventStoreClient()
-						.AddSingleton<Func<NpgsqlConnection>>(() =>
-							new NpgsqlConnection(connectionStringBuilder.ConnectionString))
+						.AddSingleton(connectionStringBuilder)
 						.AddSingleton(_streamStore))
 					.UseStartup(new Startup(GetPlugins())));
 

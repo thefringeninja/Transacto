@@ -14,6 +14,19 @@ namespace Microsoft.Extensions.DependencyInjection {
 	// ReSharper restore CheckNamespace
 
 	public static class ServiceCollectionExtensions {
+		public static IServiceCollection AddStreamStoreProjection<T>(this IServiceCollection services)
+			where T : StreamStoreProjection, new() => services.AddStreamStoreProjection(new T());
+
+		public static IServiceCollection AddStreamStoreProjection(this IServiceCollection services,
+			StreamStoreProjection projection)
+			=> services.AddSingleton(projection);
+
+		public static IServiceCollection AddNpgSqlProjection<T>(this IServiceCollection services)
+			where T : NpgsqlProjection, new() => services.AddNpgSqlProjection(new T());
+
+		public static IServiceCollection AddNpgSqlProjection(this IServiceCollection services,
+			NpgsqlProjection projection) => services.AddSingleton(projection);
+
 		public static IServiceCollection AddTransacto(this IServiceCollection services,
 			IMessageTypeMapper messageTypeMapper) => services
 			.AddRouting()
@@ -27,7 +40,7 @@ namespace Microsoft.Extensions.DependencyInjection {
 				provider.GetRequiredService<EventStoreClient>(),
 				provider.GetRequiredService<IMessageTypeMapper>(),
 				TransactoSerializerOptions.EventSerializerOptions))
-			.AddSingleton<CommandHandlerModule>(provider => new AccountingPeriodModule(
+			.AddSingleton<CommandHandlerModule>(provider => new GeneralLedgerModule(
 				provider.GetRequiredService<EventStoreClient>(),
 				provider.GetRequiredService<IMessageTypeMapper>(),
 				TransactoSerializerOptions.EventSerializerOptions))
@@ -39,19 +52,20 @@ namespace Microsoft.Extensions.DependencyInjection {
 					new AnonymousProjectionBuilder<InMemoryReadModel>()
 						.When<AccountDefined>((readModel, e) =>
 							readModel.Update<Dictionary<int, (string, bool)>>(
-								nameof(ChartOfAccounts), rm => rm.Add(e.AccountNumber, (e.AccountName, true))))
+								nameof(ChartOfAccounts),
+								rm => rm.Add(e.AccountNumber, (e.AccountName, true))))
 						.When<AccountDeactivated>((readModel, e) =>
-							readModel.Update<Dictionary<int, (string, bool)>>(
+							readModel.Update<Dictionary<int, (string accountName, bool)>>(
 								nameof(ChartOfAccounts),
-								rm => rm[e.AccountNumber] = (rm[e.AccountNumber].Item1, false)))
+								rm => rm[e.AccountNumber] = (rm[e.AccountNumber].accountName, false)))
 						.When<AccountReactivated>((readModel, e) =>
-							readModel.Update<Dictionary<int, (string, bool)>>(
+							readModel.Update<Dictionary<int, (string accountName, bool)>>(
 								nameof(ChartOfAccounts),
-								rm => rm[e.AccountNumber] = (rm[e.AccountNumber].Item1, true)))
+								rm => rm[e.AccountNumber] = (rm[e.AccountNumber].accountName, true)))
 						.When<AccountRenamed>((readModel, e) =>
-							readModel.Update<Dictionary<int, (string, bool)>>(
+							readModel.Update<Dictionary<int, (string, bool active)>>(
 								nameof(ChartOfAccounts),
-								rm => rm[e.AccountNumber] = (e.NewAccountName, rm[e.AccountNumber].Item2)))
+								rm => rm[e.AccountNumber] = (e.NewAccountName, rm[e.AccountNumber].active)))
 						.Build()));
 	}
 }

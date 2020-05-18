@@ -12,7 +12,7 @@ namespace Transacto.Infrastructure {
         public GeneralLedgerEntryEventStoreRepository(EventStoreClient eventStore,
             IMessageTypeMapper messageTypeMapper, UnitOfWork unitOfWork) {
             _inner = new EventStoreRepository<GeneralLedgerEntry, GeneralLedgerEntryIdentifier>(eventStore, unitOfWork,
-                GeneralLedgerEntry.Factory, period => period.GeneralLedgerEntryIdentifier,
+                GeneralLedgerEntry.Factory, entry => entry.GeneralLedgerEntryIdentifier,
                 identifier => $"generalLedgerEntry-{identifier.ToString()}", messageTypeMapper);
         }
 
@@ -24,6 +24,10 @@ namespace Transacto.Infrastructure {
             }
 
             return optionalGeneralLedgerEntry.Value;
+        }
+
+        public ValueTask<GeneralLedgerEntry[]> GetPosted(CancellationToken cancellationToken = default) {
+	        throw new NotImplementedException();
         }
 
         public void Add(GeneralLedgerEntry generalLedgerEntry) => _inner.Add(generalLedgerEntry);

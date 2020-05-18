@@ -10,8 +10,6 @@ namespace Transacto {
 		private readonly ConcurrentDictionary<string, string> _scripts
 			= new ConcurrentDictionary<string, string>();
 
-		public string Schema { get; set; } = null!;
-
 		public string this[Type eventType] => GetScript(eventType.Name);
 
 		public const string ReadCheckpoint = "SELECT commit, prepare FROM checkpoints WHERE projection = @projection";
@@ -30,9 +28,7 @@ namespace Transacto {
 
 				using StreamReader reader = new StreamReader(stream);
 
-				return reader
-					.ReadToEnd()
-					.Replace("__schema__", Schema);
+				return reader.ReadToEnd();
 			});
 	}
 }

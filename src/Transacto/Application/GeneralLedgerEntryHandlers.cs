@@ -5,25 +5,29 @@ using Transacto.Domain;
 using Transacto.Messages;
 
 namespace Transacto.Application {
-    public class GeneralLedgerEntryHandlers {
-        private readonly IGeneralLedgerEntryRepository _generalLedgerEntries;
+	public class GeneralLedgerEntryHandlers {
+		private readonly IGeneralLedgerRepository _generalLedger;
+		private readonly IGeneralLedgerEntryRepository _generalLedgerEntries;
 
-        public GeneralLedgerEntryHandlers(IGeneralLedgerEntryRepository generalLedgerEntries) {
-            _generalLedgerEntries = generalLedgerEntries;
-        }
+		public GeneralLedgerEntryHandlers(IGeneralLedgerRepository generalLedger,
+			IGeneralLedgerEntryRepository generalLedgerEntries) {
+			_generalLedger = generalLedger;
+			_generalLedgerEntries = generalLedgerEntries;
+		}
 
-        public ValueTask Handle(PostGeneralLedgerEntry command, CancellationToken cancellationToken = default) {
-	        if (command.BusinessTransaction == null) {
-		        throw new Exception();
-	        }
-	        var entry = command.BusinessTransaction.GetGeneralLedgerEntry(PeriodIdentifier.FromDto(command.Period),
-		        command.CreatedOn);
+		public async ValueTask Handle(PostGeneralLedgerEntry command, CancellationToken cancellationToken = default) {
+			if (command.BusinessTransaction == null) {
+				throw new Exception();
+			}
 
-            entry.Post();
+			var generalLedger = await _generalLedger.Get(cancellationToken);
+			var entry = generalLedger.Create(new GeneralLedgerEntryIdentifier(command.GeneralLedgerEntryId),
+				command.BusinessTransaction.ReferenceNumber, command.CreatedOn);
+			command.BusinessTransaction.Apply(entry);
 
-            _generalLedgerEntries.Add(entry);
+			entry.Post();
 
-            return new ValueTask(Task.CompletedTask);
-        }
-    }
+			_generalLedgerEntries.Add(entry);
+		}
+	}
 }

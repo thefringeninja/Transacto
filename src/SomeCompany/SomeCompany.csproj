@@ -36,8 +36,4 @@
 		<EmbeddedResource Remove="node_modules\**" />
 		<Compile Remove="node_modules\**" />
 	</ItemGroup>
-
-	<ItemGroup>
-	  <Folder Include="Framework\Http" />
-	</ItemGroup>
 </Project>

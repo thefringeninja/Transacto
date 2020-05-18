@@ -1,4 +1,3 @@
-using System.Text.Json;
 using EventStore.Client;
 using Transacto.Application;
 using Transacto.Framework;
@@ -16,6 +15,7 @@ namespace Transacto.Modules {
 				.Handle((_, ct) => {
 					var (unitOfWork, command) = _;
 					var handlers = new GeneralLedgerEntryHandlers(
+						new GeneralLedgerEventStoreRepository(eventStore, messageTypeMapper, unitOfWork),
 						new GeneralLedgerEntryEventStoreRepository(eventStore, messageTypeMapper, unitOfWork));
 
 					return handlers.Handle(command, ct);

@@ -7,6 +7,7 @@ using Dapper;
 using Hallo;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
+using Microsoft.Extensions.DependencyInjection;
 using Npgsql;
 using SomeCompany.BalanceSheet;
 using Transacto;
@@ -15,27 +16,23 @@ using MidFunc = System.Func<Microsoft.AspNetCore.Http.HttpContext, System.Func<S
 
 // ReSharper disable CheckNamespace
 namespace Microsoft.AspNetCore.Builder {
-// ReSharper restore CheckNamespace
-
-	public static class BalanceSheetReportMiddleware {
-		public static IEndpointRouteBuilder UseBalanceSheet(this IEndpointRouteBuilder builder,
-			Func<CancellationToken, Task<NpgsqlConnection>> connectionFactory, string schema,
-			PathString? location = null) {
-			location ??= new PathString("/balance-sheet");
-
-			return builder.MapGet(location.Value.Add("{thru}"),
+// ReSharper restore CheckNamespace\
+	internal static class BalanceSheetReportMiddleware {
+		public static IEndpointRouteBuilder UseBalanceSheet(this IEndpointRouteBuilder builder) =>
+			builder.MapGet("{thru}",
 				async (DateTime thru, CancellationToken ct) => {
+					var connectionFactory = builder.ServiceProvider
+						.GetRequiredService<Func<CancellationToken, ValueTask<NpgsqlConnection>>>();
 					await using var connection = await connectionFactory(ct);
 
 					return new HalResponse(BalanceSheetRepresentation.Instance, await connection.QueryAsync<Item>(
 						$@"
 SELECT {Schema.BalanceSheetReport.Columns.AccountNumber},
        SUM({Schema.BalanceSheetReport.Columns.Balance}) as {Schema.BalanceSheetReport.Columns.Balance} 
-FROM {schema}.{Schema.BalanceSheetReport.Table}
+FROM {Schema.BalanceSheetReport.Table}
 WHERE date ({Schema.BalanceSheetReport.Columns.PeriodYear} || '-' ||{Schema.BalanceSheetReport.Columns.PeriodMonth} || '-01') <= @thru
 GROUP BY {Schema.BalanceSheetReport.Columns.AccountNumber}", new {thru}));
 				});
-		}
 
 		private class BalanceSheetRepresentation : Hal<IEnumerable<Item>>,
 			IHalState<IEnumerable<Item>> {
@@ -43,7 +40,7 @@ GROUP BY {Schema.BalanceSheetReport.Columns.AccountNumber}", new {thru}));
 			public object StateFor(IEnumerable<Item> resource) => resource.ToArray();
 		}
 
-		private class Item {
+		public class Item {
 			public int AccountNumber { get; set; }
 			public decimal Balance { get; set; }
 		}

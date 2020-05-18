@@ -9,6 +9,11 @@ namespace Transacto.Domain {
 
 		public static PeriodIdentifier FromDto(PeriodDto period) => new PeriodIdentifier(period.Month, period.Year);
 
+		public static PeriodIdentifier FromClock(Func<DateTimeOffset> clock) {
+			var now = clock();
+			return new PeriodIdentifier(now.Month, now.Year);
+		}
+
 		public static bool TryParse(string period, out PeriodIdentifier value) {
 			if (string.IsNullOrEmpty(period) || period.Length != 6 ||
 			    !int.TryParse(period[..2], out var month) || NotAMonth(month) ||

@@ -11,8 +11,8 @@ namespace Transacto.Domain {
         public PeriodIdentifier Period => _period;
 
         private AccountingPeriod() {
-            Register<AccountingPeriodOpened>(e => _period = PeriodIdentifier.FromDto(e.Period!));
-            Register<AccountingPeriodClosed>(_ => _closed = true);
+            Register<GeneralLedgerOpened>(e => _period = PeriodIdentifier.FromDto(e.Period!));
+            Register<AccountingPeriodClosing>(_ => _closed = true);
         }
 
         public static AccountingPeriod Open(PeriodIdentifier period) {
@@ -22,7 +22,7 @@ namespace Transacto.Domain {
 
             var accountingPeriod = Factory();
 
-            accountingPeriod.Apply(new AccountingPeriodOpened {
+            accountingPeriod.Apply(new GeneralLedgerOpened {
                 Period = period.ToDto()
             });
 
@@ -32,7 +32,7 @@ namespace Transacto.Domain {
         public void Close() {
             if (_closed) return;
 
-            Apply(new AccountingPeriodClosed {
+            Apply(new AccountingPeriodClosing {
                 Period = _period.ToDto()
             });
         }

@@ -4,7 +4,7 @@ using System.Text.Json;
 using EventStore.Client;
 
 namespace Transacto.Framework {
-	internal static class UnitOfWorkExtensions {
+	public static class UnitOfWorkExtensions {
 		public static ICommandHandlerBuilder<(UnitOfWork, TCommand)> UnitOfWork<TCommand>(
 			this ICommandHandlerBuilder<TCommand> builder, EventStoreClient eventStore,
 			IMessageTypeMapper messageTypeMapper, JsonSerializerOptions eventSerializerOptions)

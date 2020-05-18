@@ -1,8 +1,12 @@
 using System;
+using System.Linq;
+using EventStore.Client;
 using Inflector;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.DependencyInjection;
+using Npgsql;
+using SqlStreamStore;
 using Transacto;
 using Transacto.Framework;
 
@@ -22,7 +26,22 @@ namespace SomeCompany {
 			app.UseTransacto();
 			foreach (var plugin in _plugins) {
 				app.Map(plugin.Name.Dasherize(), builder => {
-					var services = new ServiceCollection();
+					var services = new ServiceCollection()
+						.AddSingleton<Func<NpgsqlConnection>>(provider => () =>
+							new NpgsqlConnection(new NpgsqlConnectionStringBuilder(
+								provider.GetRequiredService<NpgsqlConnectionStringBuilder>().ConnectionString) {
+								Username = plugin.Name
+							}.ConnectionString))
+						.AddHostedService(provider => new NpgSqlProjectionHost(
+							provider.GetRequiredService<EventStoreClient>(),
+							provider.GetRequiredService<IMessageTypeMapper>(),
+							provider.GetRequiredService<Func<NpgsqlConnection>>(),
+							provider.GetServices<NpgsqlProjection>().ToArray()))
+						.AddHostedService(provider => new StreamStoreProjectionHost(
+							provider.GetRequiredService<EventStoreClient>(),
+							provider.GetRequiredService<IMessageTypeMapper>(),
+							provider.GetRequiredService<IStreamStore>(),
+							provider.GetServices<StreamStoreProjection>().ToArray()));
 					plugin.ConfigureServices(services);
 					builder.ApplicationServices = new ScopedServiceProvider(services, builder.ApplicationServices);
 					builder.UseRouting().UseEndpoints(plugin.Configure);

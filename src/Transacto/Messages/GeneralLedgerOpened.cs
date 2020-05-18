@@ -1,5 +1,5 @@
 namespace Transacto.Messages {
-    public class AccountingPeriodOpened {
+    public class GeneralLedgerOpened {
 	    public PeriodDto Period { get; set; } = null!;
     }
 }

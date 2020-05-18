@@ -1,4 +1,4 @@
-CREATE TABLE IF NOT EXISTS __schema__.purchase_orders
+CREATE TABLE IF NOT EXISTS purchase_orders
 (
     purchase_order_id     UUID NOT NULL,
     purchase_order_number INT  NOT NULL,
@@ -6,7 +6,7 @@ CREATE TABLE IF NOT EXISTS __schema__.purchase_orders
     CONSTRAINT pk_balance_sheet_report PRIMARY KEY (purchase_order_id)
 );
 
-CREATE TABLE IF NOT EXISTS __schema__.purchase_order_items
+CREATE TABLE IF NOT EXISTS purchase_order_items
 (
     purchase_order_id UUID  NOT NULL,
     inventory_item_id UUID  NOT NULL,

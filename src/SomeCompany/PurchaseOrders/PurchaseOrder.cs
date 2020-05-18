@@ -2,24 +2,19 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Transacto.Domain;
-using Transacto.Framework;
 
 namespace SomeCompany.PurchaseOrders {
 	public partial class PurchaseOrder : IBusinessTransaction {
-		public GeneralLedgerEntry GetGeneralLedgerEntry(PeriodIdentifier period, DateTimeOffset createdOn) {
-			var entry = GeneralLedgerEntry.Create(
-				new GeneralLedgerEntryIdentifier(PurchaseOrderId),
-				new GeneralLedgerEntryNumber($"purchaseorder-{PurchaseOrderNumber}"), period, createdOn);
+		public GeneralLedgerEntryNumber ReferenceNumber => new GeneralLedgerEntryNumber();
 
+		public void Apply(GeneralLedgerEntry generalLedgerEntry) {
 			var (accountsPayable, inventoryInTransit) =
 				PurchaseOrderItems.Aggregate((new Credit(new AccountNumber(2150)), new Debit(new AccountNumber(1400))),
 					Accumulate);
 
-			entry.ApplyCredit(accountsPayable);
-			entry.ApplyDebit(inventoryInTransit);
-			entry.ApplyTransaction(this);
-
-			return entry;
+			generalLedgerEntry.ApplyCredit(accountsPayable);
+			generalLedgerEntry.ApplyDebit(inventoryInTransit);
+			generalLedgerEntry.ApplyTransaction(this);
 		}
 
 		private static (Credit, Debit) Accumulate((Credit, Debit) _, PurchaseOrderItem item) {
@@ -28,7 +23,17 @@ namespace SomeCompany.PurchaseOrders {
 		}
 
 		public IEnumerable<object> GetAdditionalChanges() {
-			yield return this;
+			yield return new PurchaseOrderPlaced {
+				PurchaseOrderId = PurchaseOrderId,
+				VendorId = VendorId,
+				PurchaseOrderNumber = PurchaseOrderNumber,
+				Items = PurchaseOrderItems
+					.Select(x => new PurchaseOrderPlaced.PurchaseOrderItem {
+						Quantity = (decimal)x.Quantity,
+						UnitPrice = (decimal)x.UnitPrice,
+						InventoryItemId = x.ItemId
+					}).ToArray()
+			};
 		}
 
 		public int? Version { get; set; }

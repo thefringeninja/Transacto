@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
-using System.Runtime.Serialization;
 using System.Text.Json;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Builder;
@@ -79,76 +78,6 @@ namespace Transacto.Integration {
 			yield return (new AccountNumber(3900), new AccountName("Retained Earnings"));
 			yield return (new AccountNumber(4000), new AccountName("Sales Income"));
 			yield return (new AccountNumber(5000), new AccountName("Cost of Goods Sold"));
-		}
-
-		public void Dispose() {
-			_httpClient?.Dispose();
-			_testServer?.Dispose();
-		}
-	}
-
-	[DataContract]
-	internal class BusinessTransaction : IBusinessTransaction {
-		[DataMember(Name = "transactionId")] public Guid TransactionId { get; set; }
-		[DataMember(Name = "referenceNumber")] public int ReferenceNumber { get; set; }
-
-		public GeneralLedgerEntry GetGeneralLedgerEntry(PeriodIdentifier period, DateTimeOffset createdOn) {
-			var entry = GeneralLedgerEntry.Create(new GeneralLedgerEntryIdentifier(TransactionId),
-				new GeneralLedgerEntryNumber($"t-{ReferenceNumber}"),
-				period, createdOn);
-
-			entry.ApplyDebit(new Debit(new AccountNumber(1000), new Money(5m)));
-			entry.ApplyCredit(new Credit(new AccountNumber(3000), new Money(5m)));
-			entry.ApplyTransaction(this);
-
-			return entry;
-		}
-
-		public IEnumerable<object> GetAdditionalChanges() {
-			yield return this;
-		}
-
-		public int? Version { get; set; }
-	}
-
-	public class BusinessTransactionIntegrationTests : IDisposable {
-		private readonly TestServer _testServer;
-		private readonly HttpClient _httpClient;
-
-		public BusinessTransactionIntegrationTests() {
-			_testServer = new TestServer(new WebHostBuilder()
-				.Configure(app => app.UseTransacto().Map("/transactions", inner => inner.UseRouting().UseEndpoints(
-					e => e.MapBusinessTransaction<BusinessTransaction>(string.Empty))))
-				.ConfigureServices(s => s
-					.AddEventStoreClient(settings => {
-						settings.OperationOptions.ThrowOnAppendFailure = true;
-						settings.CreateHttpMessageHandler = () => new SocketsHttpHandler {
-							SslOptions = {
-								RemoteCertificateValidationCallback = delegate {
-									return true;
-								}
-							}
-						};
-					})
-					.AddTransacto(
-						MessageTypeMapper.Create(
-							new MessageTypeMapper(new[] {typeof(BusinessTransaction)})))));
-			_httpClient = _testServer.CreateClient();
-		}
-
-		[Fact]
-		public async Task Somewthing() {
-			var now = DateTimeOffset.UtcNow;
-			var period = new PeriodIdentifier(now.Month, now.Year);
-			await _httpClient.SendCommand("/transactions", new PostGeneralLedgerEntry {
-				BusinessTransaction = new BusinessTransaction {
-					TransactionId = Guid.NewGuid(),
-					ReferenceNumber = 1,
-					Version = 1
-				},
-				Period = period.ToDto(),
-				CreatedOn = now
-			}, TransactoSerializerOptions.CommandSerializerOptions(typeof(BusinessTransaction)));
 		}
 
 		public void Dispose() {

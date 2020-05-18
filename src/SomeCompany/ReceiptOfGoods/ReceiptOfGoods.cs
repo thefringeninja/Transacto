@@ -6,11 +6,14 @@ using Transacto.Framework;
 
 namespace SomeCompany.ReceiptOfGoods {
 	partial class ReceiptOfGoods : IBusinessTransaction {
-		public GeneralLedgerEntry GetGeneralLedgerEntry(PeriodIdentifier period, DateTimeOffset createdOn) {
-			var entry = GeneralLedgerEntry.Create(
-				new GeneralLedgerEntryIdentifier(ReceiptOfGoodsId),
-				new GeneralLedgerEntryNumber($"goodsreceipt-{ReceiptOfGoodsNumber}"), period, createdOn);
+		private static (Credit, Debit) Accumulate((Credit, Debit) _, ReceiptOfGoodsItem item) {
+			var (inventoryInTransit, inventoryOnHand) = _;
+			return (inventoryInTransit + item.Total, inventoryOnHand + item.Total);
+		}
 
+		public GeneralLedgerEntryNumber ReferenceNumber => new GeneralLedgerEntryNumber("goodsReceipt-" + ReceiptOfGoodsNumber);
+
+		public void Apply(GeneralLedgerEntry entry) {
 			var (inventoryInTransit, inventoryOnHand) = ReceiptOfGoodsItems.Aggregate(
 				(new Credit(new AccountNumber(1400)), new Debit(new AccountNumber(1450))),
 				Accumulate);
@@ -18,13 +21,6 @@ namespace SomeCompany.ReceiptOfGoods {
 			entry.ApplyCredit(inventoryInTransit);
 			entry.ApplyDebit(inventoryOnHand);
 			entry.ApplyTransaction(this);
-
-			return entry;
-		}
-
-		private static (Credit, Debit) Accumulate((Credit, Debit) _, ReceiptOfGoodsItem item) {
-			var (inventoryInTransit, inventoryOnHand) = _;
-			return (inventoryInTransit + item.Total, inventoryOnHand + item.Total);
 		}
 
 		public IEnumerable<object> GetAdditionalChanges() {

@@ -5,30 +5,24 @@ using SomeCompany.ReceiptOfGoods;
 using Transacto;
 
 namespace SomeCompany.Inventory {
-    public class InventoryLedger : NpgsqlProjectionBase {
-        public InventoryLedger(string schema = "dbo") : base(new Scripts()) {
-            When<CreateSchema>();
+	public class InventoryLedger : NpgsqlProjection {
+		public InventoryLedger() : base(new Scripts()) {
+			When<CreateSchema>();
 
-            When<InventoryItemDefined>(e => new[] {
-                Sql.UniqueIdentifier(e.InventoryItemId)
-                    .ToDbParameter("inventory_item_id"),
-                Sql.VarChar(e.Sku, new NpgsqlVarCharSize(256))
-                    .ToDbParameter("sku")
-            });
+			When<InventoryItemDefined>(e => new[] {
+				Sql.Parameter(() => e.InventoryItemId),
+				Sql.Parameter(() => e.Sku)
+			});
 
-            When<PurchaseOrderPlaced>(e => Array.ConvertAll(e.Items, item => new[] {
-                Sql.UniqueIdentifier(item.InventoryItemId)
-                    .ToDbParameter("inventory_item_id"),
-                Sql.Decimal(item.Quantity)
-                    .ToDbParameter("quantity")
-            }));
+			When<PurchaseOrderPlaced>(e => Array.ConvertAll(e.Items, item => new[] {
+				Sql.Parameter(() => item.InventoryItemId),
+				Sql.Parameter(() => item.Quantity)
+			}));
 
-            When<GoodsReceived>(e => Array.ConvertAll(e.Items, item => new[] {
-                Sql.UniqueIdentifier(item.InventoryItemId)
-                    .ToDbParameter("inventory_item_id"),
-                Sql.Decimal(item.Quantity)
-                    .ToDbParameter("quantity")
-            }));
-        }
-    }
+			When<GoodsReceived>(e => Array.ConvertAll(e.Items, item => new[] {
+				Sql.Parameter(() => item.InventoryItemId),
+				Sql.Parameter(() => item.Quantity)
+			}));
+		}
+	}
 }

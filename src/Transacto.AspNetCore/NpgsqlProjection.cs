@@ -8,12 +8,11 @@ using Projac.Npgsql;
 using Projac.Sql;
 
 namespace Transacto {
-	public abstract class NpgsqlProjectionBase : SqlProjection {
+	public abstract class NpgsqlProjection : SqlProjection {
 		protected NpgsqlScripts Scripts { get; }
-		public string Schema { set => Scripts.Schema = value; }
 		protected static readonly NpgsqlSyntax Sql = new NpgsqlSyntax();
 
-		protected NpgsqlProjectionBase(NpgsqlScripts scripts) {
+		protected NpgsqlProjection(NpgsqlScripts scripts) {
 			Scripts = scripts;
 		}
 

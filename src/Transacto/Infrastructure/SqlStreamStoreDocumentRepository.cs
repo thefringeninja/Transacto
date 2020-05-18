@@ -12,12 +12,12 @@ namespace Transacto.Infrastructure {
 		where TBusinessTransaction : IBusinessTransaction {
 		private readonly IStreamStore _streamStore;
 		private readonly Func<TBusinessTransaction, string> _getStreamName;
-		private readonly System.Text.Json.JsonSerializerOptions _serializerOptions;
+		private readonly JsonSerializerOptions _serializerOptions;
 
 		public SqlStreamStoreBusinessTransactionRepository(
 			IStreamStore streamStore,
 			Func<TBusinessTransaction, string> getStreamName,
-			System.Text.Json.JsonSerializerOptions serializerOptions) {
+			JsonSerializerOptions serializerOptions) {
 			_streamStore = streamStore;
 			_getStreamName = getStreamName;
 			_serializerOptions = serializerOptions;
@@ -49,14 +49,10 @@ namespace Transacto.Infrastructure {
 		}
 
 		public ValueTask Save(TBusinessTransaction transaction, CancellationToken cancellationToken = default) {
-			if (transaction == null) throw new ArgumentNullException(nameof(transaction));
-
 			var streamName = _getStreamName(transaction);
 			var data = JsonSerializer.Serialize(transaction, _serializerOptions);
 
-			return new ValueTask(_streamStore.AppendToStream(streamName, transaction.Version.HasValue
-					? transaction.Version.Value
-					: ExpectedVersion.NoStream,
+			return new ValueTask(_streamStore.AppendToStream(streamName, transaction.Version ?? ExpectedVersion.NoStream,
 				new NewStreamMessage(Guid.NewGuid(), typeof(TBusinessTransaction).Name, data), cancellationToken));
 		}
 	}

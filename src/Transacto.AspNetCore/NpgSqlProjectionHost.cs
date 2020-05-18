@@ -11,13 +11,14 @@ using Projac.Sql.Executors;
 using Serilog;
 using Transacto.Framework;
 using Transacto.Infrastructure;
+using Resolve = Projac.Sql.Resolve;
 
 namespace Transacto {
 	public class NpgSqlProjectionHost : IHostedService {
 		private readonly EventStoreClient _eventStore;
 		private readonly IMessageTypeMapper _messageTypeMap;
 		private readonly Func<NpgsqlConnection> _connectionFactory;
-		private readonly NpgsqlProjectionBase[] _projections;
+		private readonly NpgsqlProjection[] _projections;
 		private readonly CancellationTokenSource _stopped;
 
 		private int _retryCount;
@@ -26,7 +27,7 @@ namespace Transacto {
 		private CancellationTokenRegistration? _stoppedRegistration;
 
 		public NpgSqlProjectionHost(EventStoreClient eventStore, IMessageTypeMapper messageTypeMap,
-			Func<NpgsqlConnection> connectionFactory, params NpgsqlProjectionBase[] projections) {
+			Func<NpgsqlConnection> connectionFactory, params NpgsqlProjection[] projections) {
 			_eventStore = eventStore;
 			_messageTypeMap = messageTypeMap;
 			_connectionFactory = connectionFactory;
@@ -80,7 +81,7 @@ namespace Transacto {
 
 			_stoppedRegistration = _stopped.Token.Register(_subscription.Dispose);
 
-			async ValueTask<(NpgsqlProjectionBase projection, Position checkpoint)[]> ReadCheckpoints() {
+			async ValueTask<(NpgsqlProjection projection, Position checkpoint)[]> ReadCheckpoints() {
 				await using var connection = _connectionFactory();
 				await connection.OpenAsync(cancellationToken);
 				return await Task.WhenAll(Array.ConvertAll(_projections,
@@ -103,11 +104,11 @@ namespace Transacto {
 			private readonly Func<NpgsqlConnection> _connectionFactory;
 			private readonly IMessageTypeMapper _messageTypeMapper;
 
-			private readonly (NpgsqlProjectionBase projection, Position checkpoint)[] _projections;
+			private readonly (NpgsqlProjection projection, Position checkpoint)[] _projections;
 
 			public CheckpointAwareProjector(Func<NpgsqlConnection> connectionFactory,
 				IMessageTypeMapper messageTypeMapper,
-				(NpgsqlProjectionBase projection, Position checkpoint)[] projections) {
+				(NpgsqlProjection projection, Position checkpoint)[] projections) {
 				_connectionFactory = connectionFactory;
 				_messageTypeMapper = messageTypeMapper;
 				_projections = projections;
@@ -118,15 +119,16 @@ namespace Transacto {
 				var type = _messageTypeMapper.Map(e.Event.EventType);
 				if (type == null)
 					return Task.CompletedTask;
-				var message =
-					JsonSerializer.Deserialize(e.Event.Data.Span, type, TransactoSerializerOptions.EventSerializerOptions);
+				var message = JsonSerializer.Deserialize(
+					e.Event.Data.Span, type, TransactoSerializerOptions.EventSerializerOptions);
 				return Task.WhenAll(_projections.Where(x => x.checkpoint < e.OriginalPosition)
-					.Select(x => x.projection)
-					.Select(async projection => {
+					.Select(x => (x.projection, Resolve.WhenEqualToHandlerMessageType(x.projection)))
+					.Select(async _ => {
 						await using var connection = _connectionFactory();
 						await connection.OpenAsync(cancellationToken);
 						await using var transaction = await connection.BeginTransactionAsync(cancellationToken);
-						var projector = new AsyncSqlProjector(Resolve.WhenEqualToHandlerMessageType(projection),
+						var (projection, resolver) = _;
+						var projector = new AsyncSqlProjector(resolver,
 							new ConnectedTransactionalSqlCommandExecutor(transaction));
 						await projector.ProjectAsync(message, cancellationToken);
 						await projection.WriteCheckpoint(transaction, e.Event.Position, cancellationToken);
