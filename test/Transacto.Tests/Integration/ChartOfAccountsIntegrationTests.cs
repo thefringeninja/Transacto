@@ -34,7 +34,7 @@ namespace Transacto.Integration {
 							}
 						};
 					})
-					.AddTransacto(MessageTypeMapper.Create())));
+					.AddTransacto()));
 			_httpClient = _testServer.CreateClient();
 		}
 
@@ -46,7 +46,7 @@ namespace Transacto.Integration {
 				await _httpClient.SendCommand("/chart-of-accounts", new DefineAccount {
 					AccountName = accountName.ToString(),
 					AccountNumber = accountNumber.ToInt32()
-				}, TransactoSerializerOptions.CommandSerializerOptions());
+				}, TransactoSerializerOptions.BusinessTransactions());
 			}
 
 			await Task.Delay(500);

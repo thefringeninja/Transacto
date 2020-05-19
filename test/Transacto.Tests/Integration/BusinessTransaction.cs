@@ -12,9 +12,9 @@ namespace Transacto.Integration {
 		GeneralLedgerEntryNumber IBusinessTransaction.ReferenceNumber =>
 			new GeneralLedgerEntryNumber($"t-{ReferenceNumber}");
 
-		public void Apply(GeneralLedgerEntry entry) {
-			entry.ApplyDebit(new Debit(new AccountNumber(1000), new Money(5m)));
-			entry.ApplyCredit(new Credit(new AccountNumber(3000), new Money(5m)));
+		public void Apply(GeneralLedgerEntry entry, ChartOfAccounts chartOfAccounts) {
+			entry.ApplyDebit(new Debit(new AccountNumber(1000), new Money(5m)), chartOfAccounts);
+			entry.ApplyCredit(new Credit(new AccountNumber(3000), new Money(5m)), chartOfAccounts);
 			entry.ApplyTransaction(this);
 		}
 

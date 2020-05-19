@@ -24,9 +24,8 @@ namespace Transacto {
 		private CancellationTokenRegistration? _stoppedRegistration;
 		private readonly Projector<InMemoryReadModel> _projector;
 
-
 		public InMemoryProjectionHost(EventStoreClient eventStore, IMessageTypeMapper messageTypeMapper,
-			InMemoryReadModel target, IEnumerable<ProjectionHandler<InMemoryReadModel>> projections) {
+			InMemoryReadModel target, params ProjectionHandler<InMemoryReadModel>[][] projections) {
 			_eventStore = eventStore;
 			_messageTypeMapper = messageTypeMapper;
 			_target = target;
@@ -37,7 +36,9 @@ namespace Transacto {
 			_subscription = null;
 			_stoppedRegistration = null;
 
-			_projector = new Projector<InMemoryReadModel>(Resolve.WhenEqualToHandlerMessageType(projections.ToArray()));
+			_projector =
+				new Projector<InMemoryReadModel>(
+					Resolve.WhenEqualToHandlerMessageType(projections.SelectMany(_ => _).ToArray()));
 		}
 
 		public Task StartAsync(CancellationToken cancellationToken) => Subscribe(cancellationToken);
@@ -67,6 +68,7 @@ namespace Transacto {
 					Interlocked.Exchange(ref _subscribed, 0);
 					Task.Run(() => Subscribe(cancellationToken), cancellationToken);
 				},
+				filterOptions: new SubscriptionFilterOptions(EventTypeFilter.ExcludeSystemEvents()),
 				userCredentials: new UserCredentials("admin", "changeit"),
 				cancellationToken: _stopped.Token));
 
@@ -77,7 +79,7 @@ namespace Transacto {
 				if (type == null)
 					return Task.CompletedTask;
 				var message = JsonSerializer.Deserialize(
-					e.Event.Data.Span, type, TransactoSerializerOptions.EventSerializerOptions);
+					e.Event.Data.Span, type, TransactoSerializerOptions.Events);
 				return _projector.ProjectAsync(_target, message, ct);
 			}
 		}

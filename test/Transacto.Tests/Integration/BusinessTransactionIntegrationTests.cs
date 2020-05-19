@@ -36,21 +36,15 @@ namespace Transacto.Integration {
 					.AddSingleton<IStreamStore>(new HttpClientSqlStreamStore(new HttpClientSqlStreamStoreSettings {
 						BaseAddress = new UriBuilder {Port = 5002}.Uri
 					}))
-					.AddTransacto(
-						MessageTypeMapper.Create(
-							new MessageTypeMapper(new[] {typeof(BusinessTransaction)})))
-					.AddHostedService(provider => new StreamStoreProjectionHost(
-						provider.GetRequiredService<EventStoreClient>(),
-						provider.GetRequiredService<IMessageTypeMapper>(),
-						provider.GetRequiredService<IStreamStore>(),
-						new BusinessTransactionFeed(provider.GetRequiredService<IMessageTypeMapper>())))));
+					.AddTransacto()
+					.AddStreamStoreProjection<BusinessTransactionFeed>()));
 			_httpClient = _testServer.CreateClient();
 		}
 
 		[Fact]
 		public async Task Somewthing() {
 			var now = DateTimeOffset.UtcNow;
-			var period = new PeriodIdentifier(now.Month, now.Year);
+			var period = Period.Open(now);
 			var transactionId = Guid.NewGuid();
 			await _httpClient.SendCommand("/transactions", new PostGeneralLedgerEntry {
 				BusinessTransaction = new BusinessTransaction {
@@ -58,10 +52,10 @@ namespace Transacto.Integration {
 					ReferenceNumber = 1,
 					Version = 1
 				},
-				Period = period.ToDto(),
+				Period = period.ToString(),
 				CreatedOn = now,
 				GeneralLedgerEntryId = transactionId
-			}, TransactoSerializerOptions.CommandSerializerOptions(typeof(BusinessTransaction)));
+			}, TransactoSerializerOptions.BusinessTransactions(typeof(BusinessTransaction)));
 			await Task.Delay(TimeSpan.FromMinutes(5));
 		}
 

@@ -1,0 +1,101 @@
+{
+	"$schema": "https://json-schema.org/draft/2019-09/hyper-schema",
+	"$id": "BalanceSheetReport.schema.json",
+	"type": "object",
+	"title": "Balance Sheet Report",
+	"additionalProperties": false,
+	"required": [
+		"thru",
+		"lineItems"
+	],
+	"properties": {
+		"thru": {
+			"$ref": "#/definitions/date",
+			"title": "Thru"
+		},
+		"lineItems": {
+			"type": "array",
+			"items": {
+				"$ref": "#/definitions/LineItem"
+			}
+		},
+		"lineItemGroupings": {
+			"type": "array",
+			"title": "Groupings",
+			"items": {
+				"$ref": "#/definitions/LineItemGrouping"
+			}
+		}
+	},
+	"definitions": {
+		"decimal": {
+			"type": "object",
+			"additionalProperties": false,
+			"required": [
+				"value"
+			],
+			"properties": {
+				"value": {
+					"type": "string",
+					"maxLength": 32,
+					"pattern": "^((-?[0-9]+)|(-?([0-9]+)?[.][0-9]+))$"
+				}
+			}
+		},
+		"LineItem": {
+			"additionalProperties": false,
+			"type": "object",
+			"required": [
+				"name",
+				"number",
+				"balance"
+			],
+			"properties": {
+				"name": {
+					"type": "string",
+					"title": "Account Name"
+				},
+				"accountNumber": {
+					"type": "integer",
+					"title": "Account Number"
+				},
+				"balance": {
+					"$ref": "#/definitions/decimal",
+					"title": "Balance"
+				}
+			}
+		},
+		"LineItemGrouping": {
+			"additionalProperties": false,
+			"type": "object",
+			"required": [
+				"name",
+				"lineItems",
+				"lineItemGroupings"
+			],
+			"properties": {
+				"name": {
+					"type": "string",
+					"title": "Name"
+				},
+				"lineItems": {
+					"type": "array",
+					"items": {
+						"$ref": "#/definitions/LineItem"
+					}
+				},
+				"lineItemGroupings": {
+					"type": "array",
+					"items": {
+						"$ref": "#/definitions/LineItemGrouping"
+					}
+				}
+			}
+		},
+		"date": {
+			"type": "string",
+			"pattern": "^\\d{4}(-\\d\\d(-\\d\\d(T\\d\\d:\\d\\d(:\\d\\d)?(\\.\\d+)?(([+-]\\d\\d:\\d\\d)|Z)?)?)?)?$",
+			"format": "date-time"
+		}
+	}
+}

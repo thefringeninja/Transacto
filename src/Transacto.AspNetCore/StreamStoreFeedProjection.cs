@@ -17,7 +17,7 @@ namespace Transacto {
 			JsonSerializerOptions? serializerOptions = null)
 			: base(streamName) {
 			_messageTypeMapper = messageTypeMapper;
-			_serializerOptions = serializerOptions ?? TransactoSerializerOptions.EventSerializerOptions;
+			_serializerOptions = serializerOptions ?? TransactoSerializerOptions.Events;
 		}
 
 		protected void When<TEvent>(Func<TEvent, TFeedEntry, TFeedEntry> apply)

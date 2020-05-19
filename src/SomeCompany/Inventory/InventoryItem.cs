@@ -6,6 +6,7 @@ namespace SomeCompany.Inventory {
 		public static readonly Func<InventoryItem> Factory = () => new InventoryItem();
 
 		public InventoryItemIdentifier Identifier { get; private set; }
+		public override string Id => Identifier.ToString();
 
 		private InventoryItem() {
 			Register<InventoryItemDefined>(e => Identifier = new InventoryItemIdentifier(e.InventoryItemId));

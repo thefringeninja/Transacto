@@ -10,6 +10,10 @@ namespace Transacto {
             this.CustomizeAccountNumber();
 
             this.CustomizeMoney();
+
+            this.CustomizeCredits();
+
+            this.CustomizeDebits();
         }
     }
 }

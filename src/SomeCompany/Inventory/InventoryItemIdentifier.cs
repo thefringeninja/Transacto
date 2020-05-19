@@ -23,5 +23,6 @@ namespace SomeCompany.Inventory {
 			!left.Equals(right);
 
 		public Guid ToGuid() => _value;
+		public override string ToString() => _value.ToString("n");
 	}
 }

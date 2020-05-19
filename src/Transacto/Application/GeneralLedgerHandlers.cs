@@ -12,11 +12,23 @@ namespace Transacto.Application {
 			_generalLedger = generalLedger;
 		}
 
-		public async ValueTask Handle(CloseAccountingPeriod command, CancellationToken cancellationToken = default) {
+		public ValueTask Handle(OpenGeneralLedger command, CancellationToken cancellationToken = default) {
+			_generalLedger.Add(GeneralLedger.Open(command.OpenedOn));
+
+			return new ValueTask(Task.CompletedTask);
+		}
+
+		public async ValueTask Handle(BeginClosingAccountingPeriod command,
+			CancellationToken cancellationToken = default) {
 			var generalLedger = await _generalLedger.Get(cancellationToken);
 
-			generalLedger.Close(Array.ConvertAll(command.GeneralLedgerEntryIds,
-				id => new GeneralLedgerEntryIdentifier(id)), () => DateTimeOffset.Now);
+			var retainedEarningsAccountNumber = new AccountNumber(command.RetainedEarningsAccountNumber);
+			AccountType.OfAccountNumber(retainedEarningsAccountNumber).MustBe(AccountType.Equity);
+
+			generalLedger.BeginClosingPeriod(retainedEarningsAccountNumber,
+				new GeneralLedgerEntryIdentifier(command.ClosingGeneralLedgerEntryId),
+				Array.ConvertAll(command.GeneralLedgerEntryIds, id => new GeneralLedgerEntryIdentifier(id)),
+				command.ClosingOn);
 		}
 	}
 }

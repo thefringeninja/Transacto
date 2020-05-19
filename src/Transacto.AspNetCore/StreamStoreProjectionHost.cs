@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Concurrent;
 using System.Linq;
 using System.Text.Json;
 using System.Threading;
@@ -15,33 +14,6 @@ using Position = EventStore.Client.Position;
 using Resolve = Projac.Resolve;
 
 namespace Transacto {
-	public abstract class Envelope {
-		private static readonly ConcurrentDictionary<Type, Func<object, Position, Envelope>> Cache =
-			new ConcurrentDictionary<Type, Func<object, Position, Envelope>>();
-
-		public object Message { get; }
-		public Position Position { get; }
-
-		public static Envelope Create(object message, Position position) =>
-			Cache.GetOrAdd(message.GetType(), type => (m, p) => (Envelope)typeof(Envelope<>)
-					.MakeGenericType(m.GetType())
-					.GetConstructor(new[] {m.GetType(), typeof(Position)})!.Invoke(new[] {m, p}))
-				.Invoke(message, position);
-
-		protected Envelope(object message, Position position) {
-			Message = message;
-			Position = position;
-		}
-	}
-
-	public class Envelope<T> : Envelope {
-		public new T Message { get; }
-
-		public Envelope(T message, Position position) : base(message!, position) {
-			Message = message;
-		}
-	}
-
 	public class StreamStoreProjectionHost : IHostedService {
 		private readonly EventStoreClient _eventStore;
 		private readonly IMessageTypeMapper _messageTypeMap;
@@ -68,7 +40,8 @@ namespace Transacto {
 			_stoppedRegistration = null;
 		}
 
-		public Task StartAsync(CancellationToken cancellationToken) => Subscribe(cancellationToken);
+		public Task StartAsync(CancellationToken cancellationToken) =>
+			_projections.Length == 0 ? Task.CompletedTask : Subscribe(cancellationToken);
 
 		public Task StopAsync(CancellationToken cancellationToken) {
 			_stopped.Cancel();
@@ -106,6 +79,7 @@ namespace Transacto {
 					Interlocked.Exchange(ref _subscribed, 0);
 					Task.Run(() => Subscribe(cancellationToken), cancellationToken);
 				},
+				filterOptions: new SubscriptionFilterOptions(EventTypeFilter.ExcludeSystemEvents()),
 				userCredentials: new UserCredentials("admin", "changeit"),
 				cancellationToken: _stopped.Token));
 
@@ -137,7 +111,7 @@ namespace Transacto {
 				if (type == null)
 					return Task.CompletedTask;
 				var message = JsonSerializer.Deserialize(
-					e.Event.Data.Span, type, TransactoSerializerOptions.EventSerializerOptions);
+					e.Event.Data.Span, type, TransactoSerializerOptions.Events);
 				return Task.WhenAll(_projectors.Where(x => x.checkpoint < e.OriginalPosition)
 					.Select(_ => _.projector.ProjectAsync(_streamStore,
 						Envelope.Create(message, e.OriginalPosition!.Value), cancellationToken)));

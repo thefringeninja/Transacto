@@ -41,6 +41,9 @@ namespace Transacto {
 		}
 
 		public async Task StartAsync(CancellationToken cancellationToken) {
+			if (_projections.Length == 0) {
+				return;
+			}
 			await CreateSchema(cancellationToken);
 
 			await Subscribe(cancellationToken);
@@ -76,6 +79,7 @@ namespace Transacto {
 					Interlocked.Exchange(ref _subscribed, 0);
 					Task.Run(() => Subscribe(cancellationToken), cancellationToken);
 				},
+				filterOptions: new SubscriptionFilterOptions(EventTypeFilter.ExcludeSystemEvents()),
 				userCredentials: new UserCredentials("admin", "changeit"),
 				cancellationToken: _stopped.Token));
 
@@ -104,14 +108,16 @@ namespace Transacto {
 			private readonly Func<NpgsqlConnection> _connectionFactory;
 			private readonly IMessageTypeMapper _messageTypeMapper;
 
-			private readonly (NpgsqlProjection projection, Position checkpoint)[] _projections;
+			private readonly (NpgsqlProjection projection, SqlProjectionHandlerResolver resolver, Position checkpoint)[]
+				_projections;
 
 			public CheckpointAwareProjector(Func<NpgsqlConnection> connectionFactory,
 				IMessageTypeMapper messageTypeMapper,
 				(NpgsqlProjection projection, Position checkpoint)[] projections) {
 				_connectionFactory = connectionFactory;
 				_messageTypeMapper = messageTypeMapper;
-				_projections = projections;
+				_projections = Array.ConvertAll(projections,
+					_ => (_.projection, Resolve.WhenEqualToHandlerMessageType(_.projection), _.checkpoint));
 			}
 
 			public Task ProjectAsync(StreamSubscription subscription, ResolvedEvent e,
@@ -120,14 +126,13 @@ namespace Transacto {
 				if (type == null)
 					return Task.CompletedTask;
 				var message = JsonSerializer.Deserialize(
-					e.Event.Data.Span, type, TransactoSerializerOptions.EventSerializerOptions);
-				return Task.WhenAll(_projections.Where(x => x.checkpoint < e.OriginalPosition)
-					.Select(x => (x.projection, Resolve.WhenEqualToHandlerMessageType(x.projection)))
+					e.Event.Data.Span, type, TransactoSerializerOptions.Events);
+				return Task.WhenAll(_projections.Where(_ => _.checkpoint < e.OriginalPosition)
 					.Select(async _ => {
 						await using var connection = _connectionFactory();
 						await connection.OpenAsync(cancellationToken);
 						await using var transaction = await connection.BeginTransactionAsync(cancellationToken);
-						var (projection, resolver) = _;
+						var (projection, resolver, _) = _;
 						var projector = new AsyncSqlProjector(resolver,
 							new ConnectedTransactionalSqlCommandExecutor(transaction));
 						await projector.ProjectAsync(message, cancellationToken);

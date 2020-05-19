@@ -16,7 +16,8 @@ namespace Transacto.Modules {
 					var (unitOfWork, command) = _;
 					var handlers = new GeneralLedgerEntryHandlers(
 						new GeneralLedgerEventStoreRepository(eventStore, messageTypeMapper, unitOfWork),
-						new GeneralLedgerEntryEventStoreRepository(eventStore, messageTypeMapper, unitOfWork));
+						new GeneralLedgerEntryEventStoreRepository(eventStore, messageTypeMapper, unitOfWork),
+						new ChartOfAccountsEventStoreRepository(eventStore, messageTypeMapper, unitOfWork));
 
 					return handlers.Handle(command, ct);
 				});

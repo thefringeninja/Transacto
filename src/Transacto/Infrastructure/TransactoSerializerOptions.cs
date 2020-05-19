@@ -8,17 +8,22 @@ using Transacto.Framework;
 
 namespace Transacto.Infrastructure {
 	public static class TransactoSerializerOptions {
-		public static readonly JsonSerializerOptions EventSerializerOptions = new JsonSerializerOptions {
+		public static readonly JsonSerializerOptions Events = new JsonSerializerOptions {
 			PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
 			PropertyNameCaseInsensitive = true
 		};
 
-		public static JsonSerializerOptions CommandSerializerOptions(params Type[] businessTransactionTypes) =>
+		public static JsonSerializerOptions BusinessTransactions(params Type[] businessTransactionTypes) =>
 			new JsonSerializerOptions {
 				PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
 				PropertyNameCaseInsensitive = true,
 				Converters = {new BusinessTransactionConverter(businessTransactionTypes)}
 			};
+
+		public static readonly JsonSerializerOptions Commands = new JsonSerializerOptions {
+			PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+			PropertyNameCaseInsensitive = true
+		};
 
 		private class BusinessTransactionConverter : JsonConverter<IBusinessTransaction?> {
 			private readonly IDictionary<string, Type> _transactionTypes;
@@ -62,7 +67,7 @@ namespace Transacto.Infrastructure {
 				writer.WritePropertyName(GetBusinessTransactionPropertyName(value.GetType()));
 
 				using var document = JsonDocument.Parse(
-					JsonSerializer.SerializeToUtf8Bytes(value, value.GetType(), EventSerializerOptions));
+					JsonSerializer.SerializeToUtf8Bytes(value, value.GetType(), Events));
 
 				document.RootElement.WriteTo(writer);
 

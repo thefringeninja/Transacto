@@ -7,12 +7,12 @@ using Transacto.Framework;
 
 namespace Transacto.Infrastructure {
 	public class ChartOfAccountsEventStoreRepository : IChartOfAccountsRepository {
-		private readonly EventStoreRepository<ChartOfAccounts, string> _inner;
+		private readonly EventStoreRepository<ChartOfAccounts> _inner;
 
 		public ChartOfAccountsEventStoreRepository(EventStoreClient eventStore,
 			IMessageTypeMapper messageTypeMapper, UnitOfWork unitOfWork) {
-			_inner = new EventStoreRepository<ChartOfAccounts, string>(eventStore, unitOfWork,
-				ChartOfAccounts.Factory, _ => string.Empty, _ => "chartOfAccounts", messageTypeMapper);
+			_inner = new EventStoreRepository<ChartOfAccounts>(eventStore, unitOfWork,
+				ChartOfAccounts.Factory, _ => "chartOfAccounts", messageTypeMapper);
 		}
 
 		public ValueTask<Optional<ChartOfAccounts>> GetOptional(CancellationToken cancellationToken = default)

@@ -13,13 +13,13 @@ namespace SomeCompany.ReceiptOfGoods {
 
 		public GeneralLedgerEntryNumber ReferenceNumber => new GeneralLedgerEntryNumber("goodsReceipt-" + ReceiptOfGoodsNumber);
 
-		public void Apply(GeneralLedgerEntry entry) {
+		public void Apply(GeneralLedgerEntry entry, ChartOfAccounts chartOfAccounts) {
 			var (inventoryInTransit, inventoryOnHand) = ReceiptOfGoodsItems.Aggregate(
 				(new Credit(new AccountNumber(1400)), new Debit(new AccountNumber(1450))),
 				Accumulate);
 
-			entry.ApplyCredit(inventoryInTransit);
-			entry.ApplyDebit(inventoryOnHand);
+			entry.ApplyCredit(inventoryInTransit, chartOfAccounts);
+			entry.ApplyDebit(inventoryOnHand, chartOfAccounts);
 			entry.ApplyTransaction(this);
 		}
 

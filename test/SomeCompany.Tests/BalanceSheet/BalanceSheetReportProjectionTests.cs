@@ -5,6 +5,7 @@ using SomeCompany.Infrastructure;
 using Transacto;
 using Transacto.Domain;
 using Transacto.Messages;
+using Transacto.Plugins.BalanceSheet;
 using Xunit;
 
 namespace SomeCompany.BalanceSheet {
@@ -24,14 +25,11 @@ namespace SomeCompany.BalanceSheet {
 
         [Theory, AutoSomeCompanyData]
         public Task when_a_general_ledger_entry_was_created(GeneralLedgerEntryIdentifier generalLedgerEntryIdentifier,
-            PeriodIdentifier period) => new NpgsqlProjectionScenario(new BalanceSheetReportProjection())
+            Period period) => new NpgsqlProjectionScenario(new BalanceSheetReportProjection())
             .Given(new CreateSchema())
             .Given(new GeneralLedgerEntryCreated {
                 GeneralLedgerEntryId = generalLedgerEntryIdentifier.ToGuid(),
-                Period = new PeriodDto {
-                    Month = period.Month,
-                    Year = period.Year
-                }
+                Period = period.ToString()
             })
             .Then(_schema, "balance_sheet_general_ledger_entry_period", new BalanceSheetReportProjection.GeneralLedgerEntryPeriod {
                 PeriodMonth = period.Month,
@@ -43,15 +41,12 @@ namespace SomeCompany.BalanceSheet {
         [Theory, AutoSomeCompanyData]
         public Task when_a_credit_was_applied(
             GeneralLedgerEntryIdentifier generalLedgerEntryIdentifier,
-            PeriodIdentifier period,
+            Period period,
             Credit credit) => new NpgsqlProjectionScenario(new BalanceSheetReportProjection())
             .Given(new CreateSchema())
             .Given(new GeneralLedgerEntryCreated {
                 GeneralLedgerEntryId = generalLedgerEntryIdentifier.ToGuid(),
-                Period = new PeriodDto {
-                    Month = period.Month,
-                    Year = period.Year
-                }
+                Period = period.ToString()
             }, new CreditApplied {
                 Amount = credit.Amount.ToDecimal(),
                 AccountNumber = credit.AccountNumber.ToInt32(),
@@ -72,15 +67,12 @@ namespace SomeCompany.BalanceSheet {
         [Theory, AutoSomeCompanyData]
         public Task when_a_debit_was_applied(
             GeneralLedgerEntryIdentifier generalLedgerEntryIdentifier,
-            PeriodIdentifier period,
+            Period period,
             Credit credit) => new NpgsqlProjectionScenario(new BalanceSheetReportProjection())
             .Given(new CreateSchema())
             .Given(new GeneralLedgerEntryCreated {
                 GeneralLedgerEntryId = generalLedgerEntryIdentifier.ToGuid(),
-                Period = new PeriodDto {
-                    Month = period.Month,
-                    Year = period.Year
-                }
+                Period = period.ToString()
             }, new DebitApplied {
                 Amount = credit.Amount.ToDecimal(),
                 AccountNumber = credit.AccountNumber.ToInt32(),
@@ -101,7 +93,7 @@ namespace SomeCompany.BalanceSheet {
         [Theory, AutoSomeCompanyData]
         public Task when_the_general_ledger_entry_was_posted(
             GeneralLedgerEntryIdentifier generalLedgerEntryIdentifier,
-            PeriodIdentifier period,
+            Period period,
             AccountNumber credit,
             AccountNumber debit,
             Money amount,
@@ -109,10 +101,7 @@ namespace SomeCompany.BalanceSheet {
             .Given(new CreateSchema())
             .Given(new GeneralLedgerEntryCreated {
                 GeneralLedgerEntryId = generalLedgerEntryIdentifier.ToGuid(),
-                Period = new PeriodDto {
-                    Month = period.Month,
-                    Year = period.Year
-                }
+                Period = period.ToString()
             })
             .Given(Enumerable.Range(0, iterations).Select(_ => new DebitApplied {
                 Amount = amount.ToDecimal(),
@@ -125,7 +114,8 @@ namespace SomeCompany.BalanceSheet {
                 GeneralLedgerEntryId = generalLedgerEntryIdentifier.ToGuid()
             }))
             .Given(new GeneralLedgerEntryPosted {
-                GeneralLedgerEntryId = generalLedgerEntryIdentifier.ToGuid()
+                GeneralLedgerEntryId = generalLedgerEntryIdentifier.ToGuid(),
+                Period = period.ToString()
             })
             .Then(_schema, "balance_sheet_general_ledger_entry_period",
                 Array.Empty<BalanceSheetReportProjection.GeneralLedgerEntryPeriod>())

@@ -4,87 +4,96 @@ using Transacto.Framework;
 using Transacto.Messages;
 
 namespace Transacto.Domain {
-    public class ChartOfAccounts : AggregateRoot {
-        public static readonly Func<ChartOfAccounts> Factory = () => new ChartOfAccounts();
+	public class ChartOfAccounts : AggregateRoot {
+		public static readonly Func<ChartOfAccounts> Factory = () => new ChartOfAccounts();
 
-        private readonly HashSet<AccountNumber> _accountNumbers;
-        private readonly HashSet<AccountNumber> _deactivatedAccountNumbers;
-        private ChartOfAccounts() {
-            _accountNumbers = new HashSet<AccountNumber>();
-            _deactivatedAccountNumbers = new HashSet<AccountNumber>();
-            Register<AccountDefined>(e => _accountNumbers.Add(new AccountNumber(e.AccountNumber)));
-            Register<AccountDeactivated>(e => {
-                var accountNumber = new AccountNumber(e.AccountNumber);
-                _accountNumbers.Remove(accountNumber);
-                _deactivatedAccountNumbers.Add(accountNumber);
-            });
-            Register<AccountReactivated>(e => {
-                var accountNumber = new AccountNumber(e.AccountNumber);
-                _accountNumbers.Add(accountNumber);
-                _deactivatedAccountNumbers.Remove(accountNumber);
-            });
-        }
+		private readonly HashSet<AccountNumber> _accountNumbers;
+		private readonly HashSet<AccountNumber> _deactivatedAccountNumbers;
 
-        public void DefineAccount(AccountName accountName, AccountNumber accountNumber) {
-            MustNotContainAccountNumber(accountNumber);
+		public override string Id { get; } = "chartOfAccounts";
 
-            Apply(new AccountDefined {
-                AccountName = accountName.ToString(),
-                AccountNumber = accountNumber.ToInt32()
-            });
-        }
+		private ChartOfAccounts() {
+			_accountNumbers = new HashSet<AccountNumber>();
+			_deactivatedAccountNumbers = new HashSet<AccountNumber>();
+			Register<AccountDefined>(e => _accountNumbers.Add(new AccountNumber(e.AccountNumber)));
+			Register<AccountDeactivated>(e => {
+				var accountNumber = new AccountNumber(e.AccountNumber);
+				_accountNumbers.Remove(accountNumber);
+				_deactivatedAccountNumbers.Add(accountNumber);
+			});
+			Register<AccountReactivated>(e => {
+				var accountNumber = new AccountNumber(e.AccountNumber);
+				_accountNumbers.Add(accountNumber);
+				_deactivatedAccountNumbers.Remove(accountNumber);
+			});
+		}
 
-        public void DeactivateAccount(AccountNumber accountNumber) {
-            MustContainAccountNumber(accountNumber);
+		public void MustNotBeDeactivated(AccountNumber accountNumber) {
+			if (_deactivatedAccountNumbers.Contains(accountNumber)) {
+				throw new InvalidOperationException();
+			}
+		}
 
-            if (!IsActive(accountNumber)) {
-                return;
-            }
+		public void DefineAccount(AccountName accountName, AccountNumber accountNumber) {
+			MustNotContainAccountNumber(accountNumber);
 
-            Apply(new AccountDeactivated {
-                AccountNumber = accountNumber.ToInt32()
-            });
-        }
+			Apply(new AccountDefined {
+				AccountName = accountName.ToString(),
+				AccountNumber = accountNumber.ToInt32()
+			});
+		}
 
-        public void ReactivateAccount(AccountNumber accountNumber) {
-            MustContainAccountNumber(accountNumber);
+		public void DeactivateAccount(AccountNumber accountNumber) {
+			MustContainAccountNumber(accountNumber);
 
-            if (IsActive(accountNumber)) {
-                return;
-            }
+			if (!IsActive(accountNumber)) {
+				return;
+			}
 
-            Apply(new AccountReactivated {
-                AccountNumber = accountNumber.ToInt32()
-            });
-        }
+			Apply(new AccountDeactivated {
+				AccountNumber = accountNumber.ToInt32()
+			});
+		}
 
-        public void RenameAccount(AccountNumber accountNumber, AccountName newAccountName) {
-            MustContainAccountNumber(accountNumber);
+		public void ReactivateAccount(AccountNumber accountNumber) {
+			MustContainAccountNumber(accountNumber);
 
-            Apply(new AccountRenamed {
-                AccountNumber = accountNumber.ToInt32(),
-                NewAccountName = newAccountName.ToString()
-            });
-        }
+			if (IsActive(accountNumber)) {
+				return;
+			}
 
-        private void MustNotContainAccountNumber(AccountNumber accountNumber) {
-            if (!IsActive(accountNumber) && !IsUnactive(accountNumber)) {
-                return;
-            }
+			Apply(new AccountReactivated {
+				AccountNumber = accountNumber.ToInt32()
+			});
+		}
 
-            throw new InvalidOperationException();
-        }
+		public void RenameAccount(AccountNumber accountNumber, AccountName newAccountName) {
+			MustContainAccountNumber(accountNumber);
 
-        private void MustContainAccountNumber(AccountNumber accountNumber) {
-            if (IsActive(accountNumber) || IsUnactive(accountNumber)) {
-                return;
-            }
+			Apply(new AccountRenamed {
+				AccountNumber = accountNumber.ToInt32(),
+				NewAccountName = newAccountName.ToString()
+			});
+		}
 
-            throw new InvalidOperationException();
-        }
+		private void MustNotContainAccountNumber(AccountNumber accountNumber) {
+			if (!IsActive(accountNumber) && !IsUnactive(accountNumber)) {
+				return;
+			}
 
-        private bool IsUnactive(AccountNumber accountNumber) => _deactivatedAccountNumbers.Contains(accountNumber);
+			throw new InvalidOperationException();
+		}
 
-        private bool IsActive(AccountNumber accountNumber) => _accountNumbers.Contains(accountNumber);
-    }
+		private void MustContainAccountNumber(AccountNumber accountNumber) {
+			if (IsActive(accountNumber) || IsUnactive(accountNumber)) {
+				return;
+			}
+
+			throw new InvalidOperationException();
+		}
+
+		private bool IsUnactive(AccountNumber accountNumber) => _deactivatedAccountNumbers.Contains(accountNumber);
+
+		private bool IsActive(AccountNumber accountNumber) => _accountNumbers.Contains(accountNumber);
+	}
 }

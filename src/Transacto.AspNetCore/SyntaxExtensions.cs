@@ -7,7 +7,7 @@ using Inflector;
 namespace Projac.Npgsql {
 	// ReSharper restore CheckNamespace
 
-	internal static class SyntaxExtensions {
+	public static class SyntaxExtensions {
 		public static DbParameter Parameter(this NpgsqlSyntax syntax, Expression<Func<object>> exp) {
 			var value = exp.Compile().Invoke() switch {
 				Guid g => syntax.UniqueIdentifier(g),

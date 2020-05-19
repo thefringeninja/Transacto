@@ -7,9 +7,15 @@
 		<NullableContextOptions>enable</NullableContextOptions>
 		<TreatWarningsAsErrors>true</TreatWarningsAsErrors>
 		<LangVersion>8.0</LangVersion>
+		<RestoreSources>$(RestoreSources);https://api.nuget.org/v3/index.json;https://nuget.pkg.github.com/thefringeninja/index.json</RestoreSources>
 	</PropertyGroup>
+	<ItemGroup>
+		<FrameworkReference Include="Microsoft.AspNetCore.App" />
+	</ItemGroup>
 
 	<ItemGroup>
+		<PackageReference Include="Autofac" Version="5.2.0" />
+		<PackageReference Include="Autofac.Extensions.DependencyInjection" Version="6.0.0" />
 		<PackageReference Include="Dapper" Version="2.0.35" />
 		<PackageReference Include="Hallo" Version="2.1.0" />
 		<PackageReference Include="Inflector.NetStandard" Version="1.2.2" />
@@ -21,13 +27,21 @@
 		<PackageReference Include="Serilog" Version="2.9.0" />
 		<PackageReference Include="Serilog.AspNetCore" Version="3.2.0" />
 		<PackageReference Include="Serilog.Sinks.Console" Version="3.1.1" />
-		<PackageReference Include="SqlStreamStore.Postgres" Version="1.2.0-*" />
+		<PackageReference Include="Transacto.Tasks" Version="0.0.0-alpha.*" />
 	</ItemGroup>
 
 	<ItemGroup>
 		<ProjectReference Include="..\..\..\Projac\src\Projac.Npgsql\Projac.Npgsql.csproj" />
 		<ProjectReference Include="..\..\..\Projac\src\Projac.Sql\Projac.Sql.csproj" />
 		<ProjectReference Include="..\Transacto\Transacto.csproj" />
+	</ItemGroup>
+
+
+	<ItemGroup>
+		<EmbeddedResource Include="**\*.sql" />
+		<None Remove="node_modules\**" />
+		<EmbeddedResource Remove="node_modules\**" />
+		<Compile Remove="node_modules\**" />
 	</ItemGroup>
 
 </Project>

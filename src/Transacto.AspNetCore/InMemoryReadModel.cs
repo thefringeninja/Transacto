@@ -10,8 +10,7 @@ namespace Transacto {
 			_readModels = new ConcurrentDictionary<string, object?>();
 		}
 
-		public void Update<T>(string key, Action<T> action, Func<T>? factory = null) {
-			factory ??= Activator.CreateInstance<T>;
+		public void Update<T>(string key, Action<T> action, Func<T> factory) {
 			var maybeTarget = _readModels.GetOrAdd(key, _ => factory());
 
 			if (!(maybeTarget is T target)) {

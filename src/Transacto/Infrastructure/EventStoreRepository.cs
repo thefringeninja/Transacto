@@ -7,7 +7,7 @@ using EventStore.Client;
 using Transacto.Framework;
 
 namespace Transacto.Infrastructure {
-    public class EventStoreRepository<TAggregateRoot, TIdentifier> where TAggregateRoot : AggregateRoot {
+    public class EventStoreRepository<TAggregateRoot> where TAggregateRoot : AggregateRoot {
         private static readonly JsonSerializerOptions DefaultOptions = new JsonSerializerOptions {
             PropertyNamingPolicy = JsonNamingPolicy.CamelCase
         };
@@ -15,8 +15,7 @@ namespace Transacto.Infrastructure {
         private readonly EventStoreClient _eventStore;
         private readonly UnitOfWork _unitOfWork;
         private readonly Func<TAggregateRoot> _factory;
-        private readonly Func<TAggregateRoot, TIdentifier> _getIdentifier;
-        private readonly Func<TIdentifier, string> _getStreamName;
+        private readonly Func<string, string> _getStreamName;
         private readonly IMessageTypeMapper _messageTypeMapper;
         private readonly JsonSerializerOptions _serializerOptions;
 
@@ -24,20 +23,18 @@ namespace Transacto.Infrastructure {
             EventStoreClient eventStore,
             UnitOfWork unitOfWork,
             Func<TAggregateRoot> factory,
-            Func<TAggregateRoot, TIdentifier> getIdentifier,
-            Func<TIdentifier, string> getStreamName,
+            Func<string, string> getStreamName,
             IMessageTypeMapper messageTypeMapper,
             JsonSerializerOptions? serializerOptions = null) {
             _eventStore = eventStore;
             _unitOfWork = unitOfWork;
             _factory = factory;
-            _getIdentifier = getIdentifier;
             _getStreamName = getStreamName;
             _messageTypeMapper = messageTypeMapper;
             _serializerOptions = serializerOptions ?? DefaultOptions;
         }
 
-        public async ValueTask<Optional<TAggregateRoot>> GetById(TIdentifier identifier,
+        public async ValueTask<Optional<TAggregateRoot>> GetById(string identifier,
             CancellationToken cancellationToken = default) {
             var streamName = _getStreamName(identifier);
             if (_unitOfWork.TryGet(streamName, out var a) && a is TAggregateRoot aggregate) {
@@ -45,7 +42,7 @@ namespace Transacto.Infrastructure {
             }
 
             try {
-                var events = _eventStore.ReadStreamAsync(Direction.Forwards,
+                await using var events = _eventStore.ReadStreamAsync(Direction.Forwards,
                     streamName, StreamPosition.Start, int.MaxValue, cancellationToken: cancellationToken);
 
                 aggregate = _factory();
@@ -64,6 +61,6 @@ namespace Transacto.Infrastructure {
         }
 
         public void Add(TAggregateRoot aggregateRoot) =>
-            _unitOfWork.Attach(_getStreamName(_getIdentifier(aggregateRoot)), aggregateRoot);
+            _unitOfWork.Attach(_getStreamName(aggregateRoot.Id), aggregateRoot);
     }
 }

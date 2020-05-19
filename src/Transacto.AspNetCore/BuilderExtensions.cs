@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
@@ -7,49 +6,19 @@ using System.Reflection;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.AspNetCore.Routing.Template;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Net.Http.Headers;
-using Transacto;
 using Transacto.Domain;
 using Transacto.Framework;
 using Transacto.Infrastructure;
 using Transacto.Messages;
 
-// ReSharper disable CheckNamespace
-namespace Microsoft.AspNetCore.Builder {
-	// ReSharper restore CheckNamespace
-
-	public static class BuilderExtensions {
-		public static IApplicationBuilder UseTransacto(this IApplicationBuilder builder) {
-			var readModel = builder.ApplicationServices.GetRequiredService<InMemoryReadModel>();
-			return builder
-				.Map("/chart-of-accounts",
-					inner => inner
-						.UseRouting()
-						.UseEndpoints(endpoints => endpoints
-							.MapGet(string.Empty, (CancellationToken ct) => {
-								var response =
-									!readModel.TryGet<IDictionary<int, (string, bool)>, IDictionary<string, string>>(
-										nameof(ChartOfAccounts),
-										value => new SortedDictionary<string, string>(
-											value.ToDictionary(x => x.Key.ToString(), x => x.Value.Item1)),
-										out var chartOfAccounts)
-										? (Response)new NotFoundResponse()
-										: new HalResponse(new ChartOfAccountRepresentation(), chartOfAccounts);
-
-
-								return new ValueTask<Response>(response);
-							})
-							.MapCommands(string.Empty,
-								typeof(DefineAccount),
-								typeof(RenameAccount),
-								typeof(DeactivateAccount),
-								typeof(ReactivateAccount))));
-		}
-
+namespace Transacto {
+	static partial class BuilderExtensions {
 		public static IEndpointRouteBuilder MapGet(this IEndpointRouteBuilder builder, string route,
 			Func<CancellationToken, ValueTask<Response>> getResponse) {
 			var routeTemplate = TemplateParser.Parse(route);
@@ -94,7 +63,6 @@ namespace Microsoft.AspNetCore.Builder {
 			});
 			return builder;
 		}
-
 
 		public static IEndpointRouteBuilder MapPut<T>(this IEndpointRouteBuilder builder, string route,
 			Func<HttpContext, T, ValueTask<Response>> getResponse) {
@@ -148,7 +116,7 @@ namespace Microsoft.AspNetCore.Builder {
 
 				await using var commandStream = context.Request.Form.Files[0].OpenReadStream();
 				var command = await JsonSerializer.DeserializeAsync(commandStream, commandType,
-					TransactoSerializerOptions.CommandSerializerOptions());
+					TransactoSerializerOptions.Commands);
 
 				await dispatcher.Handle(command, context.RequestAborted);
 
@@ -161,7 +129,7 @@ namespace Microsoft.AspNetCore.Builder {
 		public static IEndpointRouteBuilder MapBusinessTransaction<T>(this IEndpointRouteBuilder builder, string route)
 			where T : IBusinessTransaction {
 			var dispatcher = new CommandDispatcher(builder.ServiceProvider.GetServices<CommandHandlerModule>());
-			var serializerOptions = TransactoSerializerOptions.CommandSerializerOptions(typeof(T));
+			var serializerOptions = TransactoSerializerOptions.BusinessTransactions(typeof(T));
 
 			builder.MapPost(route, async context => {
 				if (!MediaTypeHeaderValue.TryParse(context.Request.ContentType, out var mediaType) ||

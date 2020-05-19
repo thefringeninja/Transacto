@@ -21,7 +21,7 @@ namespace Transacto.Infrastructure {
 }}";
 
 			var command = JsonSerializer.Deserialize<TestCommand>(json,
-				TransactoSerializerOptions.CommandSerializerOptions(typeof(TestBusinessTransaction)));
+				TransactoSerializerOptions.BusinessTransactions(typeof(TestBusinessTransaction)));
 
 			Assert.Equal(property, command.Property);
 			Assert.Equal(anotherProperty, command.AnotherProperty);
@@ -44,7 +44,7 @@ namespace Transacto.Infrastructure {
 }}";
 
 			var command = JsonSerializer.Deserialize<TestCommand>(json,
-				TransactoSerializerOptions.CommandSerializerOptions(typeof(TestBusinessTransaction)));
+				TransactoSerializerOptions.BusinessTransactions(typeof(TestBusinessTransaction)));
 
 			Assert.Equal(property, command.Property);
 			Assert.Equal(anotherProperty, command.AnotherProperty);
@@ -54,7 +54,7 @@ namespace Transacto.Infrastructure {
 
 		[Fact]
 		public void Serialization() {
-			var sut = TransactoSerializerOptions.CommandSerializerOptions(typeof(TestBusinessTransaction));
+			var sut = TransactoSerializerOptions.BusinessTransactions(typeof(TestBusinessTransaction));
 
 			var testBusinessTransaction = new TestBusinessTransaction {
 				Version = 1,
@@ -86,7 +86,7 @@ namespace Transacto.Infrastructure {
 
 		public GeneralLedgerEntryNumber ReferenceNumber { get; }
 
-		public void Apply(GeneralLedgerEntry generalLedgerEntry) {
+		public void Apply(GeneralLedgerEntry generalLedgerEntry, ChartOfAccounts _) {
 			generalLedgerEntry.ApplyTransaction(this);
 		}
 

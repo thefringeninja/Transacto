@@ -6,8 +6,6 @@ namespace Transacto.Domain {
         ValueTask<GeneralLedgerEntry> Get(GeneralLedgerEntryIdentifier identifier,
             CancellationToken cancellationToken = default);
 
-        ValueTask<GeneralLedgerEntry[]> GetPosted(CancellationToken cancellationToken = default);
-
         void Add(GeneralLedgerEntry generalLedgerEntry);
     }
 }
