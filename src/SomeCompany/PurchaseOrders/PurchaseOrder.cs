@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text.Json.Serialization;
+using EventStore.Client;
 using Transacto.Domain;
 
 namespace SomeCompany.PurchaseOrders {
@@ -37,5 +39,8 @@ namespace SomeCompany.PurchaseOrders {
 		}
 
 		public int? Version { get; set; }
+
+		[JsonIgnore]
+		public long Position { get; set; }
 	}
 }

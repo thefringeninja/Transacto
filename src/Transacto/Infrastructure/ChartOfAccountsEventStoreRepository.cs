@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using EventStore.Client;
 using Transacto.Domain;
 using Transacto.Framework;
+using Transacto.Framework.CommandHandling;
 
 namespace Transacto.Infrastructure {
 	public class ChartOfAccountsEventStoreRepository : IChartOfAccountsRepository {
@@ -12,16 +13,16 @@ namespace Transacto.Infrastructure {
 		public ChartOfAccountsEventStoreRepository(EventStoreClient eventStore,
 			IMessageTypeMapper messageTypeMapper, UnitOfWork unitOfWork) {
 			_inner = new EventStoreRepository<ChartOfAccounts>(eventStore, unitOfWork,
-				ChartOfAccounts.Factory, _ => "chartOfAccounts", messageTypeMapper);
+				ChartOfAccounts.Factory, messageTypeMapper);
 		}
 
 		public ValueTask<Optional<ChartOfAccounts>> GetOptional(CancellationToken cancellationToken = default)
-			=> _inner.GetById(string.Empty, cancellationToken);
+			=> _inner.GetById(ChartOfAccounts.Identifier, cancellationToken);
 
 		public async ValueTask<ChartOfAccounts> Get(CancellationToken cancellationToken = default) {
 			var optionalChartOfAccounts = await GetOptional(cancellationToken);
 			if (!optionalChartOfAccounts.HasValue) {
-				throw new InvalidOperationException();
+				throw new ChartOfAccountsNotFoundException();
 			}
 
 			return optionalChartOfAccounts.Value;

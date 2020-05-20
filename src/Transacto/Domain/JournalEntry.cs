@@ -4,7 +4,7 @@ using System.Collections.Generic;
 namespace Transacto.Domain {
 	public class JournalEntry : IBusinessTransaction {
 		GeneralLedgerEntryNumber IBusinessTransaction.ReferenceNumber =>
-			new GeneralLedgerEntryNumber($"je-{ReferenceNumber}");
+			new GeneralLedgerEntryNumber("je", ReferenceNumber);
 
 		public int ReferenceNumber { get; set; }
 		public Item[] Credits { get; set; } = Array.Empty<Item>();

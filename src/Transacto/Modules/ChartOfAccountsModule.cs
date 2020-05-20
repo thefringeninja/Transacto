@@ -1,7 +1,7 @@
-using System.Text.Json;
 using EventStore.Client;
 using Transacto.Application;
 using Transacto.Framework;
+using Transacto.Framework.CommandHandling;
 using Transacto.Infrastructure;
 using Transacto.Messages;
 using JsonSerializerOptions = System.Text.Json.JsonSerializerOptions;
@@ -13,45 +13,53 @@ namespace Transacto.Modules {
 			Build<DefineAccount>()
 				.Log()
 				.UnitOfWork(eventStore, messageTypeMapper, serializerOptions)
-				.Handle((_, ct) => {
+				.Handle(async (_, ct) => {
 					var (unitOfWork, command) = _;
 					var handlers = new ChartOfAccountsHandlers(
 						new ChartOfAccountsEventStoreRepository(eventStore, messageTypeMapper, unitOfWork));
 
-					return handlers.Handle(command, ct);
+					await handlers.Handle(command, ct);
+
+					return Position.Start;
 				});
 
 			Build<DeactivateAccount>()
 				.Log()
 				.UnitOfWork(eventStore, messageTypeMapper, serializerOptions)
-				.Handle((_, ct) => {
+				.Handle(async (_, ct) => {
 					var (unitOfWork, command) = _;
 					var handlers = new ChartOfAccountsHandlers(
 						new ChartOfAccountsEventStoreRepository(eventStore, messageTypeMapper, unitOfWork));
 
-					return handlers.Handle(command, ct);
+					await handlers.Handle(command, ct);
+
+					return Position.Start;
 				});
 
 			Build<ReactivateAccount>()
 				.Log()
 				.UnitOfWork(eventStore, messageTypeMapper, serializerOptions)
-				.Handle((_, ct) => {
+				.Handle(async (_, ct) => {
 					var (unitOfWork, command) = _;
 					var handlers = new ChartOfAccountsHandlers(
 						new ChartOfAccountsEventStoreRepository(eventStore, messageTypeMapper, unitOfWork));
 
-					return handlers.Handle(command, ct);
+					await handlers.Handle(command, ct);
+
+					return Position.Start;
 				});
 
 			Build<RenameAccount>()
 				.Log()
 				.UnitOfWork(eventStore, messageTypeMapper, serializerOptions)
-				.Handle((_, ct) => {
+				.Handle(async (_, ct) => {
 					var (unitOfWork, command) = _;
 					var handlers = new ChartOfAccountsHandlers(
 						new ChartOfAccountsEventStoreRepository(eventStore, messageTypeMapper, unitOfWork));
 
-					return handlers.Handle(command, ct);
+					await handlers.Handle(command, ct);
+
+					return Position.Start;
 				});
 		}
 	}

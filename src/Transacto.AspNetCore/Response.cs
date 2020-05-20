@@ -1,33 +1,31 @@
-using System.Collections.Generic;
 using System.IO;
 using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
-using Microsoft.Extensions.Primitives;
+using Microsoft.AspNetCore.Http.Headers;
 
 #nullable enable
 namespace Transacto {
 	public class Response {
-		public IList<(string, StringValues)> Headers { get; }
-		public HttpStatusCode StatusCode { get; set; }
+		public virtual ResponseHeaders Headers { get; }
+		public virtual HttpStatusCode StatusCode { get; set; } = HttpStatusCode.OK;
 
 		public Response() {
-			Headers = new List<(string, StringValues)>();
-			StatusCode = HttpStatusCode.OK;
+			Headers = new ResponseHeaders(new HeaderDictionary());
 		}
 
 		public ValueTask Write(HttpResponse response) {
 			response.StatusCode = (int)StatusCode;
 
-			foreach (var (key, value) in Headers) {
+			foreach (var (key, value) in Headers.Headers) {
 				response.Headers.AppendCommaSeparatedValues(key, value);
 			}
 
 			return WriteBody(response.Body, response.HttpContext.RequestAborted);
 		}
 
-		protected virtual ValueTask WriteBody(Stream stream, CancellationToken cancellationToken = default) =>
+		protected internal virtual ValueTask WriteBody(Stream stream, CancellationToken cancellationToken) =>
 			new ValueTask(Task.CompletedTask);
 	}
 }

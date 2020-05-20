@@ -1,4 +1,3 @@
-using System.Collections.Generic;
 using System.Linq;
 using System.Text.Json;
 using System.Threading;
@@ -18,7 +17,6 @@ namespace Transacto {
 		private readonly InMemoryReadModel _target;
 		private readonly CancellationTokenSource _stopped;
 
-		private int _retryCount;
 		private int _subscribed;
 		private StreamSubscription? _subscription;
 		private CancellationTokenRegistration? _stoppedRegistration;
@@ -31,7 +29,6 @@ namespace Transacto {
 			_target = target;
 			_stopped = new CancellationTokenSource();
 
-			_retryCount = 0;
 			_subscribed = 0;
 			_subscription = null;
 			_stoppedRegistration = null;
@@ -53,20 +50,15 @@ namespace Transacto {
 				await registration.Value.DisposeAsync();
 			}
 
-			Interlocked.Exchange(ref _subscription, await _eventStore.SubscribeToAllAsync(ProjectAsync,
+			Interlocked.Exchange(ref _subscription, await _eventStore.SubscribeToAllAsync(
+				Position.Start,
+				ProjectAsync,
 				subscriptionDropped: (_, reason, ex) => {
 					if (reason == SubscriptionDroppedReason.Disposed) {
 						return;
 					}
 
-					if (Interlocked.Increment(ref _retryCount) == 5) {
-						Log.Error(ex, "Subscription dropped: {reason}", reason);
-						return;
-					}
-
-					Log.Warning(ex, "Subscription dropped: {reason}; resubscribing...", reason);
-					Interlocked.Exchange(ref _subscribed, 0);
-					Task.Run(() => Subscribe(cancellationToken), cancellationToken);
+					Log.Error(ex, "Subscription dropped: {reason}", reason);
 				},
 				filterOptions: new SubscriptionFilterOptions(EventTypeFilter.ExcludeSystemEvents()),
 				userCredentials: new UserCredentials("admin", "changeit"),
@@ -80,7 +72,7 @@ namespace Transacto {
 					return Task.CompletedTask;
 				var message = JsonSerializer.Deserialize(
 					e.Event.Data.Span, type, TransactoSerializerOptions.Events);
-				return _projector.ProjectAsync(_target, message, ct);
+				return _projector.ProjectAsync(_target, Envelope.Create(message, e.OriginalEvent.Position), ct);
 			}
 		}
 

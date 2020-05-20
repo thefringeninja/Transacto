@@ -1,0 +1,8 @@
+@model System.Collections.Generic.IEnumerable<Hallo.Link>
+
+<section>
+@foreach (var link in Model)
+{
+	<a href="@link.Href" rel="@link.Rel" name="@link.Name" hreflang="@link.HrefLang" title="@link.Title">@link.Title</a>
+}
+</section>

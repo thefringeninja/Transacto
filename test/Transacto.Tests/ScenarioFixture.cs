@@ -9,11 +9,15 @@ namespace Transacto {
 
             this.CustomizeAccountNumber();
 
+            this.CustomizeAccountType();
+
+            this.CustomizeGeneralLedgerEntryNumber();
+
             this.CustomizeMoney();
 
-            this.CustomizeCredits();
+            this.CustomizeCredit();
 
-            this.CustomizeDebits();
+            this.CustomizeDebit();
         }
     }
 }

@@ -7,8 +7,8 @@ using Transacto.Messages;
 namespace Transacto.Domain {
 	public class GeneralLedgerEntry : AggregateRoot {
 		public static readonly Func<GeneralLedgerEntry> Factory = () => new GeneralLedgerEntry();
-		private GeneralLedgerEntryIdentifier _identifier;
 
+		private GeneralLedgerEntryIdentifier _identifier;
 
 		private bool _posted;
 		private readonly List<Debit> _debits;
@@ -21,11 +21,19 @@ namespace Transacto.Domain {
 		public bool IsInBalance => Balance == Money.Zero;
 		public IEnumerable<Debit> Debits => _debits.AsReadOnly();
 		public IEnumerable<Credit> Credits => _credits.AsReadOnly();
-		public override string Id => _identifier.ToString();
+		public override string Id => FormatStreamIdentifier(_identifier);
+
 		public GeneralLedgerEntryIdentifier Identifier => _identifier;
+
+		public static string FormatStreamIdentifier(GeneralLedgerEntryIdentifier identifier) =>
+			$"generalLedgerEntry-{identifier}";
 
 		internal GeneralLedgerEntry(GeneralLedgerEntryIdentifier identifier,
 			GeneralLedgerEntryNumber number, Period period, DateTimeOffset createdOn) : this() {
+			if (!period.Contains(createdOn)) {
+				throw new GeneralLedgerEntryNotInPeriodException(number, createdOn, period);
+			}
+
 			Apply(new GeneralLedgerEntryCreated {
 				GeneralLedgerEntryId = identifier.ToGuid(),
 				Number = number.ToString(),
@@ -96,19 +104,19 @@ namespace Transacto.Domain {
 
 		private void MustNotBePosted() {
 			if (_posted) {
-				throw new InvalidOperationException();
+				throw new GeneralLedgerEntryWasPostedException(_identifier);
 			}
 		}
 
 		public void MustBePosted() {
-			if (_posted) {
-				throw new InvalidOperationException();
+			if (!_posted) {
+				throw new GeneralLedgerEntryWasNotPostedException(_identifier);
 			}
 		}
 
 		public void MustBeInBalance() {
-			if (Balance != Money.Zero) {
-				throw new InvalidOperationException();
+			if (!IsInBalance) {
+				throw new GeneralLedgerEntryNotInBalanceException(_identifier);
 			}
 		}
 	}

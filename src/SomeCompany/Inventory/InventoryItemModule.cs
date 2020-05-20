@@ -1,6 +1,7 @@
 using System.Text.Json;
 using EventStore.Client;
 using Transacto.Framework;
+using Transacto.Framework.CommandHandling;
 
 namespace SomeCompany.Inventory {
 	public class InventoryItemModule : CommandHandlerModule {
@@ -9,12 +10,14 @@ namespace SomeCompany.Inventory {
 			Build<DefineInventoryItem>()
 				.Log()
 				.UnitOfWork(eventStore, messageTypeMapper, serializerOptions)
-				.Handle((_, ct) => {
+				.Handle(async (_, ct) => {
 					var (unitOfWork, command) = _;
 					var handlers = new InventoryItemHandlers(
 						new InventoryItemRepository(eventStore, messageTypeMapper, unitOfWork));
 
-					return handlers.Handle(command, ct);
+					await handlers.Handle(command, ct);
+
+					return Position.Start;
 				});
 		}
 	}

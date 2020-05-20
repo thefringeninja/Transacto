@@ -16,7 +16,7 @@ namespace Transacto.Testing {
             Record(events.Select(e => new Fact(identifier, e)));
 
         public void Record(IEnumerable<Fact> facts) => _recordedFacts.AddRange(facts);
-        public void Record(string identifier, AggregateRoot aggregate) => _aggregates[identifier] = aggregate;
+        public void Attach(string identifier, AggregateRoot aggregate) => _aggregates[identifier] = aggregate;
 
         public IAsyncEnumerable<Fact> GetFacts() =>
             _recordedFacts.ToAsyncEnumerable()
