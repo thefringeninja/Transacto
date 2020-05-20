@@ -10,7 +10,7 @@ namespace Transacto.Domain {
 		public const string Identifier = "generalLedger";
 		public static readonly Func<GeneralLedger> Factory = () => new GeneralLedger();
 
-		private readonly BalanceSheet _balanceSheet;
+		private readonly TrialBalance _trialBalance;
 		private readonly List<GeneralLedgerEntryIdentifier> _untransferredEntryIdentifiers;
 		private readonly List<GeneralLedgerEntryIdentifier> _entryIdentifiers;
 
@@ -20,7 +20,7 @@ namespace Transacto.Domain {
 		private DateTimeOffset _closingOn;
 		private GeneralLedgerEntryIdentifier _closingGeneralLedgerEntryIdentifier;
 
-		public override string Id => Identifier;
+		public override string Id { get; } = Identifier;
 
 		public static GeneralLedger Open(DateTimeOffset openedOn) {
 			var generalLedger = new GeneralLedger();
@@ -33,7 +33,7 @@ namespace Transacto.Domain {
 		private GeneralLedger() {
 			_untransferredEntryIdentifiers = new List<GeneralLedgerEntryIdentifier>();
 			_entryIdentifiers = new List<GeneralLedgerEntryIdentifier>();
-			_balanceSheet = BalanceSheet.None;
+			_trialBalance = TrialBalance.None;
 			_closingOn = default;
 			_profitAndLoss = null!;
 
@@ -52,7 +52,7 @@ namespace Transacto.Domain {
 				_untransferredEntryIdentifiers.Clear();
 				_entryIdentifiers.Clear();
 				foreach (var (accountNumber, amount) in e.Balance) {
-					_balanceSheet.Apply(new AccountNumber(accountNumber), new Money(amount));
+					_trialBalance.Apply(new AccountNumber(accountNumber), new Money(amount));
 				}
 
 				_period = Period.Parse(e.Period).Next();
@@ -67,15 +67,13 @@ namespace Transacto.Domain {
 
 		private static GeneralLedgerEntry Create(GeneralLedgerEntryIdentifier identifier,
 			GeneralLedgerEntryNumber number, DateTimeOffset createdOn, Period period) =>
-			period.Contains(createdOn)
-				? new GeneralLedgerEntry(identifier, number, period, createdOn)
-				: throw new InvalidOperationException();
+			new GeneralLedgerEntry(identifier, number, period, createdOn);
 
 		public void BeginClosingPeriod(AccountNumber retainedEarningsAccountNumber,
 			GeneralLedgerEntryIdentifier closingGeneralLedgerEntryIdentifier,
 			GeneralLedgerEntryIdentifier[] generalLedgerEntryIdentifiers, DateTimeOffset closingOn) {
 			if (_periodClosing) {
-				throw new InvalidOperationException();
+				throw new PeriodClosingInProcessException(_period);
 			}
 
 			_period.MustNotBeAfter(closingOn);
@@ -91,45 +89,46 @@ namespace Transacto.Domain {
 
 		public void TransferEntry(GeneralLedgerEntry generalLedgerEntry) {
 			if (!_periodClosing) {
-				throw new InvalidOperationException();
+				throw new PeriodClosingInProcessException(_period);
 			}
 
 			generalLedgerEntry.MustBeInBalance();
 			generalLedgerEntry.MustBePosted();
 
-			_balanceSheet.Transfer(generalLedgerEntry);
+			_trialBalance.Transfer(generalLedgerEntry);
 			_profitAndLoss.Transfer(generalLedgerEntry);
 			_untransferredEntryIdentifiers.Remove(generalLedgerEntry.Identifier);
 		}
 
-		public void CompleteClosingPeriod(ChartOfAccounts chartOfAccounts,
+		public void CompleteClosingPeriod(AccountIsDeactivated accountIsDeactivated,
 			AccountNumber retainedEarningsAccountNumber) {
 			if (!_periodClosing) {
-				throw new InvalidOperationException();
+				throw new PeriodOpenException(_period);
 			}
 
 			if (_untransferredEntryIdentifiers.Count > 0) {
-				throw new InvalidOperationException();
+				throw new PeriodContainsUntransferredEntriesException(_period,
+					_untransferredEntryIdentifiers.ToArray());
 			}
 
-			_balanceSheet.MustBeInBalance();
+			_trialBalance.MustBeInBalance();
 
-			var closingEntry = _profitAndLoss.GetClosingEntry(chartOfAccounts, retainedEarningsAccountNumber,
+			var closingEntry = _profitAndLoss.GetClosingEntry(accountIsDeactivated, retainedEarningsAccountNumber,
 				_closingOn, _closingGeneralLedgerEntryIdentifier);
 
 			foreach (var change in closingEntry.GetChanges()) {
 				Apply(change);
 			}
 
-			_balanceSheet.Transfer(closingEntry);
+			_trialBalance.Transfer(closingEntry);
 
-			_balanceSheet.MustBeInBalance();
+			_trialBalance.MustBeInBalance();
 
 			Apply(new AccountingPeriodClosed {
 				GeneralLedgerEntryIds = _entryIdentifiers.Select(x => x.ToGuid()).ToArray(),
 				ClosingGeneralLedgerEntryId = closingEntry.Identifier.ToGuid(),
 				Period = _period.ToString(),
-				Balance = _balanceSheet.ToDictionary(x => x.Key.ToInt32(), x => x.Value.ToDecimal())
+				Balance = _trialBalance.ToDictionary(x => x.Key.ToInt32(), x => x.Value.ToDecimal())
 			});
 		}
 
@@ -144,26 +143,43 @@ namespace Transacto.Domain {
 				_expenses = new Dictionary<AccountNumber, Money>();
 			}
 
-			public GeneralLedgerEntry GetClosingEntry(ChartOfAccounts chartOfAccounts,
+			public GeneralLedgerEntry GetClosingEntry(AccountIsDeactivated accountIsDeactivated,
 				AccountNumber retainedEarningsAccountNumber, DateTimeOffset closedOn,
 				GeneralLedgerEntryIdentifier closingGeneralLedgerEntryIdentifier) {
 				var entry = new GeneralLedgerEntry(closingGeneralLedgerEntryIdentifier,
-					new GeneralLedgerEntryNumber($"closingEntry-{_period}"), _period, closedOn);
+					new GeneralLedgerEntryNumber("jec", int.Parse(_period.ToString())), _period, closedOn);
 				foreach (var (accountNumber, amount) in _income) {
-					entry.ApplyDebit(new Debit(accountNumber, amount), chartOfAccounts);
+					if (amount == Money.Zero) {
+						continue;
+					}
+
+					if (amount > Money.Zero) {
+						entry.ApplyCredit(new Credit(accountNumber, amount), accountIsDeactivated);
+					} else {
+						entry.ApplyDebit(new Debit(accountNumber, -amount), accountIsDeactivated);
+					}
 				}
 
 				foreach (var (accountNumber, amount) in _expenses) {
-					entry.ApplyCredit(new Credit(accountNumber, amount), chartOfAccounts);
+					if (amount == Money.Zero) {
+						continue;
+					}
+
+					if (amount < Money.Zero) {
+						entry.ApplyCredit(new Credit(accountNumber, amount), accountIsDeactivated);
+					} else {
+						entry.ApplyDebit(new Debit(accountNumber, -amount), accountIsDeactivated);
+					}
 				}
 
 				var retainedEarnings = entry.Debits.Select(x => x.Amount).Sum() -
 				                       entry.Credits.Select(x => x.Amount).Sum();
 
 				if (retainedEarnings < Money.Zero) {
-					entry.ApplyDebit(new Debit(retainedEarningsAccountNumber, retainedEarnings), chartOfAccounts);
+					entry.ApplyDebit(new Debit(retainedEarningsAccountNumber, -retainedEarnings), accountIsDeactivated);
 				} else if (retainedEarnings > Money.Zero) {
-					entry.ApplyCredit(new Credit(retainedEarningsAccountNumber, retainedEarnings), chartOfAccounts);
+					entry.ApplyCredit(new Credit(retainedEarningsAccountNumber, retainedEarnings),
+						accountIsDeactivated);
 				}
 
 				entry.Post();
@@ -200,50 +216,37 @@ namespace Transacto.Domain {
 			}
 		}
 
-		private class BalanceSheet : IEnumerable<KeyValuePair<AccountNumber, Money>> {
-			public static readonly BalanceSheet None = new BalanceSheet();
+		private class TrialBalance : IEnumerable<KeyValuePair<AccountNumber, Money>> {
+			public static TrialBalance None => new TrialBalance();
 
 			private readonly IDictionary<AccountNumber, Money> _inner;
 
-			private BalanceSheet() {
+			private TrialBalance() {
 				_inner = new Dictionary<AccountNumber, Money>();
 			}
 
 			public void Transfer(GeneralLedgerEntry generalLedgerEntry) {
-				foreach (var debit in generalLedgerEntry.Debits.Where(x => x.AppearsOnBalanceSheet)) {
+				foreach (var debit in generalLedgerEntry.Debits) {
 					_inner[debit.AccountNumber] = _inner.TryGetValue(debit.AccountNumber, out var amount)
-						? amount + GetBalance(debit)
-						: GetBalance(debit);
+						? amount + debit.Amount
+						: debit.Amount;
 				}
 
-				foreach (var credit in generalLedgerEntry.Credits.Where(x => x.AppearsOnBalanceSheet)) {
+				foreach (var credit in generalLedgerEntry.Credits) {
 					_inner[credit.AccountNumber] = _inner.TryGetValue(credit.AccountNumber, out var amount)
-						? amount + GetBalance(credit)
-						: GetBalance(credit);
+						? amount - credit.Amount
+						: -credit.Amount;
 				}
 			}
 
 			public void Apply(AccountNumber accountNumber, Money amount) => _inner[accountNumber] = amount;
 
 			public void MustBeInBalance() {
-				if (_inner.Values.Sum() != Money.Zero) {
-					throw new InvalidOperationException();
+				var balance = _inner.Values.Sum();
+				if (balance != Money.Zero) {
+					throw new TrialBalanceFailedException(balance);
 				}
 			}
-
-			private static Money GetBalance(Debit debit) => AccountType.OfAccountNumber(debit.AccountNumber) switch {
-				AccountType.AssetAccount _ => debit.Amount,
-				AccountType.EquityAccount _ => -debit.Amount,
-				AccountType.ExpenseAccount _ => -debit.Amount,
-				_ => throw new InvalidOperationException()
-			};
-
-			private static Money GetBalance(Credit credit) => AccountType.OfAccountNumber(credit.AccountNumber) switch {
-				AccountType.AssetAccount _ => -credit.Amount,
-				AccountType.EquityAccount _ => credit.Amount,
-				AccountType.ExpenseAccount _ => credit.Amount,
-				_ => throw new InvalidOperationException()
-			};
 
 			public IEnumerator<KeyValuePair<AccountNumber, Money>> GetEnumerator() => _inner.GetEnumerator();
 			IEnumerator IEnumerable.GetEnumerator() => ((IEnumerable)_inner).GetEnumerator();

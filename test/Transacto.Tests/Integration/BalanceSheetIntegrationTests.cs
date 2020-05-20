@@ -27,6 +27,7 @@ namespace Transacto.Integration {
 				GeneralLedgerEntryId = generalLedgerEntryIdentifier.ToGuid(),
 				CreatedOn = createdOn,
 				BusinessTransaction = new JournalEntry {
+					ReferenceNumber = 1,
 					Credits = Array.ConvertAll(credits, credit => new JournalEntry.Item {
 						Amount = credit.Amount.ToDecimal(),
 						AccountNumber = credit.AccountNumber.Value

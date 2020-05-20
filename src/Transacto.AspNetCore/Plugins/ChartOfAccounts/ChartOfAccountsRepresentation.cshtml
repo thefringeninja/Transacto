@@ -1,0 +1,10 @@
+@model System.Collections.Generic.SortedDictionary<string, string>
+
+<section>
+	<ul>
+		@foreach (var (key, value) in Model)
+		{
+			<li>@key - @value</li>
+		}
+	</ul>
+</section>

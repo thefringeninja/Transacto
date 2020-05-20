@@ -1,5 +1,4 @@
 using System;
-using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Transacto.Domain;
@@ -7,28 +6,21 @@ using Transacto.Testing;
 
 namespace Transacto.Application {
 	internal class GeneralLedgerTestRepository : IGeneralLedgerRepository {
-		private readonly IFactRecorder _factRecorder;
+		private readonly FactRecorderRepository<GeneralLedger> _inner;
 
 		public GeneralLedgerTestRepository(IFactRecorder factRecorder) {
-			_factRecorder = factRecorder;
+			_inner = new FactRecorderRepository<GeneralLedger>(factRecorder, GeneralLedger.Factory);
 		}
 
 		public async ValueTask<GeneralLedger> Get(CancellationToken cancellationToken = default) {
-			var facts = await _factRecorder.GetFacts().Where(x => x.Identifier == GeneralLedger.Identifier)
-				.ToArrayAsync(cancellationToken);
-
-			if (facts.Length == 0) {
+			var optional = await _inner.GetOptional(GeneralLedger.Identifier, cancellationToken);
+			if (!optional.HasValue) {
 				throw new InvalidOperationException();
 			}
 
-			var generalLedger = GeneralLedger.Factory();
-			await generalLedger.LoadFromHistory(facts.Select(x => x.Event).ToAsyncEnumerable());
-			_factRecorder.Record(generalLedger.Id, generalLedger);
-			return generalLedger;
-
+			return optional.Value;
 		}
 
-		public void Add(GeneralLedger generalLedger) =>
-			_factRecorder.Record(generalLedger.Id, generalLedger.GetChanges());
+		public void Add(GeneralLedger generalLedger) => _inner.Add(generalLedger);
 	}
 }

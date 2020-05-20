@@ -1,16 +1,18 @@
 using System;
 using System.Collections.Generic;
+using System.Security.Cryptography.X509Certificates;
 using Transacto.Framework;
 using Transacto.Messages;
 
 namespace Transacto.Domain {
 	public class ChartOfAccounts : AggregateRoot {
+		public const string Identifier = "chartOfAccounts";
 		public static readonly Func<ChartOfAccounts> Factory = () => new ChartOfAccounts();
 
 		private readonly HashSet<AccountNumber> _accountNumbers;
 		private readonly HashSet<AccountNumber> _deactivatedAccountNumbers;
 
-		public override string Id { get; } = "chartOfAccounts";
+		public override string Id { get; } = Identifier;
 
 		private ChartOfAccounts() {
 			_accountNumbers = new HashSet<AccountNumber>();
@@ -28,9 +30,11 @@ namespace Transacto.Domain {
 			});
 		}
 
+		public bool IsDeactivated(AccountNumber accountNumber) => _deactivatedAccountNumbers.Contains(accountNumber);
+
 		public void MustNotBeDeactivated(AccountNumber accountNumber) {
 			if (_deactivatedAccountNumbers.Contains(accountNumber)) {
-				throw new InvalidOperationException();
+				throw new AccountDeactivatedException(accountNumber);
 			}
 		}
 
@@ -77,22 +81,22 @@ namespace Transacto.Domain {
 		}
 
 		private void MustNotContainAccountNumber(AccountNumber accountNumber) {
-			if (!IsActive(accountNumber) && !IsUnactive(accountNumber)) {
+			if (!IsActive(accountNumber) && !IsInactive(accountNumber)) {
 				return;
 			}
 
-			throw new InvalidOperationException();
+			throw new AccountExistsException(accountNumber);
 		}
 
 		private void MustContainAccountNumber(AccountNumber accountNumber) {
-			if (IsActive(accountNumber) || IsUnactive(accountNumber)) {
+			if (IsActive(accountNumber) || IsInactive(accountNumber)) {
 				return;
 			}
 
-			throw new InvalidOperationException();
+			throw new AccountNotFoundException(accountNumber);
 		}
 
-		private bool IsUnactive(AccountNumber accountNumber) => _deactivatedAccountNumbers.Contains(accountNumber);
+		private bool IsInactive(AccountNumber accountNumber) => _deactivatedAccountNumbers.Contains(accountNumber);
 
 		private bool IsActive(AccountNumber accountNumber) => _accountNumbers.Contains(accountNumber);
 	}

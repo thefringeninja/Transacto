@@ -3,7 +3,7 @@ using System.Collections.Generic;
 
 namespace Transacto.Framework {
     public readonly struct Optional<T> : IEquatable<Optional<T>> {
-        public static readonly Optional<T> Empty = new Optional<T>();
+        public static readonly Optional<T> Empty = default;
         public bool HasValue { get; }
 
         public T Value {

@@ -6,11 +6,11 @@ namespace Transacto.Domain {
 
 		public AccountNumber(int value) {
 			if (value < 1000 || value >= 9000) {
-				throw new InvalidOperationException();
+				throw new ArgumentOutOfRangeException(nameof(value));
 			}
+
 			Value = value;
 		}
-
 
 		public bool Equals(AccountNumber other) => Value == other.Value;
 		public override bool Equals(object? obj) => obj is AccountNumber other && Equals(other);

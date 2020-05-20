@@ -1,17 +1,16 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Threading;
 using System.Threading.Tasks;
-using Hallo;
-using Microsoft.AspNetCore.Http;
+using EventStore.Client;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
-using Projac;
+using Transacto.Framework;
 using Transacto.Messages;
 
 namespace Transacto.Plugins.BalanceSheet {
-	internal class BalanceSheet : IPlugin {
+	internal class
+		BalanceSheet : IPlugin {
 		public string Name { get; } = nameof(BalanceSheet);
 
 		public void Configure(IEndpointRouteBuilder builder) => builder
@@ -20,88 +19,107 @@ namespace Transacto.Plugins.BalanceSheet {
 
 				var thru = DateTimeOffset.Parse(context.GetRouteValue("thru")!.ToString()!);
 
-				return !readModel.TryGet<ReadModel, BalanceSheetReport>(nameof(BalanceSheet),
-					balanceSheet => new BalanceSheetReport {
-						Thru = thru.UtcDateTime,
-						LineItems = balanceSheet.GetLines(thru.UtcDateTime),
-						LineItemGroupings = balanceSheet.GetGroupings(thru.UtcDateTime)
-					}, out var report)
-					? new ValueTask<Response>(new NotFoundResponse())
-					: new ValueTask<Response>(new HalResponse(new BalanceSheetReportRepresentation(), report));
+				if (!readModel.TryGetValue<ReadModel>(nameof(BalanceSheet), out var entry)) {
+					return new ValueTask<Response>(new NotFoundResponse());
+				}
+
+				using (entry!.Read()) {
+					return new ValueTask<Response>(new HalResponse(context.Request,
+						new BalanceSheetReportRepresentation(), ETag.Create(entry.Item.Checkpoint), new BalanceSheetReport {
+							Thru = thru.UtcDateTime,
+							LineItems = entry.Item.GetLines(thru.UtcDateTime),
+							LineItemGroupings = entry.Item.GetGroupings(thru.UtcDateTime)
+						}));
+				}
 			});
 
-		public void ConfigureServices(IServiceCollection services)
-			=> services.AddInMemoryProjection(new AnonymousProjectionBuilder<InMemoryReadModel>()
+		public void ConfigureServices(IServiceCollection services) => services
+			.AddInMemoryProjection(new InMemoryProjectionBuilder()
 				.When<AccountDefined>((readModel, e) =>
-					readModel.Update(nameof(BalanceSheet), _ => _.AccountNames[e.AccountNumber] = e.AccountName,
-						ReadModel.Factory))
+					readModel.AddOrUpdate<ReadModel>(
+						nameof(BalanceSheet), _ => {
+							_.AccountNames[e.Message.AccountNumber] = e.Message.AccountName;
+							_.Checkpoint = e.Position;
+						}))
 				.When<AccountRenamed>((readModel, e) =>
-					readModel.Update(nameof(BalanceSheet), _ => _.AccountNames[e.AccountNumber] = e.NewAccountName,
-						ReadModel.Factory))
+					readModel.AddOrUpdate<ReadModel>(
+						nameof(BalanceSheet), _ => {
+							_.AccountNames[e.Message.AccountNumber] = e.Message.NewAccountName;
+							_.Checkpoint = e.Position;
+						}))
 				.When<GeneralLedgerEntryCreated>((readModel, e) =>
-					readModel.Update(nameof(BalanceSheet), _ => _.UnpostedEntries.TryAdd(e.GeneralLedgerEntryId,
-						new Entry {
-							CreatedOn = e.CreatedOn.UtcDateTime
-						}), ReadModel.Factory))
+					readModel.AddOrUpdate<ReadModel>(
+						nameof(BalanceSheet), _ => {
+							_.UnpostedEntries.TryAdd(e.Message.GeneralLedgerEntryId,
+								new Entry {
+									CreatedOn = e.Message.CreatedOn.UtcDateTime
+								});
+							_.Checkpoint = e.Position;
+						}))
 				.When<DebitApplied>((readModel, e) =>
-					readModel.Update(nameof(BalanceSheet),
-						_ => _.UnpostedEntries[e.GeneralLedgerEntryId].Debits[e.AccountNumber] =
-							_.UnpostedEntries[e.GeneralLedgerEntryId].Debits.ContainsKey(e.AccountNumber)
-								? _.UnpostedEntries[e.GeneralLedgerEntryId].Debits[e.AccountNumber] + e.Amount
-								: e.Amount,
-						ReadModel.Factory))
+					readModel.AddOrUpdate<ReadModel>(
+						nameof(BalanceSheet), _ => {
+							_.UnpostedEntries[e.Message.GeneralLedgerEntryId].Debits[e.Message.AccountNumber] =
+								_.UnpostedEntries[e.Message.GeneralLedgerEntryId].Debits
+									.ContainsKey(e.Message.AccountNumber)
+									? _.UnpostedEntries[e.Message.GeneralLedgerEntryId]
+										  .Debits[e.Message.AccountNumber] +
+									  e.Message.Amount
+									: e.Message.Amount;
+							_.Checkpoint = e.Position;
+						}))
 				.When<CreditApplied>((readModel, e) =>
-					readModel.Update(nameof(BalanceSheet),
-						_ => _.UnpostedEntries[e.GeneralLedgerEntryId].Credits[e.AccountNumber] =
-							_.UnpostedEntries[e.GeneralLedgerEntryId].Credits.ContainsKey(e.AccountNumber)
-								? _.UnpostedEntries[e.GeneralLedgerEntryId].Credits[e.AccountNumber] + e.Amount
-								: e.Amount,
-						ReadModel.Factory))
+					readModel.AddOrUpdate<ReadModel>(
+						nameof(BalanceSheet), _ => {
+							_.UnpostedEntries[e.Message.GeneralLedgerEntryId].Credits[e.Message.AccountNumber] =
+								_.UnpostedEntries[e.Message.GeneralLedgerEntryId].Credits
+									.ContainsKey(e.Message.AccountNumber)
+									? _.UnpostedEntries[e.Message.GeneralLedgerEntryId]
+										  .Credits[e.Message.AccountNumber] +
+									  e.Message.Amount
+									: e.Message.Amount;
+							_.Checkpoint = e.Position;
+						}))
 				.When<GeneralLedgerEntryPosted>((readModel, e) =>
-					readModel.Update(nameof(BalanceSheet),
-						_ => {
-							var entry = _.UnpostedEntries[e.GeneralLedgerEntryId];
-							_.UnpostedEntries.Remove(e.GeneralLedgerEntryId);
-							_.PostedEntries[e.GeneralLedgerEntryId] = entry;
-						}, ReadModel.Factory))
+					readModel.AddOrUpdate<ReadModel>(
+						nameof(BalanceSheet), _ => {
+							var entry = _.UnpostedEntries[e.Message.GeneralLedgerEntryId];
+							_.UnpostedEntries.Remove(e.Message.GeneralLedgerEntryId);
+							_.PostedEntries[e.Message.GeneralLedgerEntryId] = entry;
+							_.Checkpoint = e.Position;
+						}))
 				.When<AccountingPeriodClosed>((readModel, e) => {
-					readModel.Update(nameof(BalanceSheet), _ => {
-						foreach (var id in e.GeneralLedgerEntryIds.Concat(new[] {e.ClosingGeneralLedgerEntryId})) {
-							var entry = _.PostedEntries[id];
-							_.PostedEntries.Remove(id);
+					readModel.AddOrUpdate<ReadModel>(
+						nameof(BalanceSheet), _ => {
+							foreach (var id in e.Message.GeneralLedgerEntryIds.Concat(new[]
+								{e.Message.ClosingGeneralLedgerEntryId})) {
+								var entry = _.PostedEntries[id];
+								_.PostedEntries.Remove(id);
 
-							foreach (var (accountNumber, amount) in entry.Debits) {
-								_.ClosedBalance[accountNumber] = _.ClosedBalance.TryGetValue(accountNumber, out var a)
-									? a + amount
-									: amount;
-							}
+								foreach (var (accountNumber, amount) in entry.Debits) {
+									_.ClosedBalance[accountNumber] =
+										_.ClosedBalance.TryGetValue(accountNumber, out var a)
+											? a + amount
+											: amount;
+								}
 
-							foreach (var (accountNumber, amount) in entry.Credits) {
-								_.ClosedBalance[accountNumber] = _.ClosedBalance.TryGetValue(accountNumber, out var a)
-									? a - amount
-									: -amount;
+								foreach (var (accountNumber, amount) in entry.Credits) {
+									_.ClosedBalance[accountNumber] =
+										_.ClosedBalance.TryGetValue(accountNumber, out var a)
+											? a - amount
+											: -amount;
+								}
 							}
-						}
-					}, ReadModel.Factory);
+						});
 				})
 				.Build());
 
 		public IEnumerable<Type> MessageTypes => Enumerable.Empty<Type>();
 
-		private class BalanceSheetReportRepresentation : Hal<BalanceSheetReport>, IHalLinks<BalanceSheetReport>,
-			IHalState<BalanceSheetReport> {
-			public IEnumerable<Link> LinksFor(BalanceSheetReport resource) {
-				yield break;
-			}
-
-			public object StateFor(BalanceSheetReport resource) => resource;
-		}
-
 		private class ReadModel {
 			public static ReadModel Factory() => new ReadModel();
 
-			private ReadModel() {
-			}
+			public Optional<Position> Checkpoint { get; set; } = Optional<Position>.Empty;
 
 			public Dictionary<Guid, Entry> UnpostedEntries { get; } = new Dictionary<Guid, Entry>();
 			public Dictionary<Guid, Entry> PostedEntries { get; } = new Dictionary<Guid, Entry>();
@@ -112,17 +130,20 @@ namespace Transacto.Plugins.BalanceSheet {
 				var groupings = AccountNames.ToDictionary(x => x.Key, pair => new LineItemGrouping {
 					Name = pair.Value,
 					LineItems = {
-						new LineItem {AccountNumber = pair.Key, Name = pair.Value, Balance = {
-							DecimalValue = ClosedBalance.TryGetValue(pair.Key, out var amount)
-								? amount
-								: decimal.Zero
-						}}
+						new LineItem {
+							AccountNumber = pair.Key, Name = pair.Value, Balance = {
+								DecimalValue = ClosedBalance.TryGetValue(pair.Key, out var amount)
+									? amount
+									: decimal.Zero
+							}
+						}
 					}
 				});
 				foreach (var posted in PostedEntries.Values.Where(x => x.CreatedOn <= thru)) {
 					foreach (var (accountNumber, amount) in posted.Debits) {
 						groupings[accountNumber].LineItems[0].Balance.DecimalValue += amount;
 					}
+
 					foreach (var (accountNumber, amount) in posted.Credits) {
 						groupings[accountNumber].LineItems[0].Balance.DecimalValue -= amount;
 					}
@@ -145,6 +166,7 @@ namespace Transacto.Plugins.BalanceSheet {
 					foreach (var (accountNumber, amount) in posted.Debits) {
 						groupings[accountNumber].Balance.DecimalValue += amount;
 					}
+
 					foreach (var (accountNumber, amount) in posted.Credits) {
 						groupings[accountNumber].Balance.DecimalValue -= amount;
 					}

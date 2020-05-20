@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 using EventStore.Client;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -8,8 +10,9 @@ using Microsoft.Extensions.Hosting;
 using Npgsql;
 using Projac;
 using SqlStreamStore;
+using Transacto.Domain;
 using Transacto.Framework;
-using Transacto.Infrastructure;
+using Transacto.Framework.CommandHandling;
 using Transacto.Modules;
 using Transacto.Plugins;
 
@@ -37,18 +40,30 @@ namespace Transacto {
 					.AddSingleton(MessageTypeMapper.Create(Array.ConvertAll(plugins,
 						plugin => new MessageTypeMapper(plugin.MessageTypes))))
 					// write model
+					.AddSingleton<AccountIsDeactivated>(provider => {
+						var readModel = provider.GetRequiredService<InMemoryReadModel>();
+
+						return accountNumber => {
+							if (!readModel.TryGetValue<HashSet<int>>("DeactivatedAccounts", out var entry)) {
+								return false;
+							}
+
+							using (entry!.Read()) {
+								return entry.Item.Contains(accountNumber.ToInt32());
+							}
+						};
+					})
 					.AddSingleton<CommandHandlerModule>(provider => new GeneralLedgerEntryModule(
 						provider.GetRequiredService<EventStoreClient>(),
 						provider.GetRequiredService<IMessageTypeMapper>(),
-						TransactoSerializerOptions.Events))
+						provider.GetRequiredService<AccountIsDeactivated>()))
 					.AddSingleton<CommandHandlerModule>(provider => new ChartOfAccountsModule(
 						provider.GetRequiredService<EventStoreClient>(),
-						provider.GetRequiredService<IMessageTypeMapper>(),
-						TransactoSerializerOptions.Events))
+						provider.GetRequiredService<IMessageTypeMapper>()))
 					.AddSingleton<CommandHandlerModule>(provider => new GeneralLedgerModule(
 						provider.GetRequiredService<EventStoreClient>(),
 						provider.GetRequiredService<IMessageTypeMapper>(),
-						TransactoSerializerOptions.Events))
+						provider.GetRequiredService<AccountIsDeactivated>()))
 					// projections
 					.AddSingleton<Func<IPlugin, NpgsqlConnection>>(provider => {
 						var cache = new ConcurrentDictionary<string, NpgsqlConnectionStringBuilder>();
@@ -68,53 +83,35 @@ namespace Transacto {
 					plugin.ConfigureServices(pluginServices);
 
 					var pluginProvider = pluginServices
-						.AddHostedService(provider => new InMemoryProjectionHost(
-							provider.GetRequiredService<EventStoreClient>(),
-							provider.GetRequiredService<IMessageTypeMapper>(),
-							provider.GetRequiredService<InMemoryReadModel>(),
-							provider.GetServices<ProjectionHandler<InMemoryReadModel>[]>().ToArray()))
-						.AddHostedService(provider => new NpgSqlProjectionHost(
-							provider.GetRequiredService<EventStoreClient>(),
-							provider.GetRequiredService<IMessageTypeMapper>(),
-							provider.GetRequiredService<Func<NpgsqlConnection>>(),
-							provider.GetServices<NpgsqlProjection>().ToArray()))
-						.AddHostedService(provider => new StreamStoreProjectionHost(
-							provider.GetRequiredService<EventStoreClient>(),
-							provider.GetRequiredService<IMessageTypeMapper>(),
-							provider.GetRequiredService<IStreamStore>(),
-							provider.GetServices<StreamStoreProjection>().ToArray()))
-						.AddHostedService(provider => new InMemoryProjectionHost(
-							provider.GetRequiredService<EventStoreClient>(),
-							provider.GetRequiredService<IMessageTypeMapper>(),
-							provider.GetRequiredService<InMemoryReadModel>(),
-							provider.GetServices<ProjectionHandler<InMemoryReadModel>[]>().ToArray()))
-						.AddHostedService(provider => new NpgSqlProjectionHost(
-							provider.GetRequiredService<EventStoreClient>(),
-							provider.GetRequiredService<IMessageTypeMapper>(),
-							provider.GetRequiredService<Func<NpgsqlConnection>>(),
-							provider.GetServices<NpgsqlProjection>().ToArray()))
-						.AddHostedService(provider => new StreamStoreProjectionHost(
-							provider.GetRequiredService<EventStoreClient>(),
-							provider.GetRequiredService<IMessageTypeMapper>(),
-							provider.GetRequiredService<IStreamStore>(),
-							provider.GetServices<StreamStoreProjection>().ToArray()))
-						.AddSingleton<Func<NpgsqlConnection>>(provider => () => rootProvider
-							.GetRequiredService<Func<IPlugin, NpgsqlConnection>>()
-							.Invoke(plugin))
-						.AddSingleton(provider => rootProvider
-							.GetRequiredService<Func<IPlugin, InMemoryReadModel>>()
-							.Invoke(plugin))
 						.AddSingleton(rootProvider.GetRequiredService<EventStoreClient>())
 						.AddSingleton(rootProvider.GetRequiredService<IStreamStore>())
 						.AddSingleton(rootProvider.GetRequiredService<IMessageTypeMapper>())
+						.AddSingleton(provider => rootProvider
+							.GetRequiredService<Func<IPlugin, InMemoryReadModel>>().Invoke(plugin))
+						.AddHostedService(provider => new InMemoryProjectionHost(
+							provider.GetRequiredService<EventStoreClient>(),
+							provider.GetRequiredService<IMessageTypeMapper>(),
+							provider.GetRequiredService<InMemoryReadModel>(),
+							provider.GetServices<ProjectionHandler<InMemoryReadModel>[]>().ToArray()))
+						.AddSingleton<Func<NpgsqlConnection>>(provider => () => rootProvider
+							.GetRequiredService<Func<IPlugin, NpgsqlConnection>>()
+							.Invoke(plugin))
+						.AddHostedService(provider => new NpgSqlProjectionHost(
+							provider.GetRequiredService<EventStoreClient>(),
+							provider.GetRequiredService<IMessageTypeMapper>(),
+							provider.GetRequiredService<Func<NpgsqlConnection>>(),
+							provider.GetServices<NpgsqlProjection>().ToArray()))
+						.AddHostedService(provider => new StreamStoreProjectionHost(
+							provider.GetRequiredService<EventStoreClient>(),
+							provider.GetRequiredService<IMessageTypeMapper>(),
+							provider.GetRequiredService<IStreamStore>(),
+							provider.GetServices<StreamStoreProjection>().ToArray()))
 						.BuildServiceProvider();
 					return pluginProvider
 						.GetServices<IHostedService>()
 						.Aggregate(services.AddSingleton(Tuple.Create(plugin, (IServiceProvider)pluginProvider)),
-							(services, service) => {
-								services.TryAddEnumerable(new ServiceDescriptor(typeof(IHostedService), service));
-								return services;
-							});
+							(services, service) => services.AddSingleton(service));
 				});
+
 	}
 }

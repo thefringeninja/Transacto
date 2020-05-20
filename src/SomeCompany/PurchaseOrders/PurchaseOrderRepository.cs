@@ -13,13 +13,13 @@ namespace SomeCompany.PurchaseOrders {
 	public class PurchaseOrderRepository {
 		private readonly string _schema;
 		private readonly Func<CancellationToken, Task<NpgsqlConnection>> _connectionFactory;
-		private readonly SqlStreamStoreBusinessTransactionRepository<PurchaseOrder> _inner;
+		private readonly StreamStoreBusinessTransactionRepository<PurchaseOrder> _inner;
 
 		public PurchaseOrderRepository(IStreamStore streamStore, string schema,
 			Func<CancellationToken, Task<NpgsqlConnection>> connectionFactory) {
 			_schema = schema;
 			_connectionFactory = connectionFactory;
-			_inner = new SqlStreamStoreBusinessTransactionRepository<PurchaseOrder>(streamStore,
+			_inner = new StreamStoreBusinessTransactionRepository<PurchaseOrder>(streamStore,
 				order => GetStreamName(order.PurchaseOrderId), new JsonSerializerOptions());
 		}
 

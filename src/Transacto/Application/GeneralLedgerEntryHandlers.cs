@@ -1,6 +1,7 @@
 using System;
 using System.Threading;
 using System.Threading.Tasks;
+using EventStore.Client;
 using Transacto.Domain;
 using Transacto.Messages;
 
@@ -8,14 +9,14 @@ namespace Transacto.Application {
 	public class GeneralLedgerEntryHandlers {
 		private readonly IGeneralLedgerRepository _generalLedger;
 		private readonly IGeneralLedgerEntryRepository _generalLedgerEntries;
-		private readonly IChartOfAccountsRepository _chartOfAccounts;
+		private readonly AccountIsDeactivated _accountIsDeactivated;
 
 		public GeneralLedgerEntryHandlers(IGeneralLedgerRepository generalLedger,
 			IGeneralLedgerEntryRepository generalLedgerEntries,
-			IChartOfAccountsRepository chartOfAccounts) {
+			AccountIsDeactivated accountIsDeactivated) {
 			_generalLedger = generalLedger;
 			_generalLedgerEntries = generalLedgerEntries;
-			_chartOfAccounts = chartOfAccounts;
+			_accountIsDeactivated = accountIsDeactivated;
 		}
 
 		public async ValueTask Handle(PostGeneralLedgerEntry command, CancellationToken cancellationToken = default) {
@@ -24,10 +25,9 @@ namespace Transacto.Application {
 			}
 
 			var generalLedger = await _generalLedger.Get(cancellationToken);
-			var chartOfAccounts = await _chartOfAccounts.Get(cancellationToken);
 			var entry = generalLedger.Create(new GeneralLedgerEntryIdentifier(command.GeneralLedgerEntryId),
 				command.BusinessTransaction.ReferenceNumber, command.CreatedOn);
-			command.BusinessTransaction.Apply(entry, chartOfAccounts);
+			command.BusinessTransaction.Apply(entry, _accountIsDeactivated);
 
 			entry.Post();
 

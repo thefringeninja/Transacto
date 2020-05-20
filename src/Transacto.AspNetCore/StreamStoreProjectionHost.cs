@@ -114,7 +114,7 @@ namespace Transacto {
 					e.Event.Data.Span, type, TransactoSerializerOptions.Events);
 				return Task.WhenAll(_projectors.Where(x => x.checkpoint < e.OriginalPosition)
 					.Select(_ => _.projector.ProjectAsync(_streamStore,
-						Envelope.Create(message, e.OriginalPosition!.Value), cancellationToken)));
+						Envelope.Create(message, e.OriginalEvent.Position), cancellationToken)));
 			}
 		}
 	}

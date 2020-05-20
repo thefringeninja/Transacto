@@ -9,7 +9,7 @@ namespace Transacto {
 			StatusCode = HttpStatusCode.NotFound;
 		}
 
-		protected override ValueTask WriteBody(Stream stream, CancellationToken cancellationToken = default) =>
+		protected internal override ValueTask WriteBody(Stream stream, CancellationToken cancellationToken) =>
 			new ValueTask(Task.CompletedTask);
 	}
 }

@@ -1,7 +1,10 @@
 using System;
+using System.Globalization;
 using System.Linq;
+using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
+using Dapper;
 using EventStore.Client;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.DependencyInjection;
@@ -14,12 +17,13 @@ using Transacto;
 namespace SomeCompany {
 	internal class Program : IDisposable {
 		private readonly CancellationTokenSource _exitedSource;
-		private readonly IStreamStore _streamStore;
 		private readonly IHostBuilder _hostBuilder;
 
 		private Program(SomeCompanyConfiguration configuration) {
-			Dapper.DefaultTypeMap.MatchNamesWithUnderscores = true;
+			DefaultTypeMap.MatchNamesWithUnderscores = true;
+			Inflector.Inflector.SetDefaultCultureFunc = () => new CultureInfo("en-US");
 			Log.Logger = new LoggerConfiguration()
+				.MinimumLevel.Verbose()
 				//.MinimumLevel.Override("Microsoft.AspNetCore", LogEventLevel.Warning)
 				.Enrich.FromLogContext()
 				.WriteTo.Console(
@@ -29,24 +33,19 @@ namespace SomeCompany {
 
 			_exitedSource = new CancellationTokenSource();
 
-			var connectionStringBuilder = new NpgsqlConnectionStringBuilder(configuration.ConnectionString);
-
-			_streamStore = new InMemoryStreamStore();
-
-			_hostBuilder = Host.CreateDefaultBuilder()
-				.ConfigureLogging(builder => builder.AddSerilog())
-				.ConfigureWebHost(builder => builder
-					.UseKestrel()
-					.ConfigureServices(services => services
-						.AddEventStoreClient()
-						.AddSingleton(connectionStringBuilder)
-						.AddSingleton(_streamStore))
-					.UseStartup(new Startup(GetPlugins())));
-
-			static IPlugin[] GetPlugins() =>
-				typeof(Startup).Assembly.GetExportedTypes().Where(typeof(IPlugin).IsAssignableFrom)
-					.Select(t => (IPlugin)Activator.CreateInstance(t)!)
-					.ToArray();
+			_hostBuilder = TransactoHost.Build(new ServiceCollection()
+				.AddEventStoreClient(settings => settings.CreateHttpMessageHandler = () => new SocketsHttpHandler {
+					SslOptions = {
+						RemoteCertificateValidationCallback = delegate { return true; }
+					}
+				})
+				.AddSingleton<IStreamStore>(new HttpClientSqlStreamStore(new HttpClientSqlStreamStoreSettings {
+					BaseAddress = new UriBuilder {
+						Port = 5002
+					}.Uri
+				}))
+				.AddSingleton(new NpgsqlConnectionStringBuilder(configuration.ConnectionString))
+				.BuildServiceProvider());
 		}
 
 		private async Task<int> Run() {
@@ -69,7 +68,6 @@ namespace SomeCompany {
 
 		public void Dispose() {
 			_exitedSource.Dispose();
-			_streamStore.Dispose();
 		}
 	}
 }

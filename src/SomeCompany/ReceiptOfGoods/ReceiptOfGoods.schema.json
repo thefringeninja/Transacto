@@ -21,7 +21,7 @@
       "title": "Purchase Order Id",
       "$ref": "#/definitions/uuid",
       "x-schema-form": {
-        "key": "purchaseOrderId",
+				"key": "purchaseOrderId",
         "type": "uuid"
       }
     },

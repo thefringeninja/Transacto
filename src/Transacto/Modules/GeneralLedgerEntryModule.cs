@@ -1,25 +1,28 @@
 using EventStore.Client;
 using Transacto.Application;
+using Transacto.Domain;
 using Transacto.Framework;
+using Transacto.Framework.CommandHandling;
 using Transacto.Infrastructure;
 using Transacto.Messages;
-using JsonSerializerOptions = System.Text.Json.JsonSerializerOptions;
 
 namespace Transacto.Modules {
 	public class GeneralLedgerEntryModule : CommandHandlerModule {
 		public GeneralLedgerEntryModule(EventStoreClient eventStore, IMessageTypeMapper messageTypeMapper,
-			JsonSerializerOptions eventSerializerOptions) {
+			AccountIsDeactivated accountIsDeactivated) {
 			Build<PostGeneralLedgerEntry>()
 				.Log()
-				.UnitOfWork(eventStore, messageTypeMapper, eventSerializerOptions)
-				.Handle((_, ct) => {
+				.UnitOfWork(eventStore, messageTypeMapper, TransactoSerializerOptions.Events)
+				.Handle(async (_, ct) => {
 					var (unitOfWork, command) = _;
 					var handlers = new GeneralLedgerEntryHandlers(
 						new GeneralLedgerEventStoreRepository(eventStore, messageTypeMapper, unitOfWork),
 						new GeneralLedgerEntryEventStoreRepository(eventStore, messageTypeMapper, unitOfWork),
-						new ChartOfAccountsEventStoreRepository(eventStore, messageTypeMapper, unitOfWork));
+						accountIsDeactivated);
 
-					return handlers.Handle(command, ct);
+					await handlers.Handle(command, ct);
+
+					return Position.Start;
 				});
 		}
 	}

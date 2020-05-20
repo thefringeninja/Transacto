@@ -86,7 +86,7 @@ namespace Transacto.Infrastructure {
 
 		public GeneralLedgerEntryNumber ReferenceNumber { get; }
 
-		public void Apply(GeneralLedgerEntry generalLedgerEntry, ChartOfAccounts _) {
+		public void Apply(GeneralLedgerEntry generalLedgerEntry, AccountIsDeactivated accountIsDeactivated) {
 			generalLedgerEntry.ApplyTransaction(this);
 		}
 

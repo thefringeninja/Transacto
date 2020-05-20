@@ -8,13 +8,13 @@ using Transacto.Domain;
 using Transacto.Framework;
 
 namespace Transacto.Infrastructure {
-	public class SqlStreamStoreBusinessTransactionRepository<TBusinessTransaction>
+	public class StreamStoreBusinessTransactionRepository<TBusinessTransaction>
 		where TBusinessTransaction : IBusinessTransaction {
 		private readonly IStreamStore _streamStore;
 		private readonly Func<TBusinessTransaction, string> _getStreamName;
 		private readonly JsonSerializerOptions _serializerOptions;
 
-		public SqlStreamStoreBusinessTransactionRepository(
+		public StreamStoreBusinessTransactionRepository(
 			IStreamStore streamStore,
 			Func<TBusinessTransaction, string> getStreamName,
 			JsonSerializerOptions serializerOptions) {

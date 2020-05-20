@@ -1,48 +1,95 @@
 using System;
-using System.Collections;
 using System.Collections.Concurrent;
+using System.Threading;
 
 namespace Transacto {
 	public class InMemoryReadModel {
-		private readonly ConcurrentDictionary<string, object?> _readModels;
+		private readonly ConcurrentDictionary<string, IInMemoryReadModelEntry> _readModels;
 
 		public InMemoryReadModel() {
-			_readModels = new ConcurrentDictionary<string, object?>();
+			_readModels = new ConcurrentDictionary<string, IInMemoryReadModelEntry>();
 		}
 
-		public void Update<T>(string key, Action<T> action, Func<T> factory) {
-			var maybeTarget = _readModels.GetOrAdd(key, _ => factory());
-
-			if (!(maybeTarget is T target)) {
-				return;
-			}
-
-			if (!(target is IEnumerable)) {
-				action(target);
-				return;
-			}
-			lock (target) {
-				action(target);
-			}
-		}
-
-		public bool TryGet<T>(string key, Func<T, T> clone, out T target) => TryGet<T, T>(key, clone, out target);
-
-		public bool TryGet<T, TTransformed>(string key, Func<T, TTransformed> transform, out TTransformed target) {
-			if (!_readModels.TryGetValue(key, out var maybeTarget) || !(maybeTarget is T value)) {
-				target = default!;
+		public bool TryGetValue<T>(string key, out InMemoryReadModelEntry<T>? value) where T : class {
+			if (!_readModels.TryGetValue(key, out var maybeEntry) ||
+			    !(maybeEntry is InMemoryReadModelEntry<T> entry)) {
+				value = default;
 				return false;
 			}
 
-			if (value is IEnumerable) {
-				lock (value) {
-					target = transform(value);
-				}
-			} else {
-				target = transform(value);
-			}
-
+			value = entry;
 			return true;
 		}
+
+		public bool TryRemove<T>(string key, out T? value) where T: class {
+			if (!_readModels.TryGetValue(key, out var maybeEntry) || !(maybeEntry is InMemoryReadModelEntry<T> entry)) {
+				value = default;
+				return false;
+			}
+
+			_readModels.TryRemove(key, out _);
+			value = entry.Item;
+			return true;
+		}
+
+		public void AddOrUpdate<T>(string key, Action<T> update, Func<T>? factory = null) where T : class, new() {
+			_readModels.AddOrUpdate(key, _ => {
+				var entry = factory?.Invoke() ?? new T();
+				update(entry);
+				return new InMemoryReadModelEntry<T>(entry);
+			}, (_, maybeEntry) => {
+				if (!(maybeEntry is InMemoryReadModelEntry<T> entry)) throw new InvalidOperationException();
+				using (maybeEntry.Write()) {
+					update(entry.Item);
+				}
+
+				return maybeEntry;
+			});
+		}
 	}
+
+	public interface IInMemoryReadModelEntry : IDisposable {
+			object Item { get; }
+			IDisposable Read();
+			IDisposable Write();
+		}
+
+		public class InMemoryReadModelEntry<T> : IInMemoryReadModelEntry where T : class {
+			private readonly ReaderWriterLockSlim _locker;
+			object IInMemoryReadModelEntry.Item => Item;
+			public T Item { get; }
+
+			public InMemoryReadModelEntry(T item) {
+				Item = item;
+				_locker = new ReaderWriterLockSlim();
+			}
+
+			public IDisposable Read() => new ReadLockToken(_locker);
+
+			public IDisposable Write() => new WriteLockToken(_locker);
+
+			public void Dispose() => _locker.Dispose();
+
+			private class ReadLockToken : IDisposable {
+				private readonly ReaderWriterLockSlim _locker;
+
+				public ReadLockToken(ReaderWriterLockSlim locker) {
+					_locker = locker;
+					_locker.EnterReadLock();
+				}
+
+				public void Dispose() => _locker.ExitReadLock();
+			}
+
+			private class WriteLockToken : IDisposable {
+				private readonly ReaderWriterLockSlim _locker;
+
+				public WriteLockToken(ReaderWriterLockSlim locker) {
+					_locker = locker;
+					_locker.EnterWriteLock();
+				}
+
+				public void Dispose() => _locker.ExitWriteLock();
+			}
+		}
 }

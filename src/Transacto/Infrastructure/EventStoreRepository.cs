@@ -5,6 +5,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using EventStore.Client;
 using Transacto.Framework;
+using Transacto.Framework.CommandHandling;
 
 namespace Transacto.Infrastructure {
     public class EventStoreRepository<TAggregateRoot> where TAggregateRoot : AggregateRoot {
@@ -15,7 +16,6 @@ namespace Transacto.Infrastructure {
         private readonly EventStoreClient _eventStore;
         private readonly UnitOfWork _unitOfWork;
         private readonly Func<TAggregateRoot> _factory;
-        private readonly Func<string, string> _getStreamName;
         private readonly IMessageTypeMapper _messageTypeMapper;
         private readonly JsonSerializerOptions _serializerOptions;
 
@@ -23,27 +23,27 @@ namespace Transacto.Infrastructure {
             EventStoreClient eventStore,
             UnitOfWork unitOfWork,
             Func<TAggregateRoot> factory,
-            Func<string, string> getStreamName,
             IMessageTypeMapper messageTypeMapper,
             JsonSerializerOptions? serializerOptions = null) {
             _eventStore = eventStore;
             _unitOfWork = unitOfWork;
             _factory = factory;
-            _getStreamName = getStreamName;
             _messageTypeMapper = messageTypeMapper;
             _serializerOptions = serializerOptions ?? DefaultOptions;
         }
 
         public async ValueTask<Optional<TAggregateRoot>> GetById(string identifier,
             CancellationToken cancellationToken = default) {
-            var streamName = _getStreamName(identifier);
+            var streamName = identifier;
             if (_unitOfWork.TryGet(streamName, out var a) && a is TAggregateRoot aggregate) {
                 return new Optional<TAggregateRoot>(aggregate);
             }
 
             try {
                 await using var events = _eventStore.ReadStreamAsync(Direction.Forwards,
-                    streamName, StreamPosition.Start, int.MaxValue, cancellationToken: cancellationToken);
+	                streamName, StreamPosition.Start,
+	                configureOperationOptions: options => options.TimeoutAfter = TimeSpan.FromMinutes(20),
+	                cancellationToken: cancellationToken);
 
                 aggregate = _factory();
 
@@ -61,6 +61,6 @@ namespace Transacto.Infrastructure {
         }
 
         public void Add(TAggregateRoot aggregateRoot) =>
-            _unitOfWork.Attach(_getStreamName(aggregateRoot.Id), aggregateRoot);
+            _unitOfWork.Attach(aggregateRoot.Id, aggregateRoot);
     }
 }

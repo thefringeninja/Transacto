@@ -1,5 +1,4 @@
 using System;
-using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Transacto.Domain;
@@ -8,25 +7,14 @@ using Transacto.Testing;
 
 namespace Transacto.Application {
 	internal class ChartOfAccountsTestRepository : IChartOfAccountsRepository {
-		private readonly IFactRecorder _factRecorder;
+		private readonly FactRecorderRepository<ChartOfAccounts> _inner;
 
 		public ChartOfAccountsTestRepository(IFactRecorder factRecorder) {
-			_factRecorder = factRecorder;
+			_inner = new FactRecorderRepository<ChartOfAccounts>(factRecorder, ChartOfAccounts.Factory);
 		}
 
-		public async ValueTask<Optional<ChartOfAccounts>> GetOptional(CancellationToken cancellationToken = default) {
-			var facts = await _factRecorder.GetFacts().Where(x => x.Identifier == string.Empty)
-				.ToArrayAsync(cancellationToken);
-
-			if (facts.Length == 0) {
-				return Optional<ChartOfAccounts>.Empty;
-			}
-
-			var chartOfAccounts = ChartOfAccounts.Factory();
-			await chartOfAccounts.LoadFromHistory(facts.Select(x => x.Event).ToAsyncEnumerable());
-			_factRecorder.Record(string.Empty, chartOfAccounts);
-			return chartOfAccounts;
-		}
+		public ValueTask<Optional<ChartOfAccounts>> GetOptional(CancellationToken cancellationToken = default)
+			=> _inner.GetOptional(ChartOfAccounts.Identifier, cancellationToken);
 
 		public async ValueTask<ChartOfAccounts> Get(CancellationToken cancellationToken = default) {
 			var optional = await GetOptional(cancellationToken);
@@ -37,7 +25,6 @@ namespace Transacto.Application {
 			return optional.Value;
 		}
 
-		public void Add(ChartOfAccounts chartOfAccounts) =>
-			_factRecorder.Record(string.Empty, chartOfAccounts.GetChanges());
+		public void Add(ChartOfAccounts chartOfAccounts) => _inner.Add(chartOfAccounts);
 	}
 }

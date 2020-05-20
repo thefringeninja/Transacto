@@ -6,7 +6,7 @@ namespace SomeCompany.Inventory {
 
 		public InventoryItemIdentifier(Guid value) {
 			if (value == Guid.Empty) {
-				throw new ArgumentException();
+				throw new ArgumentOutOfRangeException(nameof(value));
 			}
 
 			_value = value;
