@@ -53,7 +53,7 @@ namespace Transacto {
 					_ => NotAcceptableResponse.Instance
 				};
 
-			static MediaType MediaType(string x) => new MediaType(x ?? string.Empty);
+			static MediaType MediaType(string? x) => new MediaType(x ?? string.Empty);
 		}
 
 		protected internal override ValueTask WriteBody(Stream stream, CancellationToken cancellationToken) => _inner

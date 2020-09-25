@@ -27,13 +27,17 @@ namespace Transacto {
 						.IfMatch
 						.Where(etag => etag.Tag.HasValue)
 						.Select(etag => TryParsePosition(etag, out var position) ? position : Position.Start)
-						.OrderByDescending(p => p);
+						.OrderByDescending(p => p)
+						.ToList();
 
-					foreach (var requestedPosition in positions) {
-						if (responsePosition >= requestedPosition) {
-							await response.Write(context.Response);
-							return;
-						}
+					if (positions.Count == 0) {
+						await response.Write(context.Response);
+						return;
+					}
+
+					if (positions.Any(requestedPosition => responsePosition >= requestedPosition)) {
+						await response.Write(context.Response);
+						return;
 					}
 
 					await PreconditionFailedResponse.Instance.Write(context.Response);
@@ -56,7 +60,9 @@ namespace Transacto {
 
 				var parts = value?.Split(separator, 2) ?? Array.Empty<string>();
 
-				if (parts.Length != 2 || !ulong.TryParse(parts[0][1..], out var p) || !ulong.TryParse(parts[1][..^1], out var c)) {
+				if (parts.Length != 2 ||
+				    !ulong.TryParse(parts[0][1..], out var p) ||
+				    !ulong.TryParse(parts[1][..^1], out var c)) {
 					return false;
 				}
 
@@ -111,18 +117,19 @@ namespace Transacto {
 		private static IEndpointRouteBuilder MapCommandsInternal(this IEndpointRouteBuilder builder, string route,
 			JsonSerializerOptions serializerOptions,
 			params Type[] commandTypes) {
-			var dispatcher = new CommandDispatcher(builder.ServiceProvider.GetServices<CommandHandlerModule>());
-
 			var map = commandTypes.ToDictionary(commandType => commandType.Name);
+			CommandDispatcher? dispatcher = null;
 
 			builder.MapPost(route, async context => {
+				dispatcher ??= new CommandDispatcher(context.RequestServices.GetServices<CommandHandlerModule>());
+
 				if (!MediaTypeHeaderValue.TryParse(context.Request.ContentType, out var mediaType) ||
 				    !mediaType.MediaType.Equals("multipart/form-data", StringComparison.OrdinalIgnoreCase)) {
 					return new Response {StatusCode = HttpStatusCode.UnsupportedMediaType};
 				}
 
 				if (!context.Request.Form.TryGetValue("command", out var commandName)) {
-					return new TextResponse($"No command type was specified.") {
+					return new TextResponse("No command type was specified.") {
 						StatusCode = HttpStatusCode.BadRequest
 					};
 				}
@@ -139,8 +146,7 @@ namespace Transacto {
 				}
 
 				await using var commandStream = context.Request.Form.Files[0].OpenReadStream();
-				var command = await JsonSerializer.DeserializeAsync(commandStream, commandType,
-					serializerOptions);
+				var command = await JsonSerializer.DeserializeAsync(commandStream, commandType, serializerOptions);
 
 				var position = await dispatcher.Handle(command, context.RequestAborted);
 

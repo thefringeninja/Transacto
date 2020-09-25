@@ -21,7 +21,7 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<ProjectReference Include="..\..\..\Projac\src\Projac.Npgsql\Projac.Npgsql.csproj" />
+		<ProjectReference Include="..\Projac\src\Projac.Npgsql\Projac.Npgsql.csproj" />
 		<ProjectReference Include="..\Transacto.AspNetCore\Transacto.AspNetCore.csproj" />
 		<ProjectReference Include="..\Transacto\Transacto.csproj" />
 	</ItemGroup>

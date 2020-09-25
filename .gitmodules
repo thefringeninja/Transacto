@@ -1,0 +1,3 @@
+[submodule "src/Projac"]
+	path = src/Projac
+	url = git@github.com:thefringeninja/Projac.git

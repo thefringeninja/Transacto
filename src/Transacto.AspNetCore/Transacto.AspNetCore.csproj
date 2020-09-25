@@ -30,8 +30,7 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<ProjectReference Include="..\..\..\Projac\src\Projac.Npgsql\Projac.Npgsql.csproj" />
-		<ProjectReference Include="..\..\..\Projac\src\Projac.Sql\Projac.Sql.csproj" />
+		<ProjectReference Include="..\Projac\src\Projac.Npgsql\Projac.Npgsql.csproj" />
 		<ProjectReference Include="..\Transacto\Transacto.csproj" />
 	</ItemGroup>
 

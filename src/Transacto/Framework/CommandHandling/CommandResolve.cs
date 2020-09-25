@@ -10,11 +10,7 @@ namespace Transacto.Framework.CommandHandling {
 			return command => {
 				var handlers = cache[command.GetType()];
 
-				if (handlers.Count() != 1) {
-					throw new Exception();
-				}
-
-				return handlers.Single();
+				return handlers.Count() != 1 ? throw new Exception() : handlers.Single();
 			};
 		}
 	}
