@@ -1,7 +1,7 @@
 using System;
 using Projac;
 
-namespace Transacto {
+namespace Transacto.Framework.Projections {
 	public abstract class InMemoryProjection<T> : Projection<InMemorySession> where T : class, IMemoryReadModel {
 		protected void When<TMessage>(Action<T, TMessage> handler) => base.When<Envelope<TMessage>>(
 			(target, envelope) => {

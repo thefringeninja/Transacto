@@ -1,5 +1,7 @@
 using Projac.Npgsql;
 using Transacto;
+using Transacto.Framework.Projections;
+using Transacto.Framework.Projections.Npgsql;
 
 namespace SomeCompany.PurchaseOrders {
     public class PurchaseOrderListProjection : NpgsqlProjection {

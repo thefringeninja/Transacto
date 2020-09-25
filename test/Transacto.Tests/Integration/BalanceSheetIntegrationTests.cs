@@ -4,7 +4,6 @@ using System.Net;
 using System.Text.Json;
 using System.Threading.Tasks;
 using Transacto.Domain;
-using Transacto.Infrastructure;
 using Transacto.Messages;
 using Transacto.Plugins.BalanceSheet;
 using Xunit;

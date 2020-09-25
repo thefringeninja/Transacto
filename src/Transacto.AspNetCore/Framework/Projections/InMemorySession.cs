@@ -1,9 +1,8 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using Transacto.Framework;
 
-namespace Transacto {
+namespace Transacto.Framework.Projections {
 	public class InMemorySession {
 		private readonly IDictionary<Type, IMemoryReadModel> _readModelsByType;
 

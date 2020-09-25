@@ -6,6 +6,7 @@ using Npgsql;
 using SqlStreamStore;
 using Transacto;
 using Transacto.Framework;
+using Transacto.Framework.Projections.SqlStreamStore;
 
 namespace SomeCompany.PurchaseOrders {
 	public class PurchaseOrders : IPlugin {

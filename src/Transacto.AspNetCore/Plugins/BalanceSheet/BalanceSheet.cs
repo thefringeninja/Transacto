@@ -8,6 +8,7 @@ using EventStore.Client;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
 using Transacto.Framework;
+using Transacto.Framework.Projections;
 using Transacto.Messages;
 
 namespace Transacto.Plugins.BalanceSheet {

@@ -1,6 +1,6 @@
-﻿using System;
+﻿#if !NET20
+using System;
 using System.Collections.Generic;
-#if !NET20
 using KellermanSoftware.CompareNetObjects;
 
 namespace Transacto.Testing.Comparers {

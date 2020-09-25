@@ -1,6 +1,7 @@
 using System;
 using Transacto;
 using Transacto.Framework;
+using Transacto.Framework.Projections.SqlStreamStore;
 
 namespace SomeCompany.PurchaseOrders {
 	public class PurchaseOrderFeed : StreamStoreFeedProjection<PurchaseOrderFeedEntry> {

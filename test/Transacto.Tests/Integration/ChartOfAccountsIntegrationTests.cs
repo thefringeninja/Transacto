@@ -6,7 +6,6 @@ using System.Text.Json;
 using System.Threading.Tasks;
 using EventStore.Client;
 using Transacto.Domain;
-using Transacto.Infrastructure;
 using Transacto.Messages;
 using Xunit;
 

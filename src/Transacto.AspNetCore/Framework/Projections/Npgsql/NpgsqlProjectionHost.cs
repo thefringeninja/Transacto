@@ -9,12 +9,9 @@ using Npgsql;
 using Projac.Sql;
 using Projac.Sql.Executors;
 using Serilog;
-using Transacto.Framework;
-using Transacto.Infrastructure;
-using Resolve = Projac.Sql.Resolve;
 
-namespace Transacto {
-	public class NpgSqlProjectionHost : IHostedService {
+namespace Transacto.Framework.Projections.Npgsql {
+	public class NpgsqlProjectionHost : IHostedService {
 		private readonly EventStoreClient _eventStore;
 		private readonly IMessageTypeMapper _messageTypeMap;
 		private readonly Func<NpgsqlConnection> _connectionFactory;
@@ -26,7 +23,7 @@ namespace Transacto {
 		private StreamSubscription? _subscription;
 		private CancellationTokenRegistration? _stoppedRegistration;
 
-		public NpgSqlProjectionHost(EventStoreClient eventStore, IMessageTypeMapper messageTypeMap,
+		public NpgsqlProjectionHost(EventStoreClient eventStore, IMessageTypeMapper messageTypeMap,
 			Func<NpgsqlConnection> connectionFactory, params NpgsqlProjection[] projections) {
 			_eventStore = eventStore;
 			_messageTypeMap = messageTypeMap;

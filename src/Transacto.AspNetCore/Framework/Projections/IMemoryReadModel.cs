@@ -1,7 +1,6 @@
 using EventStore.Client;
-using Transacto.Framework;
 
-namespace Transacto {
+namespace Transacto.Framework.Projections {
 	public interface IMemoryReadModel {
 		Optional<Position> Checkpoint { get; set; }
 	}

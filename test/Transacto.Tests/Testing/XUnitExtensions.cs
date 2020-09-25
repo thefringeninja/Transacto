@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using KellermanSoftware.CompareNetObjects;
 using Transacto.Testing.Comparers;
+using Xunit.Sdk;
 
 namespace Transacto.Testing {
     internal static class XUnitExtensions {
@@ -41,7 +42,7 @@ namespace Transacto.Testing {
                 writer.WriteLine("  Expected: {0} event(s),", result.Specification.Thens.Length);
                 writer.WriteLine("  But was:  {0}", result.ButException.Value);
 
-                throw new Xunit.Sdk.XunitException(writer.ToString());
+                throw new XunitException(writer.ToString());
             }
 
             if (!result.ButEvents.HasValue) return;
@@ -55,7 +56,7 @@ namespace Transacto.Testing {
                     result.ButEvents.Value.Length,
                     string.Join(",", result.ButEvents.Value.Select(_ => _.Event.GetType().Name).ToArray()));
 
-                throw new Xunit.Sdk.XunitException(writer.ToString());
+                throw new XunitException(writer.ToString());
             }
 
             await using (var writer = new StringWriter()) {
@@ -70,7 +71,7 @@ namespace Transacto.Testing {
                     writer.WriteLine("    {0}", difference.Message);
                 }
 
-                throw new Xunit.Sdk.XunitException(writer.ToString());
+                throw new XunitException(writer.ToString());
             }
         }
 
@@ -90,7 +91,7 @@ namespace Transacto.Testing {
                 writer.WriteLine("  Expected: {0},", result.Specification.Throws);
                 writer.WriteLine("  But was:  {0}", result.ButException.Value);
 
-                throw new Xunit.Sdk.XunitException(writer.ToString());
+                throw new XunitException(writer.ToString());
             }
 
             if (!result.ButEvents.HasValue) return;
@@ -101,7 +102,7 @@ namespace Transacto.Testing {
                     result.ButEvents.Value.Length,
                     string.Join(",", result.ButEvents.Value.Select(_ => _.GetType().Name).ToArray()));
 
-                throw new Xunit.Sdk.XunitException(writer.ToString());
+                throw new XunitException(writer.ToString());
             }
         }
     }

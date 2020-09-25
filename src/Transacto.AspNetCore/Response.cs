@@ -5,7 +5,6 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Headers;
 
-#nullable enable
 namespace Transacto {
 	public class Response {
 		public virtual ResponseHeaders Headers { get; }

@@ -6,7 +6,7 @@ using Npgsql;
 using Projac.Sql;
 using Projac.Sql.Executors;
 
-namespace Transacto {
+namespace Transacto.Framework.Projections.Npgsql {
     public class NpgsqlExecutor : IAsyncSqlNonQueryCommandExecutor {
         private readonly Func<NpgsqlConnection> _connectionFactory;
         private readonly int _commandTimeout;

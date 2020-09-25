@@ -4,9 +4,8 @@ using System.Linq;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Transacto.Domain;
-using Transacto.Framework;
 
-namespace Transacto.Infrastructure {
+namespace Transacto {
 	public static class TransactoSerializerOptions {
 		public static readonly JsonSerializerOptions Events = new JsonSerializerOptions {
 			PropertyNamingPolicy = JsonNamingPolicy.CamelCase,

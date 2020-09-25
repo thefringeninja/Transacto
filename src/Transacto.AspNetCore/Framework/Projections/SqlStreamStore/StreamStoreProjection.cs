@@ -8,7 +8,7 @@ using SqlStreamStore;
 using SqlStreamStore.Streams;
 using Position = EventStore.Client.Position;
 
-namespace Transacto {
+namespace Transacto.Framework.Projections.SqlStreamStore {
 	public abstract class StreamStoreProjection : Projection<IStreamStore> {
 		protected string StreamName { get; }
 

@@ -7,7 +7,7 @@ using Npgsql;
 using Projac.Npgsql;
 using Projac.Sql;
 
-namespace Transacto {
+namespace Transacto.Framework.Projections.Npgsql {
 	public abstract class NpgsqlProjection : SqlProjection {
 		protected NpgsqlScripts Scripts { get; }
 		protected static readonly NpgsqlSyntax Sql = new NpgsqlSyntax();

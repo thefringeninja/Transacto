@@ -10,6 +10,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Transacto.Domain;
 using Transacto.Framework;
 using Transacto.Framework.CommandHandling;
+using Transacto.Framework.Projections;
 using Transacto.Messages;
 using Transacto.Modules;
 

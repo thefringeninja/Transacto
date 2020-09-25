@@ -1,45 +1,20 @@
 using System;
 using System.Collections.Concurrent;
-using System.Collections.Generic;
 using System.Linq;
-using System.Threading.Tasks;
 using EventStore.Client;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
 using Npgsql;
 using Projac;
 using SqlStreamStore;
-using Transacto.Domain;
 using Transacto.Framework;
-using Transacto.Framework.CommandHandling;
-using Transacto.Modules;
+using Transacto.Framework.Projections;
+using Transacto.Framework.Projections.Npgsql;
+using Transacto.Framework.Projections.SqlStreamStore;
 using Transacto.Plugins;
 
 namespace Transacto {
 	public static class ServiceCollectionExtensions {
-		public static IServiceCollection AddStreamStoreProjection<T>(this IServiceCollection services)
-			where T : StreamStoreProjection => services.AddSingleton<StreamStoreProjection, T>();
-
-		public static IServiceCollection AddStreamStoreProjection(this IServiceCollection services,
-			StreamStoreProjection projection)
-			=> services.AddSingleton(projection);
-
-		public static IServiceCollection AddNpgSqlProjection<T>(this IServiceCollection services)
-			where T : NpgsqlProjection, new() => services.AddNpgSqlProjection(new T());
-
-		public static IServiceCollection AddNpgSqlProjection(this IServiceCollection services,
-			NpgsqlProjection projection) => services.AddSingleton(projection);
-
-		public static IServiceCollection AddInMemoryProjection<T>(this IServiceCollection services,
-			ProjectionHandler<InMemorySession>[] projection) where T : class, IMemoryReadModel, new() {
-			var readModel = new T();
-			return services
-				.AddSingleton(projection)
-				.AddSingleton<IMemoryReadModel>(readModel)
-				.AddSingleton(readModel);
-		}
-
 		public static IServiceCollection AddTransacto(this IServiceCollection services, params IPlugin[] plugins) =>
 			plugins.Concat(Standard.Plugins).Aggregate(services
 					.AddRouting()
@@ -72,7 +47,7 @@ namespace Transacto {
 						.AddSingleton<Func<NpgsqlConnection>>(provider => () => rootProvider
 							.GetRequiredService<Func<IPlugin, NpgsqlConnection>>()
 							.Invoke(plugin))
-						.AddHostedService(provider => new NpgSqlProjectionHost(
+						.AddHostedService(provider => new NpgsqlProjectionHost(
 							provider.GetRequiredService<EventStoreClient>(),
 							provider.GetRequiredService<IMessageTypeMapper>(),
 							provider.GetRequiredService<Func<NpgsqlConnection>>(),

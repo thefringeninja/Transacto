@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.Text.Json;
 using Transacto.Domain;
-using Transacto.Framework;
 using Xunit;
 
 namespace Transacto.Infrastructure {

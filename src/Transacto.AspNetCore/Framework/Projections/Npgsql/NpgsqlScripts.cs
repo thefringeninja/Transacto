@@ -3,7 +3,7 @@ using System.Collections.Concurrent;
 using System.IO;
 using System.Reflection;
 
-namespace Transacto {
+namespace Transacto.Framework.Projections.Npgsql {
 	public abstract class NpgsqlScripts {
 		private Assembly s_assembly => GetType().Assembly;
 

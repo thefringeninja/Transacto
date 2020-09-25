@@ -12,7 +12,6 @@ using Microsoft.Net.Http.Headers;
 using Transacto.Domain;
 using Transacto.Framework;
 using Transacto.Framework.CommandHandling;
-using Transacto.Infrastructure;
 using Transacto.Messages;
 
 namespace Transacto {

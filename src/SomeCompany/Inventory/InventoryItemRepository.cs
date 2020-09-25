@@ -1,4 +1,5 @@
 using EventStore.Client;
+using Transacto;
 using Transacto.Framework;
 using Transacto.Framework.CommandHandling;
 using Transacto.Infrastructure;

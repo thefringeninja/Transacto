@@ -15,7 +15,6 @@ using Polly;
 using Polly.Retry;
 using SqlStreamStore;
 using Transacto.Domain;
-using Transacto.Infrastructure;
 using Transacto.Messages;
 using Xunit;
 

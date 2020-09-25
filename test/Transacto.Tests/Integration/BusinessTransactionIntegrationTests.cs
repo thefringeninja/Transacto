@@ -1,15 +1,8 @@
 using System;
-using System.Net.Http;
 using System.Threading.Tasks;
-using EventStore.Client;
-using Microsoft.AspNetCore.Builder;
-using Microsoft.AspNetCore.Hosting;
-using Microsoft.AspNetCore.TestHost;
-using Microsoft.Extensions.DependencyInjection;
-using SqlStreamStore;
 using Transacto.Domain;
 using Transacto.Framework;
-using Transacto.Infrastructure;
+using Transacto.Framework.Projections.SqlStreamStore;
 using Transacto.Messages;
 using Xunit;
 

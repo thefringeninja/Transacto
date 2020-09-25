@@ -2,14 +2,13 @@ using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using EventStore.Client;
-using Microsoft.Extensions.Hosting;
 using Transacto.Domain;
 using Transacto.Framework;
-using Transacto.Infrastructure;
+using Transacto.Framework.CommandHandling;
 using Transacto.Messages;
-using Transacto.Modules;
 
 namespace Transacto.Application {
+	/*
 	public class AccountClosingProcess {
 		private readonly EventStoreClient _eventStore;
 		private readonly IMessageTypeMapper _messageTypeMapper;
@@ -28,8 +27,8 @@ namespace Transacto.Application {
 			_subscribed = 0;
 			_subscription = null;
 			_stoppedRegistration = null;
-			_dispatcher = new CommandDispatcher(new[] {
-				new GeneralLedgerModule(eventStore, messageTypeMapper, null!)
+			_dispatcher = new CommandDispatcher(new CommandHandlerModule[] {
+				//new GeneralLedgerModule(eventStore, messageTypeMapper, null!)
 			});
 		}
 
@@ -77,5 +76,5 @@ namespace Transacto.Application {
 				}
 			}
 		}
-	}
+	}*/
 }
