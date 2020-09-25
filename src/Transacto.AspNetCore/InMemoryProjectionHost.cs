@@ -14,16 +14,16 @@ namespace Transacto {
 	public class InMemoryProjectionHost : IHostedService {
 		private readonly EventStoreClient _eventStore;
 		private readonly IMessageTypeMapper _messageTypeMapper;
-		private readonly InMemoryReadModel _target;
+		private readonly InMemorySession _target;
 		private readonly CancellationTokenSource _stopped;
 
 		private int _subscribed;
 		private StreamSubscription? _subscription;
 		private CancellationTokenRegistration? _stoppedRegistration;
-		private readonly Projector<InMemoryReadModel> _projector;
+		private readonly Projector<InMemorySession> _projector;
 
 		public InMemoryProjectionHost(EventStoreClient eventStore, IMessageTypeMapper messageTypeMapper,
-			InMemoryReadModel target, params ProjectionHandler<InMemoryReadModel>[][] projections) {
+			InMemorySession target, params ProjectionHandler<InMemorySession>[][] projections) {
 			_eventStore = eventStore;
 			_messageTypeMapper = messageTypeMapper;
 			_target = target;
@@ -34,7 +34,7 @@ namespace Transacto {
 			_stoppedRegistration = null;
 
 			_projector =
-				new Projector<InMemoryReadModel>(
+				new Projector<InMemorySession>(
 					Resolve.WhenEqualToHandlerMessageType(projections.SelectMany(_ => _).ToArray()));
 		}
 

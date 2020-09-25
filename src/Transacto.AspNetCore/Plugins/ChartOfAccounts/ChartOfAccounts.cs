@@ -1,15 +1,18 @@
 using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.Linq;
 using System.Net;
+using System.Threading;
 using System.Threading.Tasks;
 using EventStore.Client;
 using Hallo;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
 using Transacto.Framework;
+using Transacto.Framework.CommandHandling;
 using Transacto.Messages;
+using Transacto.Modules;
 
 namespace Transacto.Plugins.ChartOfAccounts {
 	internal class ChartOfAccounts : IPlugin {
@@ -17,20 +20,13 @@ namespace Transacto.Plugins.ChartOfAccounts {
 
 		public void Configure(IEndpointRouteBuilder builder) => builder
 			.MapGet(string.Empty, context => {
-				var readModel = context.RequestServices.GetRequiredService<InMemoryReadModel>();
+				var readModel = context.RequestServices.GetRequiredService<ReadModel>();
 
-				var hasValue = readModel.TryGetValue<ReadModel>(
-					nameof(ChartOfAccounts),
-					out var entry);
-
-				var statusCode = hasValue
-					? HttpStatusCode.OK
-					: HttpStatusCode.NotFound;
 				var response = new HalResponse(context.Request, new ChartOfAccountsRepresentation(),
-					ETag.Create(entry?.Item.Checkpoint ?? Optional<Position>.Empty),
-					hasValue ? new Optional<object>(entry?.Item!) : Optional<object>.Empty);
+					ETag.Create(readModel.Checkpoint),
+					readModel);
 				if (response.StatusCode != HttpStatusCode.NotAcceptable) {
-					response.StatusCode = statusCode;
+					response.StatusCode = HttpStatusCode.OK;
 				}
 
 				return new ValueTask<Response>(response);
@@ -42,55 +38,69 @@ namespace Transacto.Plugins.ChartOfAccounts {
 				typeof(ReactivateAccount));
 
 		public void ConfigureServices(IServiceCollection services) => services
-			.AddInMemoryProjection(new InMemoryProjectionBuilder()
-				.When<AccountDefined>((readModel, e) =>
-					readModel.AddOrUpdate<ReadModel>(
-						nameof(ChartOfAccounts), rm => {
-							rm.Checkpoint = e.Position;
-							rm.List.TryAdd(e.Message.AccountNumber, (e.Message.AccountName, true));
-						}))
-				.When<AccountDeactivated>((readModel, e) =>
-					readModel.AddOrUpdate<ReadModel>(
-						nameof(ChartOfAccounts), rm => {
-							rm.Checkpoint = e.Position;
-							rm.List[e.Message.AccountNumber] = (rm.List[e.Message.AccountNumber].accountName, false);
-						}))
-				.When<AccountReactivated>((readModel, e) =>
-					readModel.AddOrUpdate<ReadModel>(
-						nameof(ChartOfAccounts), rm => {
-							rm.Checkpoint = e.Position;
-							rm.List[e.Message.AccountNumber] = (rm.List[e.Message.AccountNumber].accountName, true);
-						}))
-				.When<AccountRenamed>((readModel, e) =>
-					readModel.AddOrUpdate<ReadModel>(
-						nameof(ChartOfAccounts), rm => {
-							rm.Checkpoint = e.Position;
-							rm.List[e.Message.AccountNumber] =
-								(e.Message.NewAccountName, rm.List[e.Message.AccountNumber].active);
-						}))
-				.Build());
+			.AddSingleton<CommandHandlerModule>(provider => new ChartOfAccountsModule(
+				provider.GetRequiredService<EventStoreClient>(),
+				provider.GetRequiredService<IMessageTypeMapper>()))
+			.AddInMemoryProjection<ReadModel>(new ChartOfAccountsProjection());
 
 		public IEnumerable<Type> MessageTypes => Enumerable.Empty<Type>();
 
-		private class ChartOfAccountsRepresentation : Hal<ReadModel>,
-			IHalLinks<ReadModel>,
-			IHalState<ReadModel> {
+		private class ChartOfAccountsProjection : InMemoryProjection<ReadModel> {
+			public ChartOfAccountsProjection() {
+				When<AccountDefined>((readModel, e) =>
+					readModel.AccountDefined(e.AccountNumber, e.AccountName));
+				When<AccountDeactivated>((readModel, e) =>
+					readModel.AccountActivationChanged(e.AccountNumber, false));
+				When<AccountReactivated>((readModel, e) =>
+					readModel.AccountActivationChanged(e.AccountNumber, true));
+				When<AccountRenamed>((readModel, e) =>
+					readModel.AccountRenamed(e.AccountNumber, e.NewAccountName));
+			}
+		}
+
+		private class ChartOfAccountsRepresentation : Hal<ReadModel>, IHalLinks<ReadModel>, IHalState<ReadModel> {
 			public IEnumerable<Link> LinksFor(ReadModel resource) {
 				yield break;
 			}
 
 			public object StateFor(ReadModel resource) =>
-				new SortedDictionary<string, string>(resource.List.ToDictionary(x => x.Key.ToString(),
+				new SortedDictionary<string, string>(resource.ChartOfAccounts.ToDictionary(x => x.Key.ToString(),
 					x => x.Value.accountName));
 		}
 
-		private class ReadModel {
-			public static ReadModel Factory() => new ReadModel();
+		private class ReadModel : IMemoryReadModel {
+			private ImmutableSortedDictionary<int, (string accountName, bool active)> _chartOfAccounts;
 
-			public ConcurrentDictionary<int, (string accountName, bool active)> List { get; } =
-				new ConcurrentDictionary<int, (string accountName, bool active)>();
+			public ImmutableSortedDictionary<int, (string accountName, bool active)> ChartOfAccounts =>
+				_chartOfAccounts;
 
 			public Optional<Position> Checkpoint { get; set; }
+
+			public ReadModel() {
+				_chartOfAccounts = ImmutableSortedDictionary<int, (string accountName, bool active)>.Empty;
+			}
+
+			public void AccountDefined(int accountNumber, string accountName) =>
+				Interlocked.Exchange(ref _chartOfAccounts,
+					_chartOfAccounts.SetItem(accountNumber, (accountName, true)));
+
+			public void AccountRenamed(int accountNumber, string accountName) {
+				if (!_chartOfAccounts.TryGetValue(accountNumber, out var x)) {
+					return;
+				}
+
+				Interlocked.Exchange(ref _chartOfAccounts,
+					_chartOfAccounts.SetItem(accountNumber, (accountName, x.active)));
+			}
+
+			public void AccountActivationChanged(int accountNumber, bool active) {
+				if (!_chartOfAccounts.TryGetValue(accountNumber, out var x)) {
+					return;
+				}
+
+				Interlocked.Exchange(ref _chartOfAccounts,
+					_chartOfAccounts.SetItem(accountNumber, (x.accountName, active)));
+			}
 		}
 	}
 }

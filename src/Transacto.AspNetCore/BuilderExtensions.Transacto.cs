@@ -21,16 +21,6 @@ namespace Transacto {
 									.Single();
 								return next();
 							})
-							.Use(
-(context, next) => {
-	context.Response.OnStarting(() => {
-		if (context.Response.StatusCode == 401) {
-			context.Response.Headers.Add("www-authenticate", "..");
-		}
-		return Task.CompletedTask;
-	});
-	return next();
-})
 							.UseRouting()
 							.UseEndpoints(plugin.Configure)));
 	}
