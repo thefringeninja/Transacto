@@ -128,7 +128,10 @@ namespace Transacto.Domain {
 				GeneralLedgerEntryIds = _entryIdentifiers.Select(x => x.ToGuid()).ToArray(),
 				ClosingGeneralLedgerEntryId = closingEntry.Identifier.ToGuid(),
 				Period = _period.ToString(),
-				Balance = _trialBalance.ToDictionary(x => x.Key.ToInt32(), x => x.Value.ToDecimal())
+				Balance = _trialBalance.Select(x => new BalanceLineItem {
+					Amount = x.Value.ToDecimal(),
+					AccountNumber = x.Key.ToInt32()
+				}).ToArray()
 			});
 		}
 

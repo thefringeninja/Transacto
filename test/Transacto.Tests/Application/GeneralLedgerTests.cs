@@ -183,10 +183,19 @@ namespace Transacto.Application {
 						GeneralLedgerEntryIds = Array.ConvertAll(generalLedgerEntryIdentifiers,
 							identifier => identifier.ToGuid()),
 						ClosingGeneralLedgerEntryId = closingGeneralLedgerEntryIdentifier.ToGuid(),
-						Balance = new Dictionary<int, decimal> {
-							[cashAccountNumber.ToInt32()] = amount.ToDecimal() * generalLedgerEntryIdentifiers.Length,
-							[incomeAccountNumber.ToInt32()] = Money.Zero.ToDecimal(),
-							[_retainedEarnings.ToInt32()] = -(amount.ToDecimal() * generalLedgerEntryIdentifiers.Length)
+						Balance = new[] {
+							new BalanceLineItem {
+								AccountNumber = cashAccountNumber.ToInt32(),
+								Amount = amount.ToDecimal() * generalLedgerEntryIdentifiers.Length
+							},
+							new BalanceLineItem {
+								AccountNumber = incomeAccountNumber.ToInt32(),
+								Amount = Money.Zero.ToDecimal()
+							},
+							new BalanceLineItem {
+								AccountNumber = _retainedEarnings.ToInt32(),
+								Amount = -(amount.ToDecimal() * generalLedgerEntryIdentifiers.Length)
+							}
 						}
 					})
 				.Assert(_handler, _facts);
