@@ -8,6 +8,7 @@ using System.Net.Http.Headers;
 using System.Threading.Tasks;
 using Ductus.FluentDocker.Builders;
 using Ductus.FluentDocker.Services;
+using EventStore.Client;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.TestHost;
@@ -27,6 +28,7 @@ namespace Transacto.Integration {
 
 		private TestServer _testServer;
 		protected HttpClient HttpClient { get; private set; }
+		protected EventStoreClient EventStoreClient => _testServer.Services.GetRequiredService<EventStoreClient>();
 
 		static IntegrationTests() {
 			Inflector.Inflector.SetDefaultCultureFunc = () => new CultureInfo("en-US");
@@ -36,10 +38,11 @@ namespace Transacto.Integration {
 			_eventStore = new Builder()
 				.UseContainer()
 				.WithName("transacto-es-test")
-				.UseImage("eventstore/eventstore:20.6.0-buster-slim")
+				.UseImage("eventstore/eventstore:20.6.1-buster-slim")
 				.ReuseIfExists()
 				.ExposePort(2113, 2113)
-				.WithEnvironment("EVENTSTORE_DEV=true")
+				.WithEnvironment("EVENTSTORE_ENABLE_ATOM_PUB_OVER_HTTP=true",
+					"EVENTSTORE_INSECURE=true")
 				.Build();
 			_streamStore = new Builder()
 				.UseContainer()
@@ -97,7 +100,7 @@ namespace Transacto.Integration {
 			}, true);
 
 			await Retry.ExecuteAsync(async () => {
-				using var response = await client.GetAsync("https://localhost:2113/");
+				using var response = await client.GetAsync("http://localhost:2113/");
 				if (response.StatusCode >= HttpStatusCode.BadRequest) {
 					throw new Exception();
 				}
@@ -116,6 +119,9 @@ namespace Transacto.Integration {
 			_testServer = new TestServer(new WebHostBuilder()
 				.ConfigureServices(s => s
 					.AddEventStoreClient(settings => {
+						settings.ConnectivitySettings.Address = new UriBuilder {
+							Port = 2113
+						}.Uri;
 						settings.OperationOptions.ThrowOnAppendFailure = true;
 						settings.CreateHttpMessageHandler = () => new SocketsHttpHandler {
 							SslOptions = {

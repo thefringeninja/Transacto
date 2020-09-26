@@ -103,11 +103,11 @@ namespace Transacto.Framework.Projections.SqlStreamStore {
 
 			public Task ProjectAsync(StreamSubscription subscription, ResolvedEvent e,
 				CancellationToken cancellationToken) {
-				var type = _messageTypeMapper.Map(e.Event.EventType);
-				if (type == null)
+				if (!_messageTypeMapper.TryMap(e.Event.EventType, out var type)) {
 					return Task.CompletedTask;
-				var message = JsonSerializer.Deserialize(
-					e.Event.Data.Span, type, TransactoSerializerOptions.Events);
+				}
+
+				var message = JsonSerializer.Deserialize(e.Event.Data.Span, type, TransactoSerializerOptions.Events);
 				return Task.WhenAll(_projectors.Where(x => x.checkpoint < e.OriginalPosition)
 					.Select(_ => _.projector.ProjectAsync(_streamStore,
 						Envelope.Create(message, e.OriginalEvent.Position), cancellationToken)));

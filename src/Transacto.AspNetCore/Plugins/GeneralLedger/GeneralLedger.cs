@@ -10,7 +10,6 @@ using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
 using Transacto.Domain;
 using Transacto.Framework;
-using Transacto.Framework.CommandHandling;
 using Transacto.Framework.Projections;
 using Transacto.Messages;
 
@@ -25,21 +24,17 @@ namespace Transacto.Plugins.GeneralLedger {
 				typeof(BeginClosingAccountingPeriod));
 
 		public void ConfigureServices(IServiceCollection services) => services
-			.AddSingleton<CommandHandlerModule>(provider => new GeneralLedgerEntryModule(
-				provider.GetRequiredService<EventStoreClient>(),
-				provider.GetRequiredService<IMessageTypeMapper>(),
-				provider.GetRequiredService<AccountIsDeactivated>()))
-			.AddSingleton<CommandHandlerModule>(provider => new GeneralLedgerModule(
-				provider.GetRequiredService<EventStoreClient>(),
-				provider.GetRequiredService<IMessageTypeMapper>(),
-				provider.GetRequiredService<AccountIsDeactivated>()))
+			.AddCommandHandlerModule<GeneralLedgerEntryModule>()
+			.AddCommandHandlerModule<GeneralLedgerModule>()
+			.AddCommandHandlerModule<AccountingPeriodClosingModule>()
 			.AddSingleton<AccountIsDeactivated>(provider => {
 				var readModel = provider.GetRequiredService<DeactivatedAccounts>();
 
 				return accountNumber => readModel.Contains(accountNumber.ToInt32());
 			})
 			.AddInMemoryProjection<DeactivatedAccounts>(new DeactivatedAccountsProjection())
-			.AddInMemoryProjection<UnclosedGeneralLedgerEntries>(new UnclosedGeneralLedgerEntriesProjection());
+			.AddInMemoryProjection<UnclosedGeneralLedgerEntries>(new UnclosedGeneralLedgerEntriesProjection())
+			.AddProcessManager("accountingPeriodClosingCheckpoint");
 
 		public IEnumerable<Type> MessageTypes => Enumerable.Empty<Type>();
 

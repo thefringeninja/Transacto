@@ -11,7 +11,6 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
 using Transacto.Framework;
-using Transacto.Framework.CommandHandling;
 using Transacto.Framework.Projections;
 using Transacto.Messages;
 
@@ -39,9 +38,7 @@ namespace Transacto.Plugins.ChartOfAccounts {
 				typeof(ReactivateAccount));
 
 		public void ConfigureServices(IServiceCollection services) => services
-			.AddSingleton<CommandHandlerModule>(provider => new ChartOfAccountsModule(
-				provider.GetRequiredService<EventStoreClient>(),
-				provider.GetRequiredService<IMessageTypeMapper>()))
+			.AddCommandHandlerModule<ChartOfAccountsModule>()
 			.AddInMemoryProjection<ReadModel>(new ChartOfAccountsProjection());
 
 		public IEnumerable<Type> MessageTypes => Enumerable.Empty<Type>();

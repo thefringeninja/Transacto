@@ -119,9 +119,9 @@ namespace Transacto.Framework.Projections.Npgsql {
 
 			public Task ProjectAsync(StreamSubscription subscription, ResolvedEvent e,
 				CancellationToken cancellationToken) {
-				var type = _messageTypeMapper.Map(e.Event.EventType);
-				if (type == null)
+				if (!_messageTypeMapper.TryMap(e.Event.EventType, out var type)) {
 					return Task.CompletedTask;
+				}
 				var message = JsonSerializer.Deserialize(
 					e.Event.Data.Span, type, TransactoSerializerOptions.Events);
 				return Task.WhenAll(_projections.Where(_ => _.checkpoint < e.OriginalPosition)
