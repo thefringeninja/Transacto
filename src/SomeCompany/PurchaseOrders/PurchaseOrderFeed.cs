@@ -1,5 +1,4 @@
 using System;
-using Transacto;
 using Transacto.Framework;
 using Transacto.Framework.Projections.SqlStreamStore;
 

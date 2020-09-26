@@ -1,5 +1,4 @@
 using Projac.Npgsql;
-using Transacto;
 using Transacto.Framework.Projections;
 using Transacto.Framework.Projections.Npgsql;
 

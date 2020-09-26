@@ -4,7 +4,7 @@ using Transacto.Framework.Projections.Npgsql;
 namespace Microsoft.Extensions.DependencyInjection {
 	// ReSharper restore CheckNamespace
 
-	public static class NpgsqlServiceCollectionExtensions {
+	public static partial class ServiceCollectionExtensions {
 		public static IServiceCollection AddNpgSqlProjection<T>(this IServiceCollection services)
 			where T : NpgsqlProjection, new() => services.AddNpgSqlProjection(new T());
 

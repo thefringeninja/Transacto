@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using Dapper;
@@ -7,7 +8,6 @@ using Npgsql;
 using SqlStreamStore;
 using Transacto.Framework;
 using Transacto.Infrastructure;
-using JsonSerializerOptions = System.Text.Json.JsonSerializerOptions;
 
 namespace SomeCompany.PurchaseOrders {
 	public class PurchaseOrderRepository {

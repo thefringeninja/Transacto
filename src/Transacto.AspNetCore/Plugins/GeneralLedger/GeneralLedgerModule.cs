@@ -6,8 +6,8 @@ using Transacto.Framework.CommandHandling;
 using Transacto.Infrastructure;
 using Transacto.Messages;
 
-namespace Transacto.Modules {
-	public class GeneralLedgerModule : CommandHandlerModule {
+namespace Transacto.Plugins.GeneralLedger {
+	internal class GeneralLedgerModule : CommandHandlerModule {
 		public GeneralLedgerModule(EventStoreClient eventStore, IMessageTypeMapper messageTypeMapper,
 			AccountIsDeactivated accountIsDeactivated) {
 			Build<OpenGeneralLedger>()

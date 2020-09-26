@@ -1,8 +1,11 @@
-using Microsoft.Extensions.DependencyInjection;
 using Projac;
+using Transacto.Framework.Projections;
 
-namespace Transacto.Framework.Projections {
-	public static class InMemoryServiceCollectionExtensions {
+// ReSharper disable CheckNamespace
+namespace Microsoft.Extensions.DependencyInjection {
+	// ReSharper restore CheckNamespace
+
+	public static partial class ServiceCollectionExtensions {
 		public static IServiceCollection AddInMemoryProjection<T>(this IServiceCollection services,
 			ProjectionHandler<InMemorySession>[] projection) where T : class, IMemoryReadModel, new() {
 			var readModel = new T();

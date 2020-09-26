@@ -7,13 +7,13 @@ using System.Threading;
 using System.Threading.Tasks;
 using EventStore.Client;
 using Hallo;
+using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
 using Transacto.Framework;
 using Transacto.Framework.CommandHandling;
 using Transacto.Framework.Projections;
 using Transacto.Messages;
-using Transacto.Modules;
 
 namespace Transacto.Plugins.ChartOfAccounts {
 	internal class ChartOfAccounts : IPlugin {

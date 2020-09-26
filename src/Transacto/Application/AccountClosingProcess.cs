@@ -1,12 +1,3 @@
-using System.Text.Json;
-using System.Threading;
-using System.Threading.Tasks;
-using EventStore.Client;
-using Transacto.Domain;
-using Transacto.Framework;
-using Transacto.Framework.CommandHandling;
-using Transacto.Messages;
-
 namespace Transacto.Application {
 	/*
 	public class AccountClosingProcess {

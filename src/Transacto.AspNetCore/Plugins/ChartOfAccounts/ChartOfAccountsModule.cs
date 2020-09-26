@@ -5,8 +5,8 @@ using Transacto.Framework.CommandHandling;
 using Transacto.Infrastructure;
 using Transacto.Messages;
 
-namespace Transacto.Modules {
-	public class ChartOfAccountsModule : CommandHandlerModule {
+namespace Transacto.Plugins.ChartOfAccounts {
+	internal class ChartOfAccountsModule : CommandHandlerModule {
 		public ChartOfAccountsModule(EventStoreClient eventStore, IMessageTypeMapper messageTypeMapper) {
 			Build<DefineAccount>()
 				.Log()

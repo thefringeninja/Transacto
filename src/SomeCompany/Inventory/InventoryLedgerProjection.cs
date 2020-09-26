@@ -2,7 +2,6 @@ using System;
 using Projac.Npgsql;
 using SomeCompany.PurchaseOrders;
 using SomeCompany.ReceiptOfGoods;
-using Transacto;
 using Transacto.Framework.Projections;
 using Transacto.Framework.Projections.Npgsql;
 
