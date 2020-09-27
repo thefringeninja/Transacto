@@ -29,7 +29,9 @@ namespace Transacto.Integration {
 			var body = await response.Content.ReadAsStreamAsync();
 			var chartOfAccounts = await JsonDocument.ParseAsync(body);
 
-			using var resultEnumerator = chartOfAccounts.RootElement.EnumerateObject();
+			using var resultEnumerator = chartOfAccounts.RootElement.EnumerateObject()
+				.Where(x => x.Name != "_links" && x.Name != "_embedded")
+				.GetEnumerator();
 			using var expectEnumerator = accounts.OrderBy(x => x.Item1.ToInt32()).GetEnumerator();
 
 			while (expectEnumerator.MoveNext() && resultEnumerator.MoveNext()) {

@@ -23,7 +23,6 @@ namespace Transacto.Integration {
 				CreatedOn = now,
 				GeneralLedgerEntryId = transactionId
 			}, TransactoSerializerOptions.BusinessTransactions(typeof(BusinessTransaction)));
-			await Task.Delay(TimeSpan.FromMinutes(5));
 		}
 
 		private class BusinessTransactionEntry : FeedEntry {
