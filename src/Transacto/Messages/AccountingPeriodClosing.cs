@@ -7,5 +7,7 @@ namespace Transacto.Messages {
 		public DateTimeOffset ClosingOn { get; set; }
 		public int RetainedEarningsAccountNumber { get; set; }
 		public Guid ClosingGeneralLedgerEntryId { get; set; }
+
+		public override string ToString() => $"Closing accounting period {Period} .";
 	}
 }

@@ -6,5 +6,7 @@ namespace Transacto.Messages {
         public string Number { get; set; } = null!;
         public DateTimeOffset CreatedOn { get; set; }
         public string Period { get; set; } = null!;
+
+        public override string ToString() => $"General ledger entry {Number} was created.";
     }
 }

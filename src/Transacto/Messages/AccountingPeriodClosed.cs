@@ -6,5 +6,7 @@ namespace Transacto.Messages {
 		public Guid[] GeneralLedgerEntryIds { get; set; } = Array.Empty<Guid>();
 		public BalanceLineItem[] Balance { get; set; } = Array.Empty<BalanceLineItem>();
 		public Guid ClosingGeneralLedgerEntryId { get; set; }
+
+		public override string ToString() => $"Accounting period {Period} has been closed.";
 	}
 }
