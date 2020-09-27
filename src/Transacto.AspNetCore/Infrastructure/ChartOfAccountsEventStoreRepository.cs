@@ -3,15 +3,13 @@ using System.Threading.Tasks;
 using EventStore.Client;
 using Transacto.Domain;
 using Transacto.Framework;
-using Transacto.Framework.CommandHandling;
 
 namespace Transacto.Infrastructure {
 	public class ChartOfAccountsEventStoreRepository : IChartOfAccountsRepository {
 		private readonly EventStoreRepository<ChartOfAccounts> _inner;
 
-		public ChartOfAccountsEventStoreRepository(EventStoreClient eventStore,
-			IMessageTypeMapper messageTypeMapper, UnitOfWork unitOfWork) {
-			_inner = new EventStoreRepository<ChartOfAccounts>(eventStore, unitOfWork,
+		public ChartOfAccountsEventStoreRepository(EventStoreClient eventStore, IMessageTypeMapper messageTypeMapper) {
+			_inner = new EventStoreRepository<ChartOfAccounts>(eventStore,
 				ChartOfAccounts.Factory, messageTypeMapper);
 		}
 

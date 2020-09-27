@@ -10,17 +10,15 @@ namespace Transacto.Plugins.GeneralLedger {
 	public class AccountingPeriodClosingModule : CommandHandlerModule {
 		public AccountingPeriodClosingModule(EventStoreClient eventStore, IMessageTypeMapper messageTypeMapper,
 			AccountIsDeactivated accountIsDeactivated) {
+			var handlers =
+				new AccountingPeriodClosingHandlers(
+					new GeneralLedgerEventStoreRepository(eventStore, messageTypeMapper),
+					new GeneralLedgerEntryEventStoreRepository(eventStore, messageTypeMapper),
+					accountIsDeactivated);
 			Build<AccountingPeriodClosing>()
 				.Log()
 				.UnitOfWork(eventStore, messageTypeMapper, TransactoSerializerOptions.Events)
-				.Handle(async (_, ct) => {
-					var (unitOfWork, command) = _;
-					var handlers =
-						new AccountingPeriodClosingHandlers(
-							new GeneralLedgerEventStoreRepository(eventStore, messageTypeMapper, unitOfWork),
-							new GeneralLedgerEntryEventStoreRepository(eventStore, messageTypeMapper, unitOfWork),
-							accountIsDeactivated);
-
+				.Handle(async (command, ct) => {
 					await handlers.Handle(command, ct);
 					return Position.Start;
 				});

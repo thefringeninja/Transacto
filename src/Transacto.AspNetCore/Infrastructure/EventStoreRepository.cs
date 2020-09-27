@@ -14,19 +14,16 @@ namespace Transacto.Infrastructure {
         };
 
         private readonly EventStoreClient _eventStore;
-        private readonly UnitOfWork _unitOfWork;
         private readonly Func<TAggregateRoot> _factory;
         private readonly IMessageTypeMapper _messageTypeMapper;
         private readonly JsonSerializerOptions _serializerOptions;
 
         public EventStoreRepository(
             EventStoreClient eventStore,
-            UnitOfWork unitOfWork,
             Func<TAggregateRoot> factory,
             IMessageTypeMapper messageTypeMapper,
             JsonSerializerOptions? serializerOptions = null) {
             _eventStore = eventStore;
-            _unitOfWork = unitOfWork;
             _factory = factory;
             _messageTypeMapper = messageTypeMapper;
             _serializerOptions = serializerOptions ?? DefaultOptions;
@@ -35,7 +32,7 @@ namespace Transacto.Infrastructure {
         public async ValueTask<Optional<TAggregateRoot>> GetById(string identifier,
             CancellationToken cancellationToken = default) {
             var streamName = identifier;
-            if (_unitOfWork.TryGet(streamName, out var a) && a is TAggregateRoot aggregate) {
+            if (UnitOfWork.Current.TryGet(streamName, out var a) && a is TAggregateRoot aggregate) {
                 return new Optional<TAggregateRoot>(aggregate);
             }
 
@@ -52,7 +49,7 @@ namespace Transacto.Infrastructure {
                         _messageTypeMapper.Map(e.OriginalEvent.EventType),
                         _serializerOptions)));
 
-                _unitOfWork.Attach(streamName, aggregate, version);
+                UnitOfWork.Current.Attach(streamName, aggregate, version);
 
                 return aggregate;
             } catch (StreamNotFoundException) {
@@ -61,6 +58,6 @@ namespace Transacto.Infrastructure {
         }
 
         public void Add(TAggregateRoot aggregateRoot) =>
-            _unitOfWork.Attach(aggregateRoot.Id, aggregateRoot);
+	        UnitOfWork.Current.Attach(aggregateRoot.Id, aggregateRoot);
     }
 }

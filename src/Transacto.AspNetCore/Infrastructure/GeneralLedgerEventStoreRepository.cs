@@ -12,19 +12,16 @@ namespace Transacto.Infrastructure {
 	public class GeneralLedgerEventStoreRepository : IGeneralLedgerRepository {
 		private readonly EventStoreClient _eventStore;
 		private readonly IMessageTypeMapper _messageTypeMapper;
-		private readonly UnitOfWork _unitOfWork;
 		private readonly EventStoreRepository<GeneralLedger> _inner;
 
-		public GeneralLedgerEventStoreRepository(EventStoreClient eventStore, IMessageTypeMapper messageTypeMapper,
-			UnitOfWork unitOfWork) {
+		public GeneralLedgerEventStoreRepository(EventStoreClient eventStore, IMessageTypeMapper messageTypeMapper) {
 			_eventStore = eventStore;
 			_messageTypeMapper = messageTypeMapper;
-			_unitOfWork = unitOfWork;
-			_inner = new EventStoreRepository<GeneralLedger>(eventStore, unitOfWork, GeneralLedger.Factory, messageTypeMapper);
+			_inner = new EventStoreRepository<GeneralLedger>(eventStore, GeneralLedger.Factory, messageTypeMapper);
 		}
 
 		public async ValueTask<GeneralLedger> Get(CancellationToken cancellationToken = default) {
-			if (_unitOfWork.TryGet(GeneralLedger.Identifier, out var a) && a is GeneralLedger generalLedger) {
+			if (UnitOfWork.Current.TryGet(GeneralLedger.Identifier, out var a) && a is GeneralLedger generalLedger) {
 				return generalLedger;
 			}
 
@@ -55,7 +52,7 @@ namespace Transacto.Infrastructure {
 
 			generalLedger.LoadFromHistory(stack);
 
-			_unitOfWork.Attach(GeneralLedger.Identifier, generalLedger, streamPosition.ToInt64());
+			UnitOfWork.Current.Attach(GeneralLedger.Identifier, generalLedger, streamPosition.ToInt64());
 
 			return generalLedger;
 		}

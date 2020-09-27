@@ -8,14 +8,12 @@ using Transacto.Messages;
 namespace Transacto.Plugins.ChartOfAccounts {
 	internal class ChartOfAccountsModule : CommandHandlerModule {
 		public ChartOfAccountsModule(EventStoreClient eventStore, IMessageTypeMapper messageTypeMapper) {
+			var handlers =
+				new ChartOfAccountsHandlers(new ChartOfAccountsEventStoreRepository(eventStore, messageTypeMapper));
 			Build<DefineAccount>()
 				.Log()
 				.UnitOfWork(eventStore, messageTypeMapper, TransactoSerializerOptions.Events)
-				.Handle(async (_, ct) => {
-					var (unitOfWork, command) = _;
-					var handlers = new ChartOfAccountsHandlers(
-						new ChartOfAccountsEventStoreRepository(eventStore, messageTypeMapper, unitOfWork));
-
+				.Handle(async (command, ct) => {
 					await handlers.Handle(command, ct);
 
 					return Position.Start;
@@ -24,11 +22,7 @@ namespace Transacto.Plugins.ChartOfAccounts {
 			Build<DeactivateAccount>()
 				.Log()
 				.UnitOfWork(eventStore, messageTypeMapper, TransactoSerializerOptions.Events)
-				.Handle(async (_, ct) => {
-					var (unitOfWork, command) = _;
-					var handlers = new ChartOfAccountsHandlers(
-						new ChartOfAccountsEventStoreRepository(eventStore, messageTypeMapper, unitOfWork));
-
+				.Handle(async (command, ct) => {
 					await handlers.Handle(command, ct);
 
 					return Position.Start;
@@ -37,11 +31,7 @@ namespace Transacto.Plugins.ChartOfAccounts {
 			Build<ReactivateAccount>()
 				.Log()
 				.UnitOfWork(eventStore, messageTypeMapper, TransactoSerializerOptions.Events)
-				.Handle(async (_, ct) => {
-					var (unitOfWork, command) = _;
-					var handlers = new ChartOfAccountsHandlers(
-						new ChartOfAccountsEventStoreRepository(eventStore, messageTypeMapper, unitOfWork));
-
+				.Handle(async (command, ct) => {
 					await handlers.Handle(command, ct);
 
 					return Position.Start;
@@ -50,11 +40,7 @@ namespace Transacto.Plugins.ChartOfAccounts {
 			Build<RenameAccount>()
 				.Log()
 				.UnitOfWork(eventStore, messageTypeMapper, TransactoSerializerOptions.Events)
-				.Handle(async (_, ct) => {
-					var (unitOfWork, command) = _;
-					var handlers = new ChartOfAccountsHandlers(
-						new ChartOfAccountsEventStoreRepository(eventStore, messageTypeMapper, unitOfWork));
-
+				.Handle(async (command, ct) => {
 					await handlers.Handle(command, ct);
 
 					return Position.Start;

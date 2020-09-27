@@ -3,15 +3,14 @@ using System.Threading.Tasks;
 using EventStore.Client;
 using Transacto.Domain;
 using Transacto.Framework;
-using Transacto.Framework.CommandHandling;
 
 namespace Transacto.Infrastructure {
 	public class GeneralLedgerEntryEventStoreRepository : IGeneralLedgerEntryRepository {
 		private readonly EventStoreRepository<GeneralLedgerEntry> _inner;
 
 		public GeneralLedgerEntryEventStoreRepository(EventStoreClient eventStore,
-			IMessageTypeMapper messageTypeMapper, UnitOfWork unitOfWork) {
-			_inner = new EventStoreRepository<GeneralLedgerEntry>(eventStore, unitOfWork,
+			IMessageTypeMapper messageTypeMapper) {
+			_inner = new EventStoreRepository<GeneralLedgerEntry>(eventStore,
 				GeneralLedgerEntry.Factory, messageTypeMapper);
 		}
 
