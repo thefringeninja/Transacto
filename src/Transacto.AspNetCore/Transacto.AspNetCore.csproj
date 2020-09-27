@@ -27,7 +27,7 @@
 		<PackageReference Include="Serilog" Version="2.9.0" />
 		<PackageReference Include="Serilog.AspNetCore" Version="3.2.0" />
 		<PackageReference Include="Serilog.Sinks.Console" Version="3.1.1" />
-		<PackageReference Include="SqlStreamStore" Version="1.2.0" />
+		<PackageReference Include="SqlStreamStore" Version="1.2.1-*" />
 		<PackageReference Include="Transacto.Tasks" Version="0.0.0-alpha.*" />
 	</ItemGroup>
 

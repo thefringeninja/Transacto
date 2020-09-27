@@ -58,7 +58,9 @@ namespace Transacto.Plugins.ChartOfAccounts {
 
 		private class ChartOfAccountsRepresentation : Hal<ReadModel>, IHalLinks<ReadModel>, IHalState<ReadModel> {
 			public IEnumerable<Link> LinksFor(ReadModel resource) {
-				yield break;
+				foreach (var (accountNumber, (accountName, _)) in resource.ChartOfAccounts) {
+					yield return new Link("self", $"chart-of-accounts/{accountNumber}", title: accountName);
+				}
 			}
 
 			public object StateFor(ReadModel resource) =>

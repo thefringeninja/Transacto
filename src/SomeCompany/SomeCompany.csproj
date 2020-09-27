@@ -16,7 +16,7 @@
 		<FrameworkReference Include="Microsoft.AspNetCore.App" />
 	</ItemGroup>
 	<ItemGroup>
-		<PackageReference Include="SqlStreamStore.Http" Version="1.2.0-beta.*" />
+		<PackageReference Include="SqlStreamStore.Http" Version="1.2.1-*" />
 		<PackageReference Include="Transacto.Tasks" Version="0.0.0-alpha.*" />
 	</ItemGroup>
 

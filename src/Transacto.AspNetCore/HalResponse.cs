@@ -79,20 +79,24 @@ namespace Transacto {
 				var representation = await _hal.RepresentationOfAsync(_resource);
 				await stream.WriteAsync(Encoding.UTF8.GetBytes("<html><body>"), cancellationToken);
 
-				await stream.WriteAsync(Encoding.UTF8.GetBytes(await Render(typeof(Links), representation)),
+				await stream.WriteAsync(Encoding.UTF8.GetBytes(await Render(representation.Links, typeof(Links))),
 					cancellationToken);
-				await stream.WriteAsync(Encoding.UTF8.GetBytes(await Render(_hal.GetType(), representation)),
+				await stream.WriteAsync(
+					Encoding.UTF8.GetBytes(await Render(representation.State, _resource.GetType())),
 					cancellationToken);
 
 				await stream.WriteAsync(Encoding.UTF8.GetBytes("</body></html>"), cancellationToken);
 			}
 
-			private static Task<string> Render(Type type, HalRepresentation representation) => Engines
-				.GetOrAdd(type.Assembly, assembly => new RazorLightEngineBuilder()
-					.UseEmbeddedResourcesProject(assembly)
-					.UseMemoryCachingProvider()
-					.Build())
-				.CompileRenderAsync(type.FullName, representation.State);
+			private static Task<string> Render(object model, Type? type = null) {
+				type ??= model.GetType();
+				return Engines
+					.GetOrAdd(type.Assembly, assembly => new RazorLightEngineBuilder()
+						.UseEmbeddedResourcesProject(assembly)
+						.UseMemoryCachingProvider()
+						.Build())
+					.CompileRenderAsync(type.FullName, model);
+			}
 		}
 
 		private sealed class HalJsonResponse : Response {
