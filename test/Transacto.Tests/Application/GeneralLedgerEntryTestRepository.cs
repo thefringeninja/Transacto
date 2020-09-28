@@ -16,7 +16,7 @@ namespace Transacto.Application {
 			CancellationToken cancellationToken = default) {
 			var optional = await _inner.GetOptional(GeneralLedgerEntry.FormatStreamIdentifier(identifier),
 				cancellationToken);
-			return optional.HasValue ? optional.Value : throw new InvalidOperationException();
+			return optional.HasValue ? optional.Value : throw new GeneralLedgerEntryNotFoundException(identifier);
 		}
 
 		public void Add(GeneralLedgerEntry generalLedgerEntry) => _inner.Add(generalLedgerEntry);

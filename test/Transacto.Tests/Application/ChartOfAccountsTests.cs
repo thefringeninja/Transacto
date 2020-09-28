@@ -148,7 +148,7 @@ namespace Transacto.Application {
                     NewAccountName = accountName.ToString(),
                     AccountNumber = accountNumber.ToInt32()
                 })
-                .Throws(new InvalidOperationException())
+                .Throws(new ChartOfAccountsNotFoundException())
                 .Assert(_handler, _facts);
 
         [Theory, AutoTransactoData]
@@ -174,7 +174,7 @@ namespace Transacto.Application {
                 .When(new DeactivateAccount {
                     AccountNumber = accountNumber.ToInt32()
                 })
-                .Throws(new InvalidOperationException())
+                .Throws(new ChartOfAccountsNotFoundException())
                 .Assert(_handler, _facts);
 
         [Theory, AutoTransactoData]
@@ -198,7 +198,7 @@ namespace Transacto.Application {
                 .When(new ReactivateAccount {
                     AccountNumber = accountNumber.ToInt32()
                 })
-                .Throws(new InvalidOperationException())
+                .Throws(new ChartOfAccountsNotFoundException())
                 .Assert(_handler, _facts);
 
         [Theory, AutoTransactoData]

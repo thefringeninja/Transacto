@@ -1,4 +1,3 @@
-using System;
 using System.Threading;
 using System.Threading.Tasks;
 using Transacto.Domain;
@@ -14,11 +13,13 @@ namespace Transacto.Application {
 
 		public async ValueTask<GeneralLedger> Get(CancellationToken cancellationToken = default) {
 			var optional = await _inner.GetOptional(GeneralLedger.Identifier, cancellationToken);
-			if (!optional.HasValue) {
-				throw new InvalidOperationException();
+			if (optional.HasValue) {
+				return optional.Value;
 			}
 
-			return optional.Value;
+			var generalLedger = GeneralLedger.Factory();
+			_inner.Add(generalLedger);
+			return generalLedger;
 		}
 
 		public void Add(GeneralLedger generalLedger) => _inner.Add(generalLedger);

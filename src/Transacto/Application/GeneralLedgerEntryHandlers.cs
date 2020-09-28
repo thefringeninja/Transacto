@@ -1,4 +1,3 @@
-using System;
 using System.Threading;
 using System.Threading.Tasks;
 using Transacto.Domain;
@@ -19,10 +18,6 @@ namespace Transacto.Application {
 		}
 
 		public async ValueTask Handle(PostGeneralLedgerEntry command, CancellationToken cancellationToken = default) {
-			if (command.BusinessTransaction == null) {
-				throw new InvalidOperationException();
-			}
-
 			var generalLedger = await _generalLedger.Get(cancellationToken);
 			var entry = generalLedger.Create(new GeneralLedgerEntryIdentifier(command.GeneralLedgerEntryId),
 				command.BusinessTransaction.ReferenceNumber, command.CreatedOn);

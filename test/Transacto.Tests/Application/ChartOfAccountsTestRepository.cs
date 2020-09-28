@@ -19,7 +19,7 @@ namespace Transacto.Application {
 		public async ValueTask<ChartOfAccounts> Get(CancellationToken cancellationToken = default) {
 			var optional = await GetOptional(cancellationToken);
 			if (!optional.HasValue) {
-				throw new InvalidOperationException();
+				throw new ChartOfAccountsNotFoundException();
 			}
 
 			return optional.Value;

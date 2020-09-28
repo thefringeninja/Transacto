@@ -29,15 +29,15 @@ namespace Transacto.Infrastructure {
 				GeneralLedger.Identifier, StreamPosition.End, int.MaxValue, cancellationToken: cancellationToken);
 
 			generalLedger = GeneralLedger.Factory();
-
+		
 			var stack = new Stack<object>();
-			bool lastEventRead = false;
+			bool streamPositionAssigned = false;
 			StreamPosition streamPosition = default;
 
 			await foreach (var resolvedEvent in events) {
-				if (!lastEventRead) {
+				if (!streamPositionAssigned) {
 					streamPosition = resolvedEvent.OriginalEvent.EventNumber;
-					lastEventRead = true;
+					streamPositionAssigned = true;
 				}
 
 				var @event = JsonSerializer.Deserialize(resolvedEvent.OriginalEvent.Data.Span,

@@ -22,7 +22,7 @@ namespace Transacto.Framework.CommandHandling {
 				CommandHandling.UnitOfWork.Current.GetChanges().Single();
 
 			var eventData = aggregateRoot.GetChanges().Select(e => new EventData(Uuid.NewUuid(),
-				messageTypeMapper.Map(e.GetType()) ?? throw new InvalidOperationException(),
+				messageTypeMapper.Map(e.GetType()),
 				JsonSerializer.SerializeToUtf8Bytes(e, eventSerializerOptions)));
 
 			var result = await Append();
