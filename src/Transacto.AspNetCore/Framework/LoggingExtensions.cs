@@ -2,9 +2,9 @@ using System;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 
-namespace Transacto.Framework.CommandHandling {
+namespace Transacto.Framework {
 	public static class LoggingExtensions {
-		public static ICommandHandlerBuilder<T> Log<T>(this ICommandHandlerBuilder<T> builder,
+		public static IMessageHandlerBuilder<T, TReturn> Log<T, TReturn>(this IMessageHandlerBuilder<T, TReturn> builder,
 			ILoggerFactory? loggerFactory = null) where T : class {
 			var log = loggerFactory?.CreateLogger<T>() ?? new NullLogger<T>();
 

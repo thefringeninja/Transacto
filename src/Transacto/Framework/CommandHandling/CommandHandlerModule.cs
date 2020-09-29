@@ -6,27 +6,27 @@ using System.Threading.Tasks;
 using EventStore.Client;
 
 namespace Transacto.Framework.CommandHandling {
-    public abstract class CommandHandlerModule : IEnumerable<CommandHandler> {
-        private readonly List<CommandHandler> _handlers;
+    public abstract class CommandHandlerModule : IEnumerable<MessageHandler<Position>> {
+        private readonly List<MessageHandler<Position>> _handlers;
 
         protected CommandHandlerModule() {
-            _handlers = new List<CommandHandler>();
+            _handlers = new List<MessageHandler<Position>>();
         }
 
-        protected ICommandHandlerBuilder<TCommand> Build<TCommand>() where TCommand : class =>
-	        new CommandHandlerBuilder<TCommand>(handler => {
-		        _handlers.Add(new CommandHandler(typeof(TCommand),
+        protected IMessageHandlerBuilder<TCommand, Position> Build<TCommand>() where TCommand : class =>
+	        new MessageHandlerBuilder<TCommand, Position>(handler => {
+		        _handlers.Add(new MessageHandler<Position>(typeof(TCommand),
 			        (command, token) => handler((TCommand)command, token)));
 	        });
 
         protected void Handle<TCommand>(Func<TCommand, CancellationToken, ValueTask<Position>> handler) =>
-	        _handlers.Add(new CommandHandler(typeof(TCommand), (command, token) => handler((TCommand)command, token)));
+	        _handlers.Add(new MessageHandler<Position>(typeof(TCommand), (command, token) => handler((TCommand)command, token)));
 
-        public CommandHandler[] Handlers => _handlers.ToArray();
+        public MessageHandler<Position>[] Handlers => _handlers.ToArray();
 
-        public CommandHandlerEnumerator GetEnumerator() => new CommandHandlerEnumerator(Handlers);
+        public MessageHandlerEnumerator<Position> GetEnumerator() => new MessageHandlerEnumerator<Position>(Handlers);
 
-        IEnumerator<CommandHandler> IEnumerable<CommandHandler>.GetEnumerator() => GetEnumerator();
+        IEnumerator<MessageHandler<Position>> IEnumerable<MessageHandler<Position>>.GetEnumerator() => GetEnumerator();
 
         IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
     }

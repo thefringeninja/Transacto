@@ -1,13 +1,18 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text.Json;
 using System.Threading;
+using EventStore.Client;
 
-namespace Transacto.Framework.CommandHandling {
+namespace Transacto.Framework {
 	/// <summary>
 	/// Tracks changes of attached aggregates.
 	/// </summary>
 	public class UnitOfWork {
+		private readonly EventStoreClient _eventStore;
+		private readonly IMessageTypeMapper _messageTypeMapper;
+		private readonly JsonSerializerOptions _serializerOptions;
 		private static readonly AsyncLocal<UnitOfWork?> Storage = new AsyncLocal<UnitOfWork?>();
 
 		private readonly IDictionary<string, (AggregateRoot aggregate, Optional<long> expectedVersion)> _aggregates;
@@ -16,8 +21,9 @@ namespace Transacto.Framework.CommandHandling {
 		/// Starts a <see cref="UnitOfWork"/>.
 		/// </summary>
 		/// <returns>An <see cref="IDisposable"/> that ends the <see cref="UnitOfWork"/> when invoked.</returns>
-		public static IDisposable Start() {
-			Storage.Value = new UnitOfWork();
+		public static IDisposable Start(EventStoreClient eventStore, IMessageTypeMapper messageTypeMapper,
+			JsonSerializerOptions serializerOptions) {
+			Storage.Value = new UnitOfWork(eventStore, messageTypeMapper, serializerOptions);
 
 			return new DisposableAction(() => Storage.Value = null);
 		}
@@ -30,7 +36,10 @@ namespace Transacto.Framework.CommandHandling {
 		/// <summary>
 		/// Initializes a new instance of the <see cref="UnitOfWork"/> class.
 		/// </summary>
-		private UnitOfWork() {
+		private UnitOfWork(EventStoreClient eventStore, IMessageTypeMapper messageTypeMapper, JsonSerializerOptions serializerOptions) {
+			_eventStore = eventStore;
+			_messageTypeMapper = messageTypeMapper;
+			_serializerOptions = serializerOptions;
 			_aggregates = new Dictionary<string, (AggregateRoot, Optional<long>)>();
 		}
 

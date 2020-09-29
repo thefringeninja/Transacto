@@ -1,12 +1,10 @@
 using System;
-using System.Collections.Generic;
 using System.Linq;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using EventStore.Client;
 using Microsoft.Extensions.Hosting;
-using Transacto.Framework.CommandHandling;
 
 namespace Transacto.Framework.ProcessManagers {
 	public class ProcessManagerHost : IHostedService {
@@ -14,7 +12,7 @@ namespace Transacto.Framework.ProcessManagers {
 		private readonly IMessageTypeMapper _messageTypeMapper;
 		private readonly string _checkpointStreamName;
 		private readonly CancellationTokenSource _stopped;
-		private readonly CommandDispatcher _dispatcher;
+		private readonly ProcessManagerEventDispatcher _dispatcher;
 
 		private int _subscribed;
 		private StreamSubscription? _subscription;
@@ -22,7 +20,7 @@ namespace Transacto.Framework.ProcessManagers {
 		private Position _checkpoint;
 
 		public ProcessManagerHost(EventStoreClient eventStore, IMessageTypeMapper messageTypeMapper,
-			string checkpointStreamName, IEnumerable<CommandHandlerModule> commandHandlerModules) {
+			string checkpointStreamName, ProcessManagerEventHandlerModule eventHandlerModule) {
 			_eventStore = eventStore;
 			_messageTypeMapper = messageTypeMapper;
 			_checkpointStreamName = checkpointStreamName;
@@ -31,16 +29,24 @@ namespace Transacto.Framework.ProcessManagers {
 			_subscribed = 0;
 			_subscription = null;
 			_stoppedRegistration = null;
-			_dispatcher = new CommandDispatcher(commandHandlerModules);
+			_dispatcher = new ProcessManagerEventDispatcher(eventHandlerModule);
 			_checkpoint = Position.Start;
 		}
 
-		public Task StartAsync(CancellationToken cancellationToken) => Subscribe(cancellationToken);
+		public async Task StartAsync(CancellationToken cancellationToken) {
+			await SetStreamMetadata(cancellationToken);
+			await Subscribe(cancellationToken);
+		}
 
 		public Task StopAsync(CancellationToken cancellationToken) {
 			_stopped.Cancel();
 			_stoppedRegistration?.Dispose();
 			return Task.CompletedTask;
+		}
+
+		private async Task SetStreamMetadata(CancellationToken cancellationToken) {
+			await _eventStore.SetStreamMetadataAsync(_checkpointStreamName, StreamState.NoStream,
+				new StreamMetadata(maxCount: 5), options => options.ThrowOnAppendFailure = false, cancellationToken: cancellationToken);
 		}
 
 		private async Task Subscribe(CancellationToken cancellationToken) {
@@ -89,19 +95,21 @@ namespace Transacto.Framework.ProcessManagers {
 				var message = JsonSerializer.Deserialize(
 					e.Event.Data.Span, type, TransactoSerializerOptions.Events);
 
-				try {
-					_checkpoint = await _dispatcher.Handle(message, ct);
+				_checkpoint = await _dispatcher.Handle(message, ct);
 
-					var checkpointBytes = new byte[16];
+				if (_checkpoint <= Position.Start) {
+					return;
+				}
 
-					BitConverter.TryWriteBytes(checkpointBytes, _checkpoint.CommitPosition);
-					BitConverter.TryWriteBytes(new Span<byte>(checkpointBytes).Slice(8), _checkpoint.PreparePosition);
+				var checkpointBytes = new byte[16];
 
-					await _eventStore.AppendToStreamAsync(_checkpointStreamName, StreamState.Any, new[] {
-						new EventData(Uuid.NewUuid(), "checkpoint", checkpointBytes,
-							contentType: "application/octet-stream")
-					}, cancellationToken: ct);
-				} catch (CommandResolveException) { } // not ideal
+				BitConverter.TryWriteBytes(checkpointBytes, _checkpoint.CommitPosition);
+				BitConverter.TryWriteBytes(new Span<byte>(checkpointBytes).Slice(8), _checkpoint.PreparePosition);
+
+				await _eventStore.AppendToStreamAsync(_checkpointStreamName, StreamState.Any, new[] {
+					new EventData(Uuid.NewUuid(), "checkpoint", checkpointBytes,
+						contentType: "application/octet-stream")
+				}, cancellationToken: ct);
 			}
 		}
 	}

@@ -1,6 +1,4 @@
-using Projac;
 using Transacto.Framework.CommandHandling;
-using Transacto.Framework.Projections;
 
 // ReSharper disable CheckNamespace
 namespace Microsoft.Extensions.DependencyInjection {

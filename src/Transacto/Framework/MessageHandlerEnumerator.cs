@@ -2,12 +2,12 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 
-namespace Transacto.Framework.CommandHandling {
-	public class CommandHandlerEnumerator : IEnumerator<CommandHandler> {
-		private readonly CommandHandler[] _handlers;
+namespace Transacto.Framework {
+	public class MessageHandlerEnumerator<TReturn> : IEnumerator<MessageHandler<TReturn>> {
+		private readonly MessageHandler<TReturn>[] _handlers;
 		private int _index;
 
-		public CommandHandlerEnumerator(CommandHandler[] handlers) {
+		public MessageHandlerEnumerator(MessageHandler<TReturn>[] handlers) {
 			_handlers = handlers;
 			_index = -1;
 		}
@@ -17,7 +17,7 @@ namespace Transacto.Framework.CommandHandling {
 
 		public void Reset() => _index = -1;
 
-		public CommandHandler Current {
+		public MessageHandler<TReturn> Current {
 			get {
 				if (_index == -1)
 					throw new InvalidOperationException("Enumeration has not started. Call MoveNext.");

@@ -7,7 +7,6 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Net.Http.Headers;
 using Transacto;
 using Transacto.Domain;
-using Transacto.Framework;
 using Transacto.Framework.CommandHandling;
 using Transacto.Messages;
 

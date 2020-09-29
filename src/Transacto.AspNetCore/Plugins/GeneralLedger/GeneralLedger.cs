@@ -26,7 +26,6 @@ namespace Transacto.Plugins.GeneralLedger {
 		public void ConfigureServices(IServiceCollection services) => services
 			.AddCommandHandlerModule<GeneralLedgerEntryModule>()
 			.AddCommandHandlerModule<GeneralLedgerModule>()
-			.AddCommandHandlerModule<AccountingPeriodClosingModule>()
 			.AddSingleton<AccountIsDeactivated>(provider => {
 				var readModel = provider.GetRequiredService<DeactivatedAccounts>();
 
@@ -34,7 +33,7 @@ namespace Transacto.Plugins.GeneralLedger {
 			})
 			.AddInMemoryProjection<DeactivatedAccounts>(new DeactivatedAccountsProjection())
 			.AddInMemoryProjection<UnclosedGeneralLedgerEntries>(new UnclosedGeneralLedgerEntriesProjection())
-			.AddProcessManager("accountingPeriodClosingCheckpoint");
+			.AddProcessManager<AccountingPeriodClosingModule>("accountingPeriodClosingCheckpoint");
 
 		public IEnumerable<Type> MessageTypes => Enumerable.Empty<Type>();
 

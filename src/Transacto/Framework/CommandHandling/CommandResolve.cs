@@ -1,10 +1,11 @@
 using System.Collections.Generic;
 using System.Linq;
+using EventStore.Client;
 
 namespace Transacto.Framework.CommandHandling {
 	public static class CommandResolve {
-		public static CommandHandlerResolver WhenEqualToHandlerMessageType(IEnumerable<CommandHandlerModule> modules) {
-			var cache = modules.SelectMany(m => m.Handlers).ToLookup(h => h.Command);
+		public static MessageHandlerResolver<Position> WhenEqualToHandlerMessageType(IEnumerable<CommandHandlerModule> modules) {
+			var cache = modules.SelectMany(m => m.Handlers).ToLookup(h => h.Message);
 
 			return command => {
 				var type = command.GetType();
