@@ -25,11 +25,11 @@ namespace Transacto.Application {
 		public Task entry_not_in_balance_throws(GeneralLedgerEntryIdentifier generalLedgerEntryIdentifier,
 			int sequenceNumber, DateTimeOffset openedOn, AccountName accountName, AccountNumber accountNumber) {
 			var scenario = new Scenario()
-				.Given("generalLedger",
+				.Given(GeneralLedger.Identifier,
 					new GeneralLedgerOpened {
 						OpenedOn = openedOn
 					})
-				.Given("chartOfAccounts",
+				.Given(ChartOfAccounts.Identifier,
 					new AccountDefined {
 						AccountName = accountName.ToString(),
 						AccountNumber = accountNumber.ToInt32()

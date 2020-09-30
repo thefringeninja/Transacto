@@ -21,7 +21,7 @@ namespace Transacto.Application {
 			_retainedEarnings = new AccountNumber(new Random().Next(3000, 3999));
 		}
 
-				[Theory, AutoTransactoData]
+		[Theory, AutoTransactoData]
 		public Task period_closing_started(DateTimeOffset openedOn,
 			GeneralLedgerEntryIdentifier[] generalLedgerEntryIdentifiers,
 			GeneralLedgerEntryIdentifier closingGeneralLedgerEntryIdentifier,
@@ -62,10 +62,10 @@ namespace Transacto.Application {
 							Period = period.ToString(),
 							GeneralLedgerEntryId = identifier.ToGuid()
 						},
-					}, e => new Fact($"generalLedgerEntry-{identifier}", e)))
+					}, e => new Fact(GeneralLedgerEntry.FormatStreamIdentifier(identifier), e)))
 				.ToArray();
 			return new Scenario()
-				.Given("chartOfAccounts",
+				.Given(ChartOfAccounts.Identifier,
 					new AccountDefined {
 						AccountName = "Cash on Hand",
 						AccountNumber = cashAccountNumber.ToInt32()
@@ -78,14 +78,14 @@ namespace Transacto.Application {
 						AccountName = "Retained Earnings",
 						AccountNumber = _retainedEarnings.ToInt32()
 					})
-				.Given("generalLedger",
+				.Given(GeneralLedger.Identifier,
 					new GeneralLedgerOpened {
 						OpenedOn = openedOn
 					},
 					accountingPeriodClosing)
 				.Given(generalLedgerEntryFacts)
 				.When(accountingPeriodClosing)
-				.Then("generalLedger",
+				.Then(GeneralLedger.Identifier,
 					new GeneralLedgerEntryCreated {
 						CreatedOn = closingOn,
 						GeneralLedgerEntryId = closingGeneralLedgerEntryIdentifier.ToGuid(),
@@ -128,7 +128,5 @@ namespace Transacto.Application {
 					})
 				.Assert(_handler, _facts);
 		}
-
-
 	}
 }

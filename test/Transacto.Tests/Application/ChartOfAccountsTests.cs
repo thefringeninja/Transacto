@@ -23,7 +23,7 @@ namespace Transacto.Application {
                     AccountName = accountName.ToString(),
                     AccountNumber = accountNumber.ToInt32()
                 })
-                .Then("chartOfAccounts", new AccountDefined {
+                .Then(ChartOfAccounts.Identifier, new AccountDefined {
                     AccountName = accountName.ToString(),
                     AccountNumber = accountNumber.ToInt32()
                 })
@@ -33,7 +33,7 @@ namespace Transacto.Application {
         public Task defining_a_second_account(AccountName accountName, AccountNumber accountNumber,
             AccountName secondAccountName, AccountNumber secondAccountNumber) =>
             new Scenario()
-                .Given("chartOfAccounts", new AccountDefined {
+                .Given(ChartOfAccounts.Identifier, new AccountDefined {
                     AccountName = accountName.ToString(),
                     AccountNumber = accountNumber.ToInt32()
                 })
@@ -41,7 +41,7 @@ namespace Transacto.Application {
                     AccountName = secondAccountName.ToString(),
                     AccountNumber = secondAccountNumber.ToInt32()
                 })
-                .Then("chartOfAccounts", new AccountDefined {
+                .Then(ChartOfAccounts.Identifier, new AccountDefined {
                     AccountName = secondAccountName.ToString(),
                     AccountNumber = secondAccountNumber.ToInt32()
                 })
@@ -50,7 +50,7 @@ namespace Transacto.Application {
         [Theory, AutoTransactoData]
         public Task defining_the_same_account_throws(AccountName accountName, AccountNumber accountNumber) =>
             new Scenario()
-                .Given("chartOfAccounts", new AccountDefined {
+                .Given(ChartOfAccounts.Identifier, new AccountDefined {
                     AccountName = accountName.ToString(),
                     AccountNumber = accountNumber.ToInt32()
                 })
@@ -65,7 +65,7 @@ namespace Transacto.Application {
         public Task renaming_an_account(AccountName accountName, AccountNumber accountNumber,
             AccountName secondAccountName) =>
             new Scenario()
-                .Given("chartOfAccounts", new AccountDefined {
+                .Given(ChartOfAccounts.Identifier, new AccountDefined {
                     AccountName = accountName.ToString(),
                     AccountNumber = accountNumber.ToInt32()
                 })
@@ -73,7 +73,7 @@ namespace Transacto.Application {
                     NewAccountName = secondAccountName.ToString(),
                     AccountNumber = accountNumber.ToInt32()
                 })
-                .Then("chartOfAccounts", new AccountRenamed {
+                .Then(ChartOfAccounts.Identifier, new AccountRenamed {
                     NewAccountName = secondAccountName.ToString(),
                     AccountNumber = accountNumber.ToInt32()
                 })
@@ -82,14 +82,14 @@ namespace Transacto.Application {
         [Theory, AutoTransactoData]
         public Task deactivating_an_account(AccountName accountName, AccountNumber accountNumber) =>
             new Scenario()
-                .Given("chartOfAccounts", new AccountDefined {
+                .Given(ChartOfAccounts.Identifier, new AccountDefined {
                     AccountName = accountName.ToString(),
                     AccountNumber = accountNumber.ToInt32()
                 })
                 .When(new DeactivateAccount {
                     AccountNumber = accountNumber.ToInt32()
                 })
-                .Then("chartOfAccounts", new AccountDeactivated {
+                .Then(ChartOfAccounts.Identifier, new AccountDeactivated {
                     AccountNumber = accountNumber.ToInt32()
                 })
                 .Assert(_handler, _facts);
@@ -97,7 +97,7 @@ namespace Transacto.Application {
         [Theory, AutoTransactoData]
         public Task reactivating_a_deactivated_account(AccountName accountName, AccountNumber accountNumber) =>
             new Scenario()
-                .Given("chartOfAccounts", new AccountDefined {
+                .Given(ChartOfAccounts.Identifier, new AccountDefined {
                     AccountName = accountName.ToString(),
                     AccountNumber = accountNumber.ToInt32()
                 }, new AccountDeactivated {
@@ -106,7 +106,7 @@ namespace Transacto.Application {
                 .When(new ReactivateAccount {
                     AccountNumber = accountNumber.ToInt32()
                 })
-                .Then("chartOfAccounts", new AccountReactivated {
+                .Then(ChartOfAccounts.Identifier, new AccountReactivated {
                     AccountNumber = accountNumber.ToInt32()
                 })
                 .Assert(_handler, _facts);
@@ -114,7 +114,7 @@ namespace Transacto.Application {
         [Theory, AutoTransactoData]
         public Task reactivating_an_active_account(AccountName accountName, AccountNumber accountNumber) =>
             new Scenario()
-                .Given("chartOfAccounts", new AccountDefined {
+                .Given(ChartOfAccounts.Identifier, new AccountDefined {
                     AccountName = accountName.ToString(),
                     AccountNumber = accountNumber.ToInt32()
                 })
@@ -127,7 +127,7 @@ namespace Transacto.Application {
         [Theory, AutoTransactoData]
         public Task deactivating_a_deactivated_account(AccountName accountName, AccountNumber accountNumber) =>
             new Scenario()
-                .Given("chartOfAccounts", new AccountDefined {
+                .Given(ChartOfAccounts.Identifier, new AccountDefined {
                     AccountName = accountName.ToString(),
                     AccountNumber = accountNumber.ToInt32()
                 }, new AccountDeactivated {
@@ -156,7 +156,7 @@ namespace Transacto.Application {
             AccountNumber accountNumber,
             AccountName secondAccountName, AccountNumber secondAccountNumber) =>
             new Scenario()
-                .Given("chartOfAccounts", new AccountDefined {
+                .Given(ChartOfAccounts.Identifier, new AccountDefined {
                     AccountName = accountName.ToString(),
                     AccountNumber = accountNumber.ToInt32()
                 })
@@ -181,7 +181,7 @@ namespace Transacto.Application {
         public Task deactivating_an_account_when_it_was_not_defined_throws(AccountName accountName,
             AccountNumber accountNumber, AccountNumber secondAccountNumber) =>
             new Scenario()
-                .Given("chartOfAccounts", new AccountDefined {
+                .Given(ChartOfAccounts.Identifier, new AccountDefined {
                     AccountName = accountName.ToString(),
                     AccountNumber = accountNumber.ToInt32()
                 })
@@ -205,7 +205,7 @@ namespace Transacto.Application {
         public Task reactivating_an_account_when_it_was_not_defined_throws(AccountName accountName,
             AccountNumber accountNumber, AccountNumber secondAccountNumber) =>
             new Scenario()
-                .Given("chartOfAccounts", new AccountDefined {
+                .Given(ChartOfAccounts.Identifier, new AccountDefined {
                     AccountName = accountName.ToString(),
                     AccountNumber = accountNumber.ToInt32()
                 })

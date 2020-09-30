@@ -1,5 +1,7 @@
 using System;
+using System.Threading;
 using AutoFixture;
+using AutoFixture.Kernel;
 using Transacto.Domain;
 
 namespace Transacto {
@@ -16,8 +18,10 @@ namespace Transacto {
 			fixture.Customize<AccountType>(composer =>
 				composer.FromFactory<Random>(r => AccountType.All[r.Next(0, AccountType.All.Count)]));
 
-		public static void CustomizePeriodIdentifier(this IFixture fixture) =>
+		public static void CustomizePeriodIdentifier(this IFixture fixture) {
+			fixture.Customize<DateTimeOffset>(composer => new IncreasingDateTimeOffsetGenerator(DateTimeOffset.Now));
 			fixture.Customize<Period>(composer => composer.FromFactory<DateTimeOffset>(Period.Open));
+		}
 
 		public static void CustomizeMoney(this IFixture fixture) =>
 			fixture.Customize<Money>(composer =>
@@ -36,5 +40,22 @@ namespace Transacto {
 				composer.FromFactory<Random, int>((r, i) =>
 					new GeneralLedgerEntryNumber(
 						new string('a', r.Next(1, GeneralLedgerEntryNumber.MaxPrefixLength)), i)));
+
+		private class IncreasingDateTimeOffsetGenerator : ISpecimenBuilder {
+			private readonly DateTimeOffset _seed;
+			private int _baseValue;
+
+			public IncreasingDateTimeOffsetGenerator(DateTimeOffset seed) {
+				_seed = seed;
+				_baseValue = 0;
+			}
+			public object Create(object request, ISpecimenContext context) {
+				if (!typeof(DateTimeOffset).Equals(request)) {
+					return new NoSpecimen();
+				}
+
+				return _seed.AddMonths(Interlocked.Increment(ref _baseValue));
+			}
+		}
 	}
 }

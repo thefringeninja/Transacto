@@ -25,7 +25,7 @@ namespace Transacto.Application {
 				.When(new OpenGeneralLedger {
 					OpenedOn = openedOn
 				})
-				.Then("generalLedger", new GeneralLedgerOpened {
+				.Then(GeneralLedger.Identifier, new GeneralLedgerOpened {
 					OpenedOn = openedOn
 				})
 				.Assert(_handler, _facts);
@@ -35,7 +35,7 @@ namespace Transacto.Application {
 			GeneralLedgerEntryIdentifier[] generalLedgerEntryIdentifiers,
 			GeneralLedgerEntryIdentifier closingGeneralLedgerEntryIdentifier) =>
 			new Scenario()
-				.Given("generalLedger", new GeneralLedgerOpened {
+				.Given(GeneralLedger.Identifier, new GeneralLedgerOpened {
 					OpenedOn = new DateTimeOffset(new DateTime(period.Year, period.Month, 2))
 				})
 				.When(new BeginClosingAccountingPeriod {
@@ -44,7 +44,7 @@ namespace Transacto.Application {
 					RetainedEarningsAccountNumber = _retainedEarnings.ToInt32(),
 					ClosingGeneralLedgerEntryId = closingGeneralLedgerEntryIdentifier.ToGuid()
 				})
-				.Then("generalLedger", new AccountingPeriodClosing {
+				.Then(GeneralLedger.Identifier, new AccountingPeriodClosing {
 					Period = period.ToString(),
 					GeneralLedgerEntryIds = Array.ConvertAll(generalLedgerEntryIdentifiers, x => x.ToGuid()),
 					ClosingOn = new DateTimeOffset(new DateTime(period.Year, period.Month, 2)),
@@ -57,7 +57,7 @@ namespace Transacto.Application {
 		public Task closing_a_closed_period(Period period,
 			GeneralLedgerEntryIdentifier closingGeneralLedgerEntryIdentifier) =>
 			new Scenario()
-				.Given("generalLedger", new GeneralLedgerOpened {
+				.Given(GeneralLedger.Identifier, new GeneralLedgerOpened {
 						OpenedOn = new DateTimeOffset(new DateTime(period.Year, period.Month, 1))
 					},
 					new AccountingPeriodClosing {
@@ -78,7 +78,7 @@ namespace Transacto.Application {
 		public Task closing_the_period_before_the_period_has_started(DateTimeOffset openedOn,
 			GeneralLedgerEntryIdentifier closingGeneralLedgerEntryIdentifier) =>
 			new Scenario()
-				.Given("generalLedger", new GeneralLedgerOpened {
+				.Given(GeneralLedger.Identifier, new GeneralLedgerOpened {
 					OpenedOn = openedOn
 				})
 				.When(new BeginClosingAccountingPeriod {
