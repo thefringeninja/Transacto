@@ -6,7 +6,7 @@ namespace SomeCompany {
     /// </summary>
     public struct VerificationResult : IEquatable<VerificationResult> {
         public bool Equals(VerificationResult other) => _state == other._state && Message == other.Message;
-        public override bool Equals(object obj) => obj is VerificationResult other && Equals(other);
+        public override bool Equals(object? obj) => obj is VerificationResult other && Equals(other);
         public static bool operator ==(VerificationResult left, VerificationResult right) => left.Equals(right);
         public static bool operator !=(VerificationResult left, VerificationResult right) => !left.Equals(right);
 

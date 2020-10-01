@@ -32,7 +32,7 @@ namespace Transacto {
 			}
 
 			private static string GetBusinessTransactionPropertyName(Type type) =>
-				char.ToLower(type.Name[0]) + new string(type.Name[1..]);
+				char.ToLower(type.Name[0]) + new string(type.Name.AsSpan()[1..]);
 
 			public override IBusinessTransaction? Read(ref Utf8JsonReader reader, Type typeToConvert,
 				JsonSerializerOptions options) {
@@ -43,14 +43,14 @@ namespace Transacto {
 				var typeName = reader.GetString();
 
 
-				if (!_transactionTypes.TryGetValue(typeName, out var type) ||
+				if (!_transactionTypes.TryGetValue(typeName!, out var type) ||
 				    !typeof(IBusinessTransaction).IsAssignableFrom(type)) {
 					reader.Skip();
 					reader.Read();
 					return null;
 				}
 
-				var businessTransaction = (IBusinessTransaction)JsonSerializer.Deserialize(ref reader, type, options);
+				var businessTransaction = (IBusinessTransaction)JsonSerializer.Deserialize(ref reader, type, options)!;
 				reader.Read();
 				return businessTransaction;
 			}

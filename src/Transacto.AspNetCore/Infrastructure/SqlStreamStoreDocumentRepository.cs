@@ -36,7 +36,7 @@ namespace Transacto.Infrastructure {
 
 			var data = await document.GetJsonData(cancellationToken);
 
-			return JsonSerializer.Deserialize<TBusinessTransaction>(data).WithVersion(document.StreamVersion);
+			return JsonSerializer.Deserialize<TBusinessTransaction>(data)!.WithVersion(document.StreamVersion);
 		}
 
 		public async ValueTask<TBusinessTransaction> Get(string id, CancellationToken cancellationToken = default) {

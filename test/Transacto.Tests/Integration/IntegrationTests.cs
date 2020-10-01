@@ -105,15 +105,15 @@ namespace Transacto.Integration {
 					throw new Exception();
 				}
 			});
-			await Retry.ExecuteAsync(async () => {
-				return;
-				using var response =
-					await client.SendAsync(new HttpRequestMessage(HttpMethod.Get, "http://localhost:5000/") {
-						Headers = {Accept = {new MediaTypeWithQualityHeaderValue("application/hal+json")}}
-					});
-				if (response.StatusCode >= HttpStatusCode.BadRequest) {
-					throw new Exception();
-				}
+			await Retry.ExecuteAsync(() => {
+				return Task.CompletedTask;
+				// using var response =
+				// 	await client.SendAsync(new HttpRequestMessage(HttpMethod.Get, "http://localhost:5000/") {
+				// 		Headers = {Accept = {new MediaTypeWithQualityHeaderValue("application/hal+json")}}
+				// 	});
+				// if (response.StatusCode >= HttpStatusCode.BadRequest) {
+				// 	throw new Exception();
+				// }
 			});
 
 			_testServer = new TestServer(new WebHostBuilder()

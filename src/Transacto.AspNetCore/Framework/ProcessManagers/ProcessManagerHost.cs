@@ -93,7 +93,7 @@ namespace Transacto.Framework.ProcessManagers {
 				}
 
 				var message = JsonSerializer.Deserialize(
-					e.Event.Data.Span, type, TransactoSerializerOptions.Events);
+					e.Event.Data.Span, type!, TransactoSerializerOptions.Events)!;
 
 				_checkpoint = await _dispatcher.Handle(message, ct);
 

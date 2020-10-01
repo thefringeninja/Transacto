@@ -88,7 +88,7 @@ namespace Microsoft.AspNetCore.Builder {
 		public static IEndpointRouteBuilder MapPost<T>(this IEndpointRouteBuilder builder, string route,
 			Func<HttpContext, T, ValueTask<Response>> getResponse) {
 			builder.MapPost(route, async context => {
-				var request = await JsonSerializer.DeserializeAsync<T>(context.Request.Body);
+				var request = (await JsonSerializer.DeserializeAsync<T>(context.Request.Body))!;
 
 				var response = await getResponse(context, request);
 
@@ -110,7 +110,7 @@ namespace Microsoft.AspNetCore.Builder {
 		public static IEndpointRouteBuilder MapPut<T>(this IEndpointRouteBuilder builder, string route,
 			Func<HttpContext, T, ValueTask<Response>> getResponse) {
 			builder.MapPut(route, async context => {
-				var request = await JsonSerializer.DeserializeAsync<T>(context.Request.Body);
+				var request = (await JsonSerializer.DeserializeAsync<T>(context.Request.Body))!;
 
 				var response = await getResponse(context, request);
 

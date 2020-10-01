@@ -16,7 +16,7 @@ namespace SomeCompany {
         static readonly Inflector.Inflector Inflector = new Inflector.Inflector(CultureInfo.GetCultureInfo("en-US"));
 
         public static async Task Assert(this NpgsqlProjectionScenario scenario,
-            NpgsqlConnectionStringBuilder connectionStringBuilder = null) {
+            NpgsqlConnectionStringBuilder? connectionStringBuilder = null) {
             if (scenario == null) throw new ArgumentNullException(nameof(scenario));
 
             connectionStringBuilder ??= new NpgsqlConnectionStringBuilder {
@@ -86,7 +86,7 @@ namespace SomeCompany {
         }
 
         private static object ToObject(this IDataRecord reader, Type type) {
-            var item = Activator.CreateInstance(type);
+            var item = Activator.CreateInstance(type)!;
 
             foreach (var property in type.GetProperties().Where(pi => pi.CanWrite)) {
                 var ordinal = reader.GetOrdinal(Inflector.Underscore(property.Name));
@@ -100,11 +100,11 @@ namespace SomeCompany {
             return item;
         }
 
-        private static object ChangeType(object value, Type type) =>
+        private static object? ChangeType(object? value, Type type) =>
             type.IsGenericType && type.GetGenericTypeDefinition() == typeof(Nullable<>)
                 ? value == null
                     ? null
-                    : Convert.ChangeType(value, Nullable.GetUnderlyingType(type))
+                    : Convert.ChangeType(value, Nullable.GetUnderlyingType(type)!)
                 : Convert.ChangeType(value, type);
     }
 }

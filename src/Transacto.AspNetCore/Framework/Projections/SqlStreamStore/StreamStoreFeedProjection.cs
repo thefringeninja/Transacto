@@ -24,7 +24,7 @@ namespace Transacto.Framework.Projections.SqlStreamStore {
 
 				var (target, expectedVersion) = page.Status == PageReadStatus.StreamNotFound
 					? (new TFeedEntry(), ExpectedVersion.NoStream)
-					: (JsonSerializer.Deserialize<TFeedEntry>(await page.Messages[0].GetJsonData(ct)),
+					: (JsonSerializer.Deserialize<TFeedEntry>(await page.Messages[0].GetJsonData(ct))!,
 						page.Messages[0].StreamVersion);
 
 

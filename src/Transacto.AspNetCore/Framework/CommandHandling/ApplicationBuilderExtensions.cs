@@ -57,7 +57,7 @@ namespace Microsoft.AspNetCore.Builder {
 				}
 
 				await using var commandStream = context.Request.Form.Files[0].OpenReadStream();
-				var command = await JsonSerializer.DeserializeAsync(commandStream, commandType, serializerOptions);
+				var command = (await JsonSerializer.DeserializeAsync(commandStream, commandType, serializerOptions))!;
 
 				var position = await dispatcher.Handle(command, context.RequestAborted);
 
