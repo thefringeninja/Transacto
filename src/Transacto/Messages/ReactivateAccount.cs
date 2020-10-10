@@ -1,7 +1,5 @@
 namespace Transacto.Messages {
-    public class ReactivateAccount {
-        public int AccountNumber { get; set; }
-
+    partial class ReactivateAccount {
         public override string ToString() => $"Reactivating account {AccountNumber}.";
     }
 }

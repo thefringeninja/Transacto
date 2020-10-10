@@ -1,0 +1,37 @@
+{
+	"$schema": "https://json-schema.org/draft/2019-09/hyper-schema",
+	"type": "object",
+	"title": "Post General Ledger Entry",
+	"additionalProperties": true,
+	"required": [
+		"generalLedgerEntryId",
+		"period",
+		"createdOn"
+	],
+	"properties": {
+		"generalLedgerEntryId": {
+			"title": "General Ledger Entry Id",
+			"$ref": "#/definitions/uuid",
+			"x-schema-form": {
+				"key": "vendorId",
+				"type": "uuid"
+			}
+		},
+		"period": {
+			"title": "Period",
+			"type": "string"
+		},
+		"createdOn": {
+			"title": "Created On",
+			"type": "string",
+			"format": "date-time"
+		}
+	},
+	"definitions": {
+		"uuid": {
+			"type": "string",
+			"pattern": "^[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{12}$",
+			"format": "uuid"
+		}
+	}
+}

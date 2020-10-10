@@ -1,9 +1,5 @@
-using System;
-
 namespace Transacto.Messages {
-	public class OpenGeneralLedger {
-		public DateTimeOffset OpenedOn { get; set; }
-
+	public partial class OpenGeneralLedger {
 		public override string ToString() => $"Opening general ledger on {OpenedOn:O}.";
 	}
 }

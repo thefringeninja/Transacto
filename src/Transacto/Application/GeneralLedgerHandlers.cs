@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Transacto.Domain;
@@ -27,7 +28,7 @@ namespace Transacto.Application {
 
 			generalLedger.BeginClosingPeriod(retainedEarningsAccountNumber,
 				new GeneralLedgerEntryIdentifier(command.ClosingGeneralLedgerEntryId),
-				Array.ConvertAll(command.GeneralLedgerEntryIds, id => new GeneralLedgerEntryIdentifier(id)),
+				command.GeneralLedgerEntryIds.Select(id => new GeneralLedgerEntryIdentifier(id)).ToArray(),
 				command.ClosingOn);
 		}
 	}

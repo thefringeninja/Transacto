@@ -1,14 +1,15 @@
-using System;
+using System.Text.Json.Serialization;
 using Transacto.Domain;
 
 namespace Transacto.Messages {
-	public class PostGeneralLedgerEntry {
-		public Guid GeneralLedgerEntryId { get; set; }
-		public string Period { get; set; } = null!;
-		public DateTimeOffset CreatedOn { get; set; }
-		public IBusinessTransaction BusinessTransaction { get; set; } = null!;
+	partial class PostGeneralLedgerEntry {
+		public PostGeneralLedgerEntry() {
+			Period = null!;
+		}
+		[JsonPropertyName("document")]
+		public IBusinessTransaction? BusinessTransaction { get; set; }
 
 		public override string ToString() =>
-			$"Posting general ledger entry {BusinessTransaction.ReferenceNumber} in period {Period} on {CreatedOn:O}.";
+			$"Posting general ledger entry {BusinessTransaction?.ReferenceNumber.ToString() ?? "unknown"} in period {Period} on {CreatedOn:O}.";
 	}
 }
