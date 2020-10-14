@@ -1,9 +1,7 @@
 using System;
-using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using EventStore.Client;
-using Transacto.Framework.EventHandling;
 
 namespace Transacto.Framework.ProcessManagers {
 	public static class ProcessManagerEventResolve {
@@ -17,8 +15,8 @@ namespace Transacto.Framework.ProcessManagers {
 				var handlers = cache[type].ToArray();
 
 				return handlers.Length switch {
-					0 => new MessageHandler<Position>(type, (e, token) => new ValueTask<Position>(Position.Start)),
-					1 => new MessageHandler<Position>(type, (e, ct) => handlers[0].Handler(e, ct)),
+					0 => new MessageHandler<Position>(type, (_, _) => new ValueTask<Position>(Position.Start)),
+					1 => new MessageHandler<Position>(type, handlers[0].Handler),
 					_ => throw new InvalidOperationException()
 				};
 			};

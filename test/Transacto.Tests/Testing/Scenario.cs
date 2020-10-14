@@ -5,10 +5,7 @@ namespace Transacto.Testing {
     /// The given-when-then test specification builder bootstrapper.
     /// </summary>
     public class Scenario : IScenarioInitialStateBuilder {
-        public Scenario() {
-
-        }
-        /// <summary>
+	    /// <summary>
         /// Given the following facts occured.
         /// </summary>
         /// <param name="facts">The facts that occurred.</param>

@@ -1,5 +1,4 @@
 ﻿using System;
-using JetBrains.Annotations;
 using Transacto.Framework;
 
 namespace Transacto.Testing {

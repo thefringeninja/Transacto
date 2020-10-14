@@ -5,7 +5,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using EventStore.Client;
 using Transacto.Framework;
-using Transacto.Framework.CommandHandling;
 
 namespace Transacto.Infrastructure {
     public class EventStoreRepository<TAggregateRoot> where TAggregateRoot : AggregateRoot {

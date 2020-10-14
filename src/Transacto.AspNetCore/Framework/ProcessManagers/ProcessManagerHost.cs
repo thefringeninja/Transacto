@@ -75,7 +75,7 @@ namespace Transacto.Framework.ProcessManagers {
 				}
 
 				return await _eventStore.SubscribeToAllAsync(
-					_checkpoint, HandleAsync, subscriptionDropped: (_, reason, ex) => {
+					_checkpoint, HandleAsync, subscriptionDropped: (_, reason, _) => {
 						if (reason == SubscriptionDroppedReason.Disposed) {
 							return;
 						}

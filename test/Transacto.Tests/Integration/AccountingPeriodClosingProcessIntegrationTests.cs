@@ -16,7 +16,7 @@ namespace Transacto.Integration {
 			var accountingPeriodClosedSource = new TaskCompletionSource<ResolvedEvent>();
 			var checkpointSource = new TaskCompletionSource<Position>();
 
-			await EventStoreClient.SubscribeToAllAsync((s, e, ct) => {
+			await EventStoreClient.SubscribeToAllAsync((_, e, _) => {
 				if (e.Event.EventType == nameof(AccountingPeriodClosed)) {
 					accountingPeriodClosedSource.TrySetResult(e);
 				}
@@ -28,7 +28,7 @@ namespace Transacto.Integration {
 				}
 
 				return Task.CompletedTask;
-			}, subscriptionDropped: (subscription, reason, ex) => {
+			}, subscriptionDropped: (_, _, ex) => {
 				if (ex != null) {
 					accountingPeriodClosedSource.TrySetException(ex);
 					checkpointSource.TrySetException(ex);

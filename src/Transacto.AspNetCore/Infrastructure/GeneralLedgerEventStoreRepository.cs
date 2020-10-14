@@ -5,7 +5,6 @@ using System.Threading.Tasks;
 using EventStore.Client;
 using Transacto.Domain;
 using Transacto.Framework;
-using Transacto.Framework.CommandHandling;
 using Transacto.Messages;
 
 namespace Transacto.Infrastructure {

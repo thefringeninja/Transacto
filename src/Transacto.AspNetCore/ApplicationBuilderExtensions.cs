@@ -64,7 +64,7 @@ namespace Microsoft.AspNetCore.Builder {
 
 			return builder;
 
-			bool TryParsePosition(EntityTagHeaderValue etag, out Position position) {
+			bool TryParsePosition(EntityTagHeaderValue? etag, out Position position) {
 				position = default;
 				var value = etag?.Tag.ToString();
 				if (value == "*") {

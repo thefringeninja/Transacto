@@ -4,7 +4,7 @@ using System.Threading;
 using System.Threading.Tasks;
 
 namespace Transacto {
-	public class NotFoundResponse : Response {
+	public sealed class NotFoundResponse : Response {
 		public NotFoundResponse() {
 			StatusCode = HttpStatusCode.NotFound;
 		}

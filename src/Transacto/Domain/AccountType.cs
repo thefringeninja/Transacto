@@ -20,15 +20,15 @@ namespace Transacto.Domain {
 		public abstract bool AppearsOnBalanceSheet { get; }
 		public abstract bool AppearsOnProfitAndLoss { get; }
 
-		public static AccountType OfAccountNumber(AccountNumber value) => value switch {
-			var x when x.Value >= 1000 && x.Value < 2000 => Asset,
-			var x when x.Value >= 2000 && x.Value < 3000 => Liability,
-			var x when x.Value >= 3000 && x.Value < 4000 => Equity,
-			var x when x.Value >= 4000 && x.Value < 5000 => Income,
-			var x when x.Value >= 5000 && x.Value < 6000 => CostOfGoodsSold,
-			var x when x.Value >= 6000 && x.Value < 7000 => Expenses,
-			var x when x.Value >= 7000 && x.Value < 8000 => OtherIncome,
-			var x when x.Value >= 8000 && x.Value < 9000 => OtherExpenses,
+		public static AccountType OfAccountNumber(AccountNumber value) => value.Value switch {
+			>= 1000 and < 2000 => Asset,
+			>= 2000 and < 3000 => Liability,
+			>= 3000 and < 4000 => Equity,
+			>= 4000 and < 5000 => Income,
+			>= 5000 and < 6000 => CostOfGoodsSold,
+			>= 6000 and < 7000 => Expenses,
+			>= 7000 and < 8000 => OtherIncome,
+			>= 8000 and < 9000 => OtherExpenses,
 			_ => throw new ArgumentOutOfRangeException(nameof(value))
 		};
 

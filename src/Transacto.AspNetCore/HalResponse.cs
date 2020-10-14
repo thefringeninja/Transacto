@@ -1,14 +1,11 @@
 using System;
-using System.Collections;
 using System.Collections.Concurrent;
-using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Net;
 using System.Reflection;
 using System.Text;
 using System.Text.Json;
-using System.Text.Json.Serialization;
 using System.Threading;
 using System.Threading.Tasks;
 using Hallo;
@@ -19,7 +16,6 @@ using Microsoft.AspNetCore.Mvc.Formatters;
 using Microsoft.Net.Http.Headers;
 using RazorLight;
 using Transacto.Framework;
-using Transacto.Views;
 
 namespace Transacto {
 	public class HalResponse : Response {
@@ -124,19 +120,6 @@ namespace Transacto {
 			protected internal override async ValueTask WriteBody(Stream stream, CancellationToken cancellationToken) {
 				var representation = await _hal.RepresentationOfAsync(_resource);
 				await JsonSerializer.SerializeAsync(stream, representation, SerializerOptions, cancellationToken);
-			}
-
-			private class EnumerableOfDictionaryEntryConverter : JsonConverter<IEnumerable<DictionaryEntry>> {
-				public override IEnumerable<DictionaryEntry> Read(ref Utf8JsonReader reader, Type typeToConvert,
-					JsonSerializerOptions options) => throw new NotSupportedException();
-
-				public override void Write(Utf8JsonWriter writer, IEnumerable<DictionaryEntry> value,
-					JsonSerializerOptions options) {
-					foreach (var entry in value) {
-						//writer.WritePropertyName(entry.Key.ToString());
-						//writer.WriteNullValue();
-					}
-				}
 			}
 		}
 	}
