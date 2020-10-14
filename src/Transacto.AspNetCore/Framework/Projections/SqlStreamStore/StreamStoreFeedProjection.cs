@@ -24,12 +24,15 @@ namespace Transacto.Framework.Projections.SqlStreamStore {
 
 				var (target, expectedVersion) = page.Status == PageReadStatus.StreamNotFound
 					? (new TFeedEntry(), ExpectedVersion.NoStream)
-					: (JsonSerializer.Deserialize<TFeedEntry>(await page.Messages[0].GetJsonData(ct)),
+					: (JsonSerializer.Deserialize<TFeedEntry>(await page.Messages[0].GetJsonData(ct))!,
 						page.Messages[0].StreamVersion);
 
+				if (!_messageTypeMapper.TryMap(typeof(TEvent), out var type)) {
+					type = "unknown";
+				}
 
 				target = apply.Invoke(e.Message, target);
-				target.Events.Add(_messageTypeMapper.Map(typeof(TEvent)) ?? "unknown");
+				target.Events.Add(type!);
 
 				await streamStore.AppendToStream(StreamName, expectedVersion,
 					new NewStreamMessage(Guid.NewGuid(), _messageTypeMapper.Map(typeof(TEvent)),

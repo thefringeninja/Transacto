@@ -14,6 +14,6 @@ namespace Microsoft.Extensions.DependencyInjection {
 				provider.GetRequiredService<EventStoreClient>(),
 				provider.GetRequiredService<IMessageTypeMapper>(),
 				checkpointStreamName,
-				provider.GetService<TProcessManager>()));
+				provider.GetRequiredService<TProcessManager>()));
 	}
 }

@@ -90,7 +90,7 @@ namespace Microsoft.AspNetCore.Builder {
 			builder.MapPost(route, async context => {
 				var request = await JsonSerializer.DeserializeAsync<T>(context.Request.Body);
 
-				var response = await getResponse(context, request);
+				var response = await getResponse(context, request!);
 
 				await response.Write(context.Response);
 			});
@@ -112,7 +112,7 @@ namespace Microsoft.AspNetCore.Builder {
 			builder.MapPut(route, async context => {
 				var request = await JsonSerializer.DeserializeAsync<T>(context.Request.Body);
 
-				var response = await getResponse(context, request);
+				var response = await getResponse(context, request!);
 
 				await response.Write(context.Response);
 			});

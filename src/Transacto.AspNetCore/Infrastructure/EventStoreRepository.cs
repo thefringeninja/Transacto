@@ -47,7 +47,7 @@ namespace Transacto.Infrastructure {
                 var version = await aggregate.LoadFromHistory(events.Select(e =>
                     JsonSerializer.Deserialize(e.OriginalEvent.Data.Span,
                         _messageTypeMapper.Map(e.OriginalEvent.EventType),
-                        _serializerOptions)));
+                        _serializerOptions)!));
 
                 UnitOfWork.Current.Attach(streamName, aggregate, version);
 

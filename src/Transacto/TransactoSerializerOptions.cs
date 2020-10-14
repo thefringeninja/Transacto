@@ -40,7 +40,7 @@ namespace Transacto {
 					throw new JsonException();
 				}
 
-				var typeName = reader.GetString();
+				var typeName = reader.GetString()!;
 
 				if (!_transactionTypes.TryGetValue(typeName, out var type) ||
 				    !typeof(IBusinessTransaction).IsAssignableFrom(type)) {
@@ -51,7 +51,7 @@ namespace Transacto {
 					return null;
 				}
 
-				var businessTransaction = (IBusinessTransaction)JsonSerializer.Deserialize(ref reader, type, options);
+				var businessTransaction = (IBusinessTransaction)JsonSerializer.Deserialize(ref reader, type, options)!;
 				reader.Read();
 
 				return businessTransaction;

@@ -5,7 +5,7 @@ namespace System.Collections.Immutable {
 
 	public static class ImmutableExtensions {
 		public static ImmutableDictionary<TKey, TValue> Compact<TKey, TValue>(
-			this ImmutableDictionary<TKey, TValue> source) {
+			this ImmutableDictionary<TKey, TValue> source) where TKey: notnull {
 			var builder = ImmutableDictionary<TKey, TValue>.Empty.ToBuilder();
 			builder.AddRange(source);
 			return builder.ToImmutable();
