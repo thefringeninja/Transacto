@@ -1,7 +1,11 @@
 using System;
+using System.Collections.Concurrent;
+using System.IO;
 using System.Linq;
 using System.Net;
 using System.Text.Json;
+using System.Threading.Tasks;
+using Hallo;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Net.Http.Headers;
@@ -29,6 +33,7 @@ namespace Microsoft.AspNetCore.Builder {
 			JsonSerializerOptions serializerOptions,
 			params Type[] commandTypes) {
 			var map = commandTypes.ToDictionary(commandType => commandType.Name);
+			var schemaCache = new JsonCommandSchemaCache(commandTypes);
 			CommandDispatcher? dispatcher = null;
 
 			builder.MapPost(route, async context => {
@@ -62,9 +67,50 @@ namespace Microsoft.AspNetCore.Builder {
 				var position = await dispatcher.Handle(command, context.RequestAborted);
 
 				return new CommandHandledResponse(position);
-			});
+			}).MapGet(route,
+				context => new ValueTask<Response>(new HalResponse(context.Request, new JsonCommandSchemaRepresentation(),
+					ETag.None, schemaCache)));
 
 			return builder;
+		}
+
+		private class JsonCommandSchemaRepresentation : Hal<JsonCommandSchemaCache>, IHalState<JsonCommandSchemaCache> {
+			public object StateFor(JsonCommandSchemaCache resource) {
+				return new {
+					forms = Array.ConvertAll(resource.CommandTypes, type => resource[type].RootElement)
+				};
+			}
+		}
+
+		private class JsonCommandSchemaCache {
+			private readonly ConcurrentDictionary<Type, JsonDocument> _scripts;
+
+			public Type[] CommandTypes { get; }
+			public JsonDocument this[Type commandType] => GetScript(commandType);
+
+			public JsonCommandSchemaCache(params Type[] commandTypes) {
+				CommandTypes = commandTypes;
+				_scripts = new ConcurrentDictionary<Type, JsonDocument>();
+			}
+
+			private JsonDocument GetScript(Type commandType) {
+				if (!CommandTypes.Contains(commandType)) {
+					throw new InvalidOperationException();
+				}
+
+				return _scripts.GetOrAdd(commandType,
+					key => {
+						using var stream =
+							commandType.Assembly.GetManifestResourceStream(commandType, $"{key.Name}.schema.json");
+						if (stream == null) {
+							throw new Exception($"Embedded resource, {key}, not found. BUG!");
+						}
+
+						using StreamReader reader = new StreamReader(stream);
+
+						return JsonDocument.Parse(reader.ReadToEnd());
+					});
+			}
 		}
 	}
 }

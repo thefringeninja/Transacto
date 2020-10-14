@@ -77,9 +77,9 @@ namespace Transacto {
 
 			protected internal override async ValueTask WriteBody(Stream stream, CancellationToken cancellationToken) {
 				var representation = await _hal.RepresentationOfAsync(_resource);
-				await stream.WriteAsync(Encoding.UTF8.GetBytes("<html><body>"), cancellationToken);
+				await stream.WriteAsync(Encoding.UTF8.GetBytes("<!doctype html><html><body>"), cancellationToken);
 
-				await stream.WriteAsync(Encoding.UTF8.GetBytes(await Render(representation.Links, typeof(Links))),
+				await stream.WriteAsync(Encoding.UTF8.GetBytes(await Render(representation.Links, typeof(Views.Views))),
 					cancellationToken);
 				await stream.WriteAsync(
 					Encoding.UTF8.GetBytes(await Render(representation.State, _resource.GetType())),
