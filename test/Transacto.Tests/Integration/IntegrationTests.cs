@@ -35,6 +35,8 @@ namespace Transacto.Integration {
 		}
 
 		protected IntegrationTests() {
+			HttpClient = null!;
+			_testServer = null!;
 			_eventStore = new Builder()
 				.UseContainer()
 				.WithName("transacto-es-test")
@@ -106,7 +108,6 @@ namespace Transacto.Integration {
 				}
 			});
 			await Retry.ExecuteAsync(async () => {
-				return;
 				using var response =
 					await client.SendAsync(new HttpRequestMessage(HttpMethod.Get, "http://localhost:5000/") {
 						Headers = {Accept = {new MediaTypeWithQualityHeaderValue("application/hal+json")}}

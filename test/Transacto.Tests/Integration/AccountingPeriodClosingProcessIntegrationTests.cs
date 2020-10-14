@@ -49,13 +49,13 @@ namespace Transacto.Integration {
 			var accountingPeriodClosedEvent = await accountingPeriodClosedSource.Task;
 			var accountingPeriodClosed = JsonSerializer.Deserialize<AccountingPeriodClosed>(
 				Encoding.UTF8.GetString(accountingPeriodClosedEvent.OriginalEvent.Data.Span),
-				TransactoSerializerOptions.Events);
+				TransactoSerializerOptions.Events)!;
 			var checkpoint = await checkpointSource.Task;
 
 			Assert.Equal(period, Period.Parse(accountingPeriodClosed.Period));
 			Assert.Equal(closingEntryIdentifier,
 				new GeneralLedgerEntryIdentifier(accountingPeriodClosed.ClosingGeneralLedgerEntryId));
-			Assert.Equal(accountingPeriodClosedEvent.OriginalPosition.Value, checkpoint);
+			Assert.Equal(accountingPeriodClosedEvent.OriginalPosition!.Value, checkpoint);
 		}
 	}
 }

@@ -1,24 +1,5 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
-	<PropertyGroup>
-		<TargetFramework>net5</TargetFramework>
-		<RootNamespace>Transacto</RootNamespace>
-		<Nullable>enable</Nullable>
-		<NullableContextOptions>enable</NullableContextOptions>
-		<TreatWarningsAsErrors>true</TreatWarningsAsErrors>
-		<LangVersion>8.0</LangVersion>
-		<RestoreSources>
-			$(RestoreSources);
-			https://api.nuget.org/v3/index.json;
-			https://nuget.pkg.github.com/thefringeninja/index.json;
-			https://nuget.pkg.github.com/EventStore/index.json
-		</RestoreSources>
-		<PreserveCompilationContext>true</PreserveCompilationContext>
-	</PropertyGroup>
-	<ItemGroup>
-		<FrameworkReference Include="Microsoft.AspNetCore.App" />
-	</ItemGroup>
-
 	<ItemGroup>
 		<PackageReference Include="AngleSharp" Version="0.14.0" />
 		<PackageReference Include="Dapper" Version="2.0.35" />

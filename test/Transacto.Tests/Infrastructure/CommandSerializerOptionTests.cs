@@ -20,7 +20,7 @@ namespace Transacto.Infrastructure {
 }}";
 
 			var command = JsonSerializer.Deserialize<TestCommand>(json,
-				TransactoSerializerOptions.BusinessTransactions(typeof(TestBusinessTransaction)));
+				TransactoSerializerOptions.BusinessTransactions(typeof(TestBusinessTransaction)))!;
 
 			Assert.Equal(property, command.Property);
 			Assert.Equal(anotherProperty, command.AnotherProperty);
@@ -43,7 +43,7 @@ namespace Transacto.Infrastructure {
 }}";
 
 			var command = JsonSerializer.Deserialize<TestCommand>(json,
-				TransactoSerializerOptions.BusinessTransactions(typeof(TestBusinessTransaction)));
+				TransactoSerializerOptions.BusinessTransactions(typeof(TestBusinessTransaction)))!;
 
 			Assert.Equal(property, command.Property);
 			Assert.Equal(anotherProperty, command.AnotherProperty);
@@ -65,7 +65,7 @@ namespace Transacto.Infrastructure {
 				BusinessTransaction = testBusinessTransaction
 			};
 
-			var copy = JsonSerializer.Deserialize<TestCommand>(JsonSerializer.Serialize(dto, sut), sut);
+			var copy = JsonSerializer.Deserialize<TestCommand>(JsonSerializer.Serialize(dto, sut), sut)!;
 
 			Assert.Equal(dto.Property, copy.Property);
 			Assert.Equal(dto.AnotherProperty, copy.AnotherProperty);
@@ -74,9 +74,9 @@ namespace Transacto.Infrastructure {
 		}
 
 		private class TestCommand {
-			public string AnotherProperty { get; set; }
-			public string Property { get; set; }
-			public IBusinessTransaction BusinessTransaction { get; set; }
+			public string AnotherProperty { get; set; } = null!;
+			public string Property { get; set; } = null!;
+			public IBusinessTransaction BusinessTransaction { get; set; } = null!;
 		}
 	}
 
