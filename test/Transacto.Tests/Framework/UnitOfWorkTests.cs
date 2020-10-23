@@ -1,4 +1,3 @@
-using EventStore.Client;
 using Xunit;
 
 namespace Transacto.Framework {
@@ -10,8 +9,7 @@ namespace Transacto.Framework {
 
 		[Fact]
 		public void CanStart() {
-			using var _ = UnitOfWork.Start(new EventStoreClient(), MessageTypeMapper.Create(),
-				TransactoSerializerOptions.Events);
+			using var _ = UnitOfWork.Start();
 			Assert.False(UnitOfWork.Current.HasChanges);
 		}
 
@@ -19,8 +17,7 @@ namespace Transacto.Framework {
 		public void AttachingAnAggregate() {
 			var aggregate = new TestAggregate();
 
-			using var _ = UnitOfWork.Start(new EventStoreClient(), MessageTypeMapper.Create(),
-				TransactoSerializerOptions.Events);
+			using var _ = UnitOfWork.Start();
 			UnitOfWork.Current.Attach("stream", aggregate, Optional<long>.Empty);
 			Assert.True(UnitOfWork.Current.TryGet("stream", out var result));
 			Assert.Same(aggregate, result);
@@ -30,8 +27,7 @@ namespace Transacto.Framework {
 		public void GettingChanges() {
 			var aggregate = new TestAggregate();
 
-			using var _ = UnitOfWork.Start(new EventStoreClient(), MessageTypeMapper.Create(),
-				TransactoSerializerOptions.Events);
+			using var _ = UnitOfWork.Start();
 			UnitOfWork.Current.Attach("stream", aggregate, Optional<long>.Empty);
 			aggregate.DoSomething();
 			Assert.True(UnitOfWork.Current.HasChanges);

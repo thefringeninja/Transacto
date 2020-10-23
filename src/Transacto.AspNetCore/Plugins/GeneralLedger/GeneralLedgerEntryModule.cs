@@ -16,7 +16,7 @@ namespace Transacto.Plugins.GeneralLedger {
 				accountIsDeactivated);
 			Build<PostGeneralLedgerEntry>()
 				.Log()
-				.UnitOfWork(eventStore, messageTypeMapper, TransactoSerializerOptions.Events)
+				.UnitOfWork(eventStore, messageTypeMapper)
 				.Handle(async (command, ct) => {
 					await handlers.Handle(command, ct);
 

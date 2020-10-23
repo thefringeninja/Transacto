@@ -13,14 +13,14 @@ namespace Transacto.Plugins.GeneralLedger {
 					new GeneralLedgerEventStoreRepository(eventStore, messageTypeMapper));
 			Build<OpenGeneralLedger>()
 				.Log()
-				.UnitOfWork(eventStore, messageTypeMapper, TransactoSerializerOptions.Events)
+				.UnitOfWork(eventStore, messageTypeMapper)
 				.Handle(async (command, ct) => {
 					await handlers.Handle(command, ct);
 					return Position.Start;
 				});
 			Build<BeginClosingAccountingPeriod>()
 				.Log()
-				.UnitOfWork(eventStore, messageTypeMapper, TransactoSerializerOptions.Events)
+				.UnitOfWork(eventStore, messageTypeMapper)
 				.Handle(async (command, ct) => {
 					await handlers.Handle(command, ct);
 					return Position.Start;

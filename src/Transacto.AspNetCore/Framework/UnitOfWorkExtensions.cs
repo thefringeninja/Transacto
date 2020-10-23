@@ -9,9 +9,9 @@ namespace Transacto.Framework {
 	public static class UnitOfWorkExtensions {
 		public static IMessageHandlerBuilder<TCommand, Position> UnitOfWork<TCommand>(
 			this IMessageHandlerBuilder<TCommand, Position> builder, EventStoreClient eventStore,
-			IMessageTypeMapper messageTypeMapper, JsonSerializerOptions eventSerializerOptions)
+			IMessageTypeMapper messageTypeMapper)
 			where TCommand : class => builder.Pipe(next => async (message, ct) => {
-			using var _ = Framework.UnitOfWork.Start(eventStore, messageTypeMapper, eventSerializerOptions);
+			using var _ = Framework.UnitOfWork.Start();
 
 			await next(message, ct);
 
@@ -19,16 +19,16 @@ namespace Transacto.Framework {
 				return Position.Start;
 			}
 
-			return await Commit(eventStore, messageTypeMapper, eventSerializerOptions, ct);
+			return await Commit(eventStore, messageTypeMapper, ct);
 		});
 
 		private static async Task<Position> Commit(EventStoreClient eventStore,
-			IMessageTypeMapper messageTypeMapper, JsonSerializerOptions eventSerializerOptions, CancellationToken ct) {
+			IMessageTypeMapper messageTypeMapper, CancellationToken ct) {
 			var (streamName, aggregateRoot, expectedVersion) = Framework.UnitOfWork.Current.GetChanges().Single();
 
 			var eventData = aggregateRoot.GetChanges().Select(e => new EventData(Uuid.NewUuid(),
 				messageTypeMapper.Map(e.GetType()),
-				JsonSerializer.SerializeToUtf8Bytes(e, eventSerializerOptions)));
+				JsonSerializer.SerializeToUtf8Bytes(e, TransactoSerializerOptions.Events)));
 
 			var result = await Append();
 

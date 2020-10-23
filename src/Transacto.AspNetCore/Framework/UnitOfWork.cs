@@ -1,9 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text.Json;
 using System.Threading;
-using EventStore.Client;
 
 namespace Transacto.Framework {
 	/// <summary>
@@ -18,8 +16,7 @@ namespace Transacto.Framework {
 		/// Starts a <see cref="UnitOfWork"/>.
 		/// </summary>
 		/// <returns>An <see cref="IDisposable"/> that ends the <see cref="UnitOfWork"/> when invoked.</returns>
-		public static IDisposable Start(EventStoreClient eventStore, IMessageTypeMapper messageTypeMapper,
-			JsonSerializerOptions serializerOptions) {
+		public static IDisposable Start() {
 			Storage.Value = new UnitOfWork();
 
 			return new DisposableAction(() => Storage.Value = null);
