@@ -22,9 +22,9 @@ namespace Transacto.Integration {
 				}
 			}, cancellationToken);
 
-			var value = await response.Content.ReadAsStringAsync();
+			var value = await response.Content.ReadAsStringAsync(cancellationToken);
 
-			var parts = value?.Split(separator, 2) ?? Array.Empty<string>();
+			var parts = value.Split(separator, 2);
 
 			if (parts.Length != 2 || !ulong.TryParse(parts[0], out var p) || !ulong.TryParse(parts[1], out var c)) {
 				return Position.Start;

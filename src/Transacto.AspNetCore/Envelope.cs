@@ -11,7 +11,7 @@ namespace Transacto {
 		public Position Position { get; }
 
 		public static Envelope Create(object message, Position position) =>
-			Cache.GetOrAdd(message.GetType(), type => (m, p) => (Envelope)typeof(Envelope<>)
+			Cache.GetOrAdd(message.GetType(), _ => (m, p) => (Envelope)typeof(Envelope<>)
 					.MakeGenericType(m.GetType())
 					.GetConstructor(new[] {m.GetType(), typeof(Position)})!.Invoke(new[] {m, p}))
 				.Invoke(message, position);

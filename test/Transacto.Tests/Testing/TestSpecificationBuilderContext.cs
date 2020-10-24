@@ -12,8 +12,8 @@ namespace Transacto.Testing {
         public TestSpecificationBuilderContext() {
             _givens = Fact.Empty;
             _thens = Fact.Empty;
-            _when = null;
-            _throws = null;
+            _when = null!;
+            _throws = null!;
         }
 
         TestSpecificationBuilderContext(Fact[] givens, object when, Fact[] thens,

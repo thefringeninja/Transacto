@@ -8,12 +8,12 @@ namespace Microsoft.AspNetCore.Builder {
 	public static class HttpContextExtensions {
 		public static bool TryParseGuid(this HttpContext context, string key, out Guid value) {
 			value = default;
-			return Guid.TryParse(context.GetRouteValue(key).ToString(), out value);
+			return Guid.TryParse(context.GetRouteValue(key)?.ToString(), out value);
 		}
 
 		public static bool TryParseInt32(this HttpContext context, string key, out int value) {
 			value = default;
-			return int.TryParse(context.GetRouteValue(key).ToString(), out value);
+			return int.TryParse(context.GetRouteValue(key)?.ToString(), out value);
 		}
 	}
 }

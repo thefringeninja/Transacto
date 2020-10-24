@@ -75,7 +75,7 @@ namespace Transacto.Framework.ProcessManagers {
 				}
 
 				return await _eventStore.SubscribeToAllAsync(
-					_checkpoint, HandleAsync, subscriptionDropped: (_, reason, ex) => {
+					_checkpoint, HandleAsync, subscriptionDropped: (_, reason, _) => {
 						if (reason == SubscriptionDroppedReason.Disposed) {
 							return;
 						}
@@ -93,7 +93,7 @@ namespace Transacto.Framework.ProcessManagers {
 				}
 
 				var message = JsonSerializer.Deserialize(
-					e.Event.Data.Span, type, TransactoSerializerOptions.Events);
+					e.Event.Data.Span, type!, TransactoSerializerOptions.Events)!;
 
 				_checkpoint = await _dispatcher.Handle(message, ct);
 

@@ -5,7 +5,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using EventStore.Client;
 using Transacto.Framework;
-using Transacto.Framework.CommandHandling;
 
 namespace Transacto.Infrastructure {
     public class EventStoreRepository<TAggregateRoot> where TAggregateRoot : AggregateRoot {
@@ -47,7 +46,7 @@ namespace Transacto.Infrastructure {
                 var version = await aggregate.LoadFromHistory(events.Select(e =>
                     JsonSerializer.Deserialize(e.OriginalEvent.Data.Span,
                         _messageTypeMapper.Map(e.OriginalEvent.EventType),
-                        _serializerOptions)));
+                        _serializerOptions)!));
 
                 UnitOfWork.Current.Attach(streamName, aggregate, version);
 

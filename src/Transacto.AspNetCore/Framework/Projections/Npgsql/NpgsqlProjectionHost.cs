@@ -123,7 +123,7 @@ namespace Transacto.Framework.Projections.Npgsql {
 					return Task.CompletedTask;
 				}
 				var message = JsonSerializer.Deserialize(
-					e.Event.Data.Span, type, TransactoSerializerOptions.Events);
+					e.Event.Data.Span, type!, TransactoSerializerOptions.Events)!;
 				return Task.WhenAll(_projections.Where(_ => _.checkpoint < e.OriginalPosition)
 					.Select(async _ => {
 						await using var connection = _connectionFactory();

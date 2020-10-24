@@ -26,6 +26,8 @@ namespace Transacto.Testing {
         /// </summary>
         /// <param name="builder">The specification builder.</param>
         /// <param name="comparer">The event comparer.</param>
+        /// <param name="handler"></param>
+        /// <param name="factRecorder"></param>
         public static async Task Assert(this IEventCentricTestSpecificationBuilder builder,
             IFactComparer comparer, object handler, IFactRecorder factRecorder) {
             if (builder == null) throw new ArgumentNullException(nameof(builder));

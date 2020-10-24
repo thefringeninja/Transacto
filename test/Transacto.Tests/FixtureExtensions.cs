@@ -19,7 +19,7 @@ namespace Transacto {
 				composer.FromFactory<Random>(r => AccountType.All[r.Next(0, AccountType.All.Count)]));
 
 		public static void CustomizePeriodIdentifier(this IFixture fixture) {
-			fixture.Customize<DateTimeOffset>(composer => new IncreasingDateTimeOffsetGenerator(DateTimeOffset.Now));
+			fixture.Customize<DateTimeOffset>(_ => new IncreasingDateTimeOffsetGenerator(DateTimeOffset.Now));
 			fixture.Customize<Period>(composer => composer.FromFactory<DateTimeOffset>(Period.Open));
 		}
 

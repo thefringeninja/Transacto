@@ -1,5 +1,4 @@
 using EventStore.Client;
-using Transacto.Framework.CommandHandling;
 using Xunit;
 
 namespace Transacto.Framework {

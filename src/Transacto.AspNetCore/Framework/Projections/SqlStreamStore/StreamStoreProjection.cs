@@ -29,7 +29,7 @@ namespace Transacto.Framework.Projections.SqlStreamStore {
 				return Position.Start;
 			}
 
-			var metadata = JsonSerializer.Deserialize<Dictionary<string, string>>(page.Messages[0].JsonMetadata);
+			var metadata = JsonSerializer.Deserialize<Dictionary<string, string>>(page.Messages[0].JsonMetadata)!;
 
 			return metadata.TryGetValue("commit", out var commitValue) &&
 			       ulong.TryParse(commitValue, out var commit) &&

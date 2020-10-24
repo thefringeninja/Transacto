@@ -12,10 +12,6 @@ using Xunit;
 namespace Transacto.Integration {
 	public class ChartOfAccountsIntegrationTests : IntegrationTests {
 		[Fact]
-		public async Task html() {
-		}
-
-		[Fact]
 		public async Task hal() {
 			var position = await SetupChartOfAccounts();
 

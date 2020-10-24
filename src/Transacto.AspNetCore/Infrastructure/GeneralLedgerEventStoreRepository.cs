@@ -5,7 +5,6 @@ using System.Threading.Tasks;
 using EventStore.Client;
 using Transacto.Domain;
 using Transacto.Framework;
-using Transacto.Framework.CommandHandling;
 using Transacto.Messages;
 
 namespace Transacto.Infrastructure {
@@ -42,7 +41,7 @@ namespace Transacto.Infrastructure {
 
 				var @event = JsonSerializer.Deserialize(resolvedEvent.OriginalEvent.Data.Span,
 					_messageTypeMapper.Map(resolvedEvent.OriginalEvent.EventType),
-					TransactoSerializerOptions.Events);
+					TransactoSerializerOptions.Events)!;
 				stack.Push(@event);
 
 				if (@event is GeneralLedgerOpened || @event is AccountingPeriodClosed) {

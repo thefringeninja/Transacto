@@ -45,7 +45,7 @@ namespace Transacto.Integration {
 			using var response = await HttpClient.ConditionalGetAsync($"/balance-sheet/{createdOn.AddDays(1):O}", position);
 			Assert.Equal(HttpStatusCode.OK, response.StatusCode);
 			var json = await response.Content.ReadAsStringAsync();
-			var balanceSheet = JsonSerializer.Deserialize<BalanceSheetReport>(json, TransactoSerializerOptions.Events);
+			var balanceSheet = JsonSerializer.Deserialize<BalanceSheetReport>(json, TransactoSerializerOptions.Events)!;
 			Assert.Equal(accounts.Length, balanceSheet.LineItems.Count);
 		}
 	}

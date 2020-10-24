@@ -44,7 +44,7 @@ namespace Transacto {
 							provider.GetRequiredService<IMessageTypeMapper>(),
 							provider.GetRequiredService<InMemorySession>(),
 							provider.GetServices<ProjectionHandler<InMemorySession>[]>().ToArray()))
-						.AddSingleton<Func<NpgsqlConnection>>(provider => () => rootProvider
+						.AddSingleton<Func<NpgsqlConnection>>(_ => () => rootProvider
 							.GetRequiredService<Func<IPlugin, NpgsqlConnection>>()
 							.Invoke(plugin))
 						.AddHostedService(provider => new NpgsqlProjectionHost(
