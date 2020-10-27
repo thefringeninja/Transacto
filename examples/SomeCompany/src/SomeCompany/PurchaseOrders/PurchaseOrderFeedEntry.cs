@@ -6,7 +6,7 @@ namespace SomeCompany.PurchaseOrders {
 		public Guid PurchaseOrderId { get; set; }
 		public Guid VendorId { get; set; }
 		public int PurchaseOrderNumber { get; set; }
-		public Item[] Items { get; set; }
+		public Item[] Items { get; set; } = Array.Empty<Item>();
 
 		public class Item {
 			public Guid InventoryItemId { get; set; }

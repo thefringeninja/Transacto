@@ -67,9 +67,7 @@ namespace Microsoft.AspNetCore.Builder {
 				var position = await dispatcher.Handle(command!, context.RequestAborted);
 
 				return new CommandHandledResponse(position);
-			}).MapGet(route,
-				context => new ValueTask<Response>(new HalResponse(context.Request, new JsonCommandSchemaRepresentation(),
-					ETag.None, schemaCache)));
+			});
 
 			return builder;
 		}
