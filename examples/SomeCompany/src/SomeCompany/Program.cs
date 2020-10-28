@@ -1,5 +1,6 @@
 using System;
 using System.Globalization;
+using System.Net;
 using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
@@ -31,10 +32,17 @@ namespace SomeCompany {
 			_exitedSource = new CancellationTokenSource();
 
 			_hostBuilder = TransactoHost.Build(new ServiceCollection()
-				.AddEventStoreClient(settings => settings.CreateHttpMessageHandler = () => new SocketsHttpHandler {
-					SslOptions = {
-						RemoteCertificateValidationCallback = delegate { return true; }
-					}
+				.AddEventStoreClient(settings => {
+					settings.ConnectivitySettings.IpGossipSeeds = new[] {
+						new IPEndPoint(IPAddress.Loopback, 2111),
+						new IPEndPoint(IPAddress.Loopback, 2112),
+						new IPEndPoint(IPAddress.Loopback, 2113)
+					};
+					settings.CreateHttpMessageHandler = () => new SocketsHttpHandler {
+						SslOptions = {
+							RemoteCertificateValidationCallback = delegate { return true; }
+						}
+					};
 				})
 				.AddSingleton<IStreamStore>(new HttpClientSqlStreamStore(new HttpClientSqlStreamStoreSettings {
 					BaseAddress = new UriBuilder {
