@@ -1,0 +1,30 @@
+{
+ "name": "somecompany",
+ "version": "0.1.0",
+ "license": "MIT",
+ "scripts": {
+  "start": "razzle start --type=spa",
+  "build": "yarn lint && razzle build --type=spa",
+  "test": "razzle test --env=jsdom",
+  "start:prod": "NODE_ENV=production node build/server.js --type=spa",
+  "format": "prettier --write \"src/**/*.{js,ts,tsx}\" && eslint --fix .",
+  "lint": "prettier --check \"src/**/*.{js,ts,tsx}\" && eslint . "
+ },
+ "eslintConfig": {
+  "parserOptions": {
+   "ecmaVersion": 2016,
+   "sourceType": "module",
+   "ecmaFeatures": {
+    "jsx": true
+   }
+  }
+ },
+ "devDependencies": {
+  "express": "^4.17.1"
+ },
+ "dependencies": {
+  "react": "^17.0.1",
+  "react-dom": "^17.0.1",
+  "react-router-dom": "^5.2.0"
+ }
+}

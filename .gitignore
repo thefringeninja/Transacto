@@ -254,3 +254,4 @@ paket-files/
 .dotnet
 /src/LoadTests/LoadTests.txt
 **/*.g.cs
+.certs/

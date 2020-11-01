@@ -1,0 +1,13 @@
+{
+	"workspaces": [
+		"src/Transacto.UI",
+		"examples/SomeCompany.UI"
+	],
+	"private": true,
+	"devDependencies": {
+		"eslint": "^7.12.1",
+		"prettier": "^2.1.2",
+		"razzle": "latest",
+		"typescript": "^4.0.5"
+	}
+}
