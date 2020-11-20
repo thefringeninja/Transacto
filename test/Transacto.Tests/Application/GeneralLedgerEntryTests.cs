@@ -50,7 +50,7 @@ namespace Transacto.Application {
 
 		private class BadTransaction : IBusinessTransaction {
 			GeneralLedgerEntryNumber IBusinessTransaction.ReferenceNumber =>
-				new GeneralLedgerEntryNumber("BAD", ReferenceNumber);
+				new("BAD", ReferenceNumber);
 
 			public int ReferenceNumber { get; set; }
 

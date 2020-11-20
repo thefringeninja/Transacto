@@ -25,7 +25,7 @@ namespace Transacto.Framework.ProcessManagers {
 
 		public MessageHandler<Position>[] Handlers => _handlers.ToArray();
 
-		public MessageHandlerEnumerator<Position> GetEnumerator() => new MessageHandlerEnumerator<Position>(Handlers);
+		public MessageHandlerEnumerator<Position> GetEnumerator() => new(Handlers);
 
 		IEnumerator<MessageHandler<Position>> IEnumerable<MessageHandler<Position>>.GetEnumerator() => GetEnumerator();
 

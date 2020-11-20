@@ -14,6 +14,6 @@ namespace Transacto.Framework {
 
 		public MessageHandler<TReturn> Pipe(Func<
 			Func<object, CancellationToken, ValueTask<TReturn>>,
-			Func<object, CancellationToken, ValueTask<TReturn>>> pipe) => new MessageHandler<TReturn>(Message, pipe(Handler));
+			Func<object, CancellationToken, ValueTask<TReturn>>> pipe) => new(Message, pipe(Handler));
 	}
 }

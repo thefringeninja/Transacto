@@ -185,8 +185,8 @@ namespace Transacto.Plugins.BalanceSheet {
 
 		private class Entry {
 			public DateTime CreatedOn { get; set; }
-			public Dictionary<int, decimal> Credits { get; } = new Dictionary<int, decimal>();
-			public Dictionary<int, decimal> Debits { get; } = new Dictionary<int, decimal>();
+			public Dictionary<int, decimal> Credits { get; } = new();
+			public Dictionary<int, decimal> Debits { get; } = new();
 		}
 	}
 }

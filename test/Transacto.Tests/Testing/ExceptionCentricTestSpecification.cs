@@ -51,7 +51,7 @@ namespace Transacto.Testing {
         /// </summary>
         /// <returns>A new <see cref="ExceptionCentricTestResult"/>.</returns>
         public ExceptionCentricTestResult Pass() {
-            return new ExceptionCentricTestResult(this, TestResultState.Passed, Optional<Exception>.Empty,
+            return new(this, TestResultState.Passed, Optional<Exception>.Empty,
                 Optional<Fact[]>.Empty);
         }
 
@@ -60,7 +60,7 @@ namespace Transacto.Testing {
         /// </summary>
         /// <returns>A new <see cref="ExceptionCentricTestResult"/>.</returns>
         public ExceptionCentricTestResult Fail() {
-            return new ExceptionCentricTestResult(this, TestResultState.Failed, Optional<Exception>.Empty,
+            return new(this, TestResultState.Failed, Optional<Exception>.Empty,
                 Optional<Fact[]>.Empty);
         }
 

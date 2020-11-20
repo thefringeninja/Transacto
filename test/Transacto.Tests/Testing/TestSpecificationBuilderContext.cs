@@ -25,27 +25,27 @@ namespace Transacto.Testing {
         }
 
         public TestSpecificationBuilderContext AppendGivens(IEnumerable<Fact> facts) {
-            return new TestSpecificationBuilderContext(_givens.Concat(facts).ToArray(), _when, _thens, _throws);
+            return new(_givens.Concat(facts).ToArray(), _when, _thens, _throws);
         }
 
         public TestSpecificationBuilderContext SetWhen(object message) {
-            return new TestSpecificationBuilderContext(_givens, message, _thens, _throws);
+            return new(_givens, message, _thens, _throws);
         }
 
         public TestSpecificationBuilderContext AppendThens(IEnumerable<Fact> facts) {
-            return new TestSpecificationBuilderContext(_givens, _when, _thens.Concat(facts).ToArray(), _throws);
+            return new(_givens, _when, _thens.Concat(facts).ToArray(), _throws);
         }
 
         public TestSpecificationBuilderContext SetThrows(Exception exception) {
-            return new TestSpecificationBuilderContext(_givens, _when, _thens, exception);
+            return new(_givens, _when, _thens, exception);
         }
 
         public EventCentricTestSpecification ToEventCentricSpecification() {
-            return new EventCentricTestSpecification(_givens, _when, _thens);
+            return new(_givens, _when, _thens);
         }
 
         public ExceptionCentricTestSpecification ToExceptionCentricSpecification() {
-            return new ExceptionCentricTestSpecification(_givens, _when, _throws);
+            return new(_givens, _when, _throws);
         }
     }
 }

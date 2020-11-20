@@ -27,9 +27,9 @@ namespace Transacto.Domain {
 		public override bool Equals(object? obj) => obj is Debit other && Equals(other);
 		public static bool operator ==(Debit left, Debit right) => left.Equals(right);
 		public static bool operator !=(Debit left, Debit right) => !left.Equals(right);
-		public static Debit operator +(Debit left, Money right) => new Debit(left.AccountNumber, left.Amount + right);
-		public static Debit operator -(Debit left, Money right) => new Debit(left.AccountNumber, left.Amount - right);
-		public static Debit operator +(Debit left, decimal right) => new Debit(left.AccountNumber, left.Amount + right);
-		public static Debit operator -(Debit left, decimal right) => new Debit(left.AccountNumber, left.Amount - right);
+		public static Debit operator +(Debit left, Money right) => new(left.AccountNumber, left.Amount + right);
+		public static Debit operator -(Debit left, Money right) => new(left.AccountNumber, left.Amount - right);
+		public static Debit operator +(Debit left, decimal right) => new(left.AccountNumber, left.Amount + right);
+		public static Debit operator -(Debit left, decimal right) => new(left.AccountNumber, left.Amount - right);
 	}
 }

@@ -8,7 +8,7 @@ using Transacto.Framework;
 
 namespace Transacto.Infrastructure {
 	public class EventStoreRepository<TAggregateRoot> where TAggregateRoot : AggregateRoot {
-		private static readonly JsonSerializerOptions DefaultOptions = new JsonSerializerOptions {
+		private static readonly JsonSerializerOptions DefaultOptions = new() {
 			PropertyNamingPolicy = JsonNamingPolicy.CamelCase
 		};
 

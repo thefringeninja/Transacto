@@ -29,14 +29,6 @@ namespace Transacto.Domain {
 			});
 		}
 
-		public bool IsDeactivated(AccountNumber accountNumber) => _deactivatedAccountNumbers.Contains(accountNumber);
-
-		public void MustNotBeDeactivated(AccountNumber accountNumber) {
-			if (_deactivatedAccountNumbers.Contains(accountNumber)) {
-				throw new AccountDeactivatedException(accountNumber);
-			}
-		}
-
 		public void DefineAccount(AccountName accountName, AccountNumber accountNumber) {
 			MustNotContainAccountNumber(accountNumber);
 

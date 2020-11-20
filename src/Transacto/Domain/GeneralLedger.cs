@@ -67,7 +67,7 @@ namespace Transacto.Domain {
 
 		private static GeneralLedgerEntry Create(GeneralLedgerEntryIdentifier identifier,
 			GeneralLedgerEntryNumber number, DateTimeOffset createdOn, Period period) =>
-			new GeneralLedgerEntry(identifier, number, period, createdOn);
+			new(identifier, number, period, createdOn);
 
 		public void BeginClosingPeriod(AccountNumber retainedEarningsAccountNumber,
 			GeneralLedgerEntryIdentifier closingGeneralLedgerEntryIdentifier,
@@ -193,34 +193,45 @@ namespace Transacto.Domain {
 			public void Transfer(GeneralLedgerEntry generalLedgerEntry) {
 				foreach (var credit in generalLedgerEntry.Credits) {
 					var accountType = AccountType.OfAccountNumber(credit.AccountNumber);
-					if (accountType is AccountType.ExpenseAccount) {
-						_expenses[credit.AccountNumber] = _expenses.TryGetValue(credit.AccountNumber, out var amount)
-							? amount + credit.Amount
-							: credit.Amount;
-					} else if (accountType is AccountType.IncomeAccount) {
-						_income[credit.AccountNumber] = _income.TryGetValue(credit.AccountNumber, out var amount)
-							? amount - credit.Amount
-							: -credit.Amount;
+					switch (accountType) {
+						case AccountType.ExpenseAccount: {
+							_expenses[credit.AccountNumber] =
+								_expenses.TryGetValue(credit.AccountNumber, out var amount)
+									? amount + credit.Amount
+									: credit.Amount;
+							break;
+						}
+						case AccountType.IncomeAccount: {
+							_income[credit.AccountNumber] = _income.TryGetValue(credit.AccountNumber, out var amount)
+								? amount - credit.Amount
+								: -credit.Amount;
+							break;
+						}
 					}
 				}
 
 				foreach (var debit in generalLedgerEntry.Debits) {
 					var accountType = AccountType.OfAccountNumber(debit.AccountNumber);
-					if (accountType is AccountType.ExpenseAccount) {
-						_expenses[debit.AccountNumber] = _expenses.TryGetValue(debit.AccountNumber, out var amount)
-							? amount - debit.Amount
-							: -debit.Amount;
-					} else if (accountType is AccountType.IncomeAccount) {
-						_income[debit.AccountNumber] = _income.TryGetValue(debit.AccountNumber, out var amount)
-							? amount + debit.Amount
-							: debit.Amount;
+					switch (accountType) {
+						case AccountType.ExpenseAccount: {
+							_expenses[debit.AccountNumber] = _expenses.TryGetValue(debit.AccountNumber, out var amount)
+								? amount - debit.Amount
+								: -debit.Amount;
+							break;
+						}
+						case AccountType.IncomeAccount: {
+							_income[debit.AccountNumber] = _income.TryGetValue(debit.AccountNumber, out var amount)
+								? amount + debit.Amount
+								: debit.Amount;
+							break;
+						}
 					}
 				}
 			}
 		}
 
 		private class TrialBalance : IEnumerable<KeyValuePair<AccountNumber, Money>> {
-			public static TrialBalance None => new TrialBalance();
+			public static TrialBalance None => new();
 
 			private readonly IDictionary<AccountNumber, Money> _inner;
 

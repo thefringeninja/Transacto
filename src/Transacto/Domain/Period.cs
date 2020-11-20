@@ -24,7 +24,7 @@ namespace Transacto.Domain {
 				: throw new FormatException();
 
 		public static Period Open(DateTimeOffset dateTimeOffset) =>
-			new Period(dateTimeOffset.UtcDateTime.Month, dateTimeOffset.UtcDateTime.Year);
+			new(dateTimeOffset.UtcDateTime.Month, dateTimeOffset.UtcDateTime.Year);
 
 		private Period(int month, int year) {
 			MustBeAMonth(month);

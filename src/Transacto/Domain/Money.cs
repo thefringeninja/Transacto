@@ -4,11 +4,9 @@ namespace Transacto.Domain {
 	public readonly struct Money : IEquatable<Money>, IComparable<Money> {
 		private readonly decimal _value;
 
-		public static readonly Money Zero = new Money(decimal.Zero);
+		public static readonly Money Zero = new(decimal.Zero);
 
-		public Money(decimal value) {
-			_value = value;
-		}
+		public Money(decimal value) => _value = value;
 
 		public bool Equals(Money other) => _value == other._value;
 		public override bool Equals(object? obj) => obj is Money other && Equals(other);
@@ -23,10 +21,10 @@ namespace Transacto.Domain {
 		public static bool operator >(Money left, Money right) => left._value > right._value;
 		public static bool operator <=(Money left, Money right) => left._value <= right._value;
 		public static bool operator >=(Money left, Money right) => left._value >= right._value;
-		public static Money operator +(Money left, Money right) => new Money(left._value + right._value);
-		public static Money operator -(Money left, Money right) => new Money(left._value - right._value);
-		public static Money operator +(Money left, decimal right) => new Money(left._value + right);
-		public static Money operator -(Money left, decimal right) => new Money(left._value - right);
-		public static Money operator -(Money value) => new Money(-value._value);
+		public static Money operator +(Money left, Money right) => new(left._value + right._value);
+		public static Money operator -(Money left, Money right) => new(left._value - right._value);
+		public static Money operator +(Money left, decimal right) => new(left._value + right);
+		public static Money operator -(Money left, decimal right) => new(left._value - right);
+		public static Money operator -(Money value) => new(-value._value);
 	}
 }

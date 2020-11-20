@@ -25,7 +25,7 @@ namespace Transacto.Framework {
         public override bool Equals(object? obj) => obj is Optional<T> other && Equals(other);
         public static bool operator ==(Optional<T> left, Optional<T> right) => left.Equals(right);
         public static bool operator !=(Optional<T> left, Optional<T> right) => !left.Equals(right);
-        public static implicit operator Optional<T>(T value) => new Optional<T>(value);
+        public static implicit operator Optional<T>(T value) => new(value);
 
         public override int GetHashCode() {
             unchecked {

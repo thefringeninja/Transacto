@@ -8,7 +8,7 @@ namespace Transacto.Framework.Projections.Npgsql {
 		private Assembly s_assembly => GetType().Assembly;
 
 		private readonly ConcurrentDictionary<string, string> _scripts
-			= new ConcurrentDictionary<string, string>();
+			= new();
 
 		public string this[Type eventType] => GetScript(eventType.Name);
 
@@ -26,7 +26,7 @@ namespace Transacto.Framework.Projections.Npgsql {
 					throw new Exception($"Embedded resource, {key}, not found. BUG!");
 				}
 
-				using StreamReader reader = new StreamReader(stream);
+				using StreamReader reader = new(stream);
 
 				return reader.ReadToEnd();
 			});

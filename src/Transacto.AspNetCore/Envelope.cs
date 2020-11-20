@@ -5,7 +5,7 @@ using EventStore.Client;
 namespace Transacto {
 	public abstract class Envelope {
 		private static readonly ConcurrentDictionary<Type, Func<object, Position, Envelope>> Cache =
-			new ConcurrentDictionary<Type, Func<object, Position, Envelope>>();
+			new();
 
 		public object Message { get; }
 		public Position Position { get; }

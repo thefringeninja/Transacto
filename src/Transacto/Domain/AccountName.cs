@@ -6,15 +6,15 @@ namespace Transacto.Domain {
 		private readonly string _value;
 
 		public AccountName(string value) {
-			if (value.Length == 0) {
-				throw new ArgumentException("Input was empty.", nameof(value));
+			switch (value.Length) {
+				case 0:
+					throw new ArgumentException("Input was empty.", nameof(value));
+				case > MaxLength:
+					throw new ArgumentException("Input was too long.", nameof(value));
+				default:
+					_value = value;
+					break;
 			}
-
-			if (value.Length > MaxLength) {
-				throw new ArgumentException("Input was too long.", nameof(value));
-			}
-
-			_value = value;
 		}
 
 		public bool Equals(AccountName other) => _value == other._value;

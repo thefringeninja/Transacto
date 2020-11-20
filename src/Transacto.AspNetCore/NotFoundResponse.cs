@@ -10,6 +10,6 @@ namespace Transacto {
 		}
 
 		protected internal override ValueTask WriteBody(Stream stream, CancellationToken cancellationToken) =>
-			new ValueTask(Task.CompletedTask);
+			new(Task.CompletedTask);
 	}
 }

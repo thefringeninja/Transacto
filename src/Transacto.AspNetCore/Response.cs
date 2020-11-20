@@ -25,6 +25,6 @@ namespace Transacto {
 		}
 
 		protected internal virtual ValueTask WriteBody(Stream stream, CancellationToken cancellationToken) =>
-			new ValueTask(Task.CompletedTask);
+			new(Task.CompletedTask);
 	}
 }

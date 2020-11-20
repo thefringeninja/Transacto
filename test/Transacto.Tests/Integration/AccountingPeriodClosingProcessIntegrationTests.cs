@@ -17,14 +17,16 @@ namespace Transacto.Integration {
 			var checkpointSource = new TaskCompletionSource<Position>();
 
 			await EventStoreClient.SubscribeToAllAsync((_, e, _) => {
-				if (e.Event.EventType == nameof(AccountingPeriodClosed)) {
-					accountingPeriodClosedSource.TrySetResult(e);
-				}
-				else if (e.Event.EventType == "checkpoint") {
-					checkpointSource.TrySetResult(
-						new Position(
-							BitConverter.ToUInt64(e.Event.Data.Span),
-							BitConverter.ToUInt64(e.Event.Data.Span.Slice(8))));
+				switch (e.Event.EventType) {
+					case nameof(AccountingPeriodClosed):
+						accountingPeriodClosedSource.TrySetResult(e);
+						break;
+					case "checkpoint":
+						checkpointSource.TrySetResult(
+							new Position(
+								BitConverter.ToUInt64(e.Event.Data.Span),
+								BitConverter.ToUInt64(e.Event.Data.Span.Slice(8))));
+						break;
 				}
 
 				return Task.CompletedTask;

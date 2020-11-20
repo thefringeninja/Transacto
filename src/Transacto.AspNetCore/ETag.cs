@@ -15,7 +15,7 @@ namespace Transacto {
 			? new ETag(position.Value.ToString())
 			: None;
 
-		private static ETag Create(Position position) => new ETag($"{position.CommitPosition}/{position.PreparePosition}");
+		private static ETag Create(Position position) => new($"{position.CommitPosition}/{position.PreparePosition}");
 
 		private ETag(string value) {
 			_value = value;

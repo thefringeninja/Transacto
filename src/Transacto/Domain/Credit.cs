@@ -29,15 +29,15 @@ namespace Transacto.Domain {
 		public static bool operator !=(Credit left, Credit right) => !left.Equals(right);
 
 		public static Credit operator +(Credit left, Money right) =>
-			new Credit(left.AccountNumber, left.Amount + right);
+			new(left.AccountNumber, left.Amount + right);
 
 		public static Credit operator -(Credit left, Money right) =>
-			new Credit(left.AccountNumber, left.Amount - right);
+			new(left.AccountNumber, left.Amount - right);
 
 		public static Credit operator +(Credit left, decimal right) =>
-			new Credit(left.AccountNumber, left.Amount + right);
+			new(left.AccountNumber, left.Amount + right);
 
 		public static Credit operator -(Credit left, decimal right) =>
-			new Credit(left.AccountNumber, left.Amount - right);
+			new(left.AccountNumber, left.Amount - right);
 	}
 }

@@ -10,7 +10,7 @@ namespace Transacto.Integration {
 		[DataMember(Name = "referenceNumber")] public int ReferenceNumber { get; set; }
 
 		GeneralLedgerEntryNumber IBusinessTransaction.ReferenceNumber =>
-			new GeneralLedgerEntryNumber("t", ReferenceNumber);
+			new("t", ReferenceNumber);
 
 		public void Apply(GeneralLedgerEntry entry, AccountIsDeactivated accountIsDeactivated) {
 			entry.ApplyDebit(new Debit(new AccountNumber(1000), new Money(5m)), accountIsDeactivated);

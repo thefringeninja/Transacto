@@ -19,9 +19,9 @@ using Transacto.Framework;
 
 namespace Transacto {
 	public class HalResponse : Response {
-		private static readonly object EmptyBody = new object();
-		private static readonly MediaType HalJson = new MediaType("application/hal+json");
-		private static readonly MediaType Html = new MediaType("text/html");
+		private static readonly object EmptyBody = new();
+		private static readonly MediaType HalJson = new("application/hal+json");
+		private static readonly MediaType Html = new("text/html");
 
 		private readonly Response _inner;
 
@@ -49,7 +49,7 @@ namespace Transacto {
 					_ => NotAcceptableResponse.Instance
 				};
 
-			static MediaType MediaType(string? x) => new MediaType(x ?? string.Empty);
+			static MediaType MediaType(string? x) => new(x ?? string.Empty);
 		}
 
 		protected internal override ValueTask WriteBody(Stream stream, CancellationToken cancellationToken) => _inner
@@ -57,9 +57,9 @@ namespace Transacto {
 
 		private sealed class HalHtmlResponse : Response {
 			private static readonly ConcurrentDictionary<Assembly, RazorLightEngine> Engines =
-				new ConcurrentDictionary<Assembly, RazorLightEngine>();
+				new();
 
-			private static readonly MediaTypeHeaderValue ContentType = new MediaTypeHeaderValue("text/html");
+			private static readonly MediaTypeHeaderValue ContentType = new("text/html");
 
 			private readonly object _resource;
 			private readonly IHal _hal;
@@ -97,7 +97,7 @@ namespace Transacto {
 
 		private sealed class HalJsonResponse : Response {
 			private static readonly JsonSerializerOptions SerializerOptions
-				= new JsonSerializerOptions {
+				= new() {
 					Converters = {
 						new LinksConverter(),
 						new HalRepresentationConverter()
@@ -106,7 +106,7 @@ namespace Transacto {
 					PropertyNamingPolicy = JsonNamingPolicy.CamelCase
 				};
 
-			private static readonly MediaTypeHeaderValue ContentType = new MediaTypeHeaderValue("application/hal+json");
+			private static readonly MediaTypeHeaderValue ContentType = new("application/hal+json");
 
 			private readonly object _resource;
 			private readonly IHal _hal;

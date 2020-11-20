@@ -7,19 +7,19 @@ using Transacto.Domain;
 
 namespace Transacto {
 	public static class TransactoSerializerOptions {
-		public static readonly JsonSerializerOptions Events = new JsonSerializerOptions {
+		public static readonly JsonSerializerOptions Events = new() {
 			PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
 			PropertyNameCaseInsensitive = true
 		};
 
 		public static JsonSerializerOptions BusinessTransactions(params Type[] businessTransactionTypes) =>
-			new JsonSerializerOptions {
+			new() {
 				PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
 				PropertyNameCaseInsensitive = true,
 				Converters = {new BusinessTransactionConverter(businessTransactionTypes)}
 			};
 
-		public static readonly JsonSerializerOptions Commands = new JsonSerializerOptions {
+		public static readonly JsonSerializerOptions Commands = new() {
 			PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
 			PropertyNameCaseInsensitive = true
 		};

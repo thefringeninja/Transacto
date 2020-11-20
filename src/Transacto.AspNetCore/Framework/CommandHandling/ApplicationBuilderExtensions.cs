@@ -106,7 +106,7 @@ namespace Microsoft.AspNetCore.Builder {
 							throw new Exception($"Embedded resource, {key}, not found. BUG!");
 						}
 
-						using StreamReader reader = new StreamReader(stream);
+						using StreamReader reader = new(stream);
 
 						return JsonDocument.Parse(reader.ReadToEnd());
 					});

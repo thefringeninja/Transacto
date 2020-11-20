@@ -8,7 +8,7 @@ namespace Transacto.Framework {
 	/// Tracks changes of attached aggregates.
 	/// </summary>
 	public class UnitOfWork {
-		private static readonly AsyncLocal<UnitOfWork?> Storage = new AsyncLocal<UnitOfWork?>();
+		private static readonly AsyncLocal<UnitOfWork?> Storage = new();
 
 		private readonly IDictionary<string, (AggregateRoot aggregate, Optional<long> expectedVersion)> _aggregates;
 
