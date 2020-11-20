@@ -64,15 +64,15 @@ namespace Transacto.Framework.ProcessManagers {
 			_stoppedRegistration = _stopped.Token.Register(_subscription.Dispose);
 
 			async Task<StreamSubscription> Subscribe() {
-				try {
-					_checkpoint = await _eventStore.ReadStreamAsync(Direction.Backwards, _checkpointStreamName,
-							StreamPosition.End, cancellationToken: cancellationToken)
+				await using var result = _eventStore.ReadStreamAsync(Direction.Backwards, _checkpointStreamName,
+					StreamPosition.End, cancellationToken: cancellationToken);
+
+				_checkpoint = await result.ReadState == ReadState.StreamNotFound
+					? Position.Start
+					: await result
 						.Select(e => new Position(BitConverter.ToUInt64(e.Event.Data.Slice(0, 8).Span),
 							BitConverter.ToUInt64(e.Event.Data.Slice(8, 8).Span)))
 						.FirstOrDefaultAsync(cancellationToken);
-				} catch (StreamNotFoundException) {
-					_checkpoint = Position.Start;
-				}
 
 				return await _eventStore.SubscribeToAllAsync(
 					_checkpoint, HandleAsync, subscriptionDropped: (_, reason, _) => {
