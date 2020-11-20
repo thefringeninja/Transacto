@@ -69,7 +69,7 @@ namespace Transacto.Framework.Projections.Npgsql {
 
                 return count;
             } finally {
-                dbConnection.Close();
+                await dbConnection.CloseAsync();
             }
         }
     }

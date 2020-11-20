@@ -65,7 +65,7 @@ namespace Transacto.Testing {
                 writer.WriteLine("  Expected: {0} event(s) ({1}),",
                     result.Specification.Thens.Length,
                     string.Join(",", result.Specification.Thens.Select(_ => _.Event.GetType().Name).ToArray()));
-                writer.WriteLine("  But found the following differences:");
+                await writer.WriteLineAsync("  But found the following differences:");
                 foreach (var difference in
                     result.Specification.Thens.Zip(result.ButEvents.Value,
                             (expected, actual) => new Tuple<Fact, Fact>(expected, actual))

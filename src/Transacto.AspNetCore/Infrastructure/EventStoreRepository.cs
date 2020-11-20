@@ -31,6 +31,7 @@ namespace Transacto.Infrastructure {
 		public async ValueTask<Optional<TAggregateRoot>> GetById(string identifier,
 			CancellationToken cancellationToken = default) {
 			var streamName = identifier;
+
 			if (UnitOfWork.Current.TryGet(streamName, out var a) && a is TAggregateRoot aggregate) {
 				return new Optional<TAggregateRoot>(aggregate);
 			}
