@@ -69,6 +69,8 @@ namespace Transacto.Domain {
 			GeneralLedgerEntryNumber number, DateTimeOffset createdOn, Period period) =>
 			new(identifier, number, period, createdOn);
 
+		private static bool IgnoreInactiveAccount(AccountNumber _) => false;
+
 		public void BeginClosingPeriod(AccountNumber retainedEarningsAccountNumber,
 			GeneralLedgerEntryIdentifier closingGeneralLedgerEntryIdentifier,
 			GeneralLedgerEntryIdentifier[] generalLedgerEntryIdentifiers, DateTimeOffset closingOn) {
@@ -157,9 +159,9 @@ namespace Transacto.Domain {
 					}
 
 					if (amount > Money.Zero) {
-						entry.ApplyCredit(new Credit(accountNumber, amount), accountIsDeactivated);
+						entry.ApplyCredit(new Credit(accountNumber, amount), IgnoreInactiveAccount);
 					} else {
-						entry.ApplyDebit(new Debit(accountNumber, -amount), accountIsDeactivated);
+						entry.ApplyDebit(new Debit(accountNumber, -amount), IgnoreInactiveAccount);
 					}
 				}
 
@@ -169,9 +171,9 @@ namespace Transacto.Domain {
 					}
 
 					if (amount < Money.Zero) {
-						entry.ApplyCredit(new Credit(accountNumber, amount), accountIsDeactivated);
+						entry.ApplyCredit(new Credit(accountNumber, amount), IgnoreInactiveAccount);
 					} else {
-						entry.ApplyDebit(new Debit(accountNumber, -amount), accountIsDeactivated);
+						entry.ApplyDebit(new Debit(accountNumber, -amount), IgnoreInactiveAccount);
 					}
 				}
 
