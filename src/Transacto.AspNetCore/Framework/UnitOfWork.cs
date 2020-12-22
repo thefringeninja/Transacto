@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.Linq;
 using System.Threading;
 
@@ -10,7 +11,7 @@ namespace Transacto.Framework {
 	public class UnitOfWork {
 		private static readonly AsyncLocal<UnitOfWork?> Storage = new();
 
-		private readonly IDictionary<string, (AggregateRoot aggregate, Optional<long> expectedVersion)> _aggregates;
+		private readonly KeyedCollection<string, Transaction> _transactions;
 
 		/// <summary>
 		/// Starts a <see cref="UnitOfWork"/>.
@@ -31,20 +32,18 @@ namespace Transacto.Framework {
 		/// Initializes a new instance of the <see cref="UnitOfWork"/> class.
 		/// </summary>
 		private UnitOfWork() {
-			_aggregates = new Dictionary<string, (AggregateRoot, Optional<long>)>();
+			_transactions = new TransactionCollection();
 		}
 
 		/// <summary>
 		/// Attaches the specified aggregate.
 		/// </summary>
-		/// <param name="streamName">The identifier.</param>
-		/// <param name="aggregate">The aggregate.</param>
-		/// <param name="expectedVersion">The expected version.</param>
-		/// <exception cref="System.ArgumentNullException">Thrown when the <paramref name="aggregate"/> is null.</exception>
-		public void Attach(string streamName, AggregateRoot aggregate, Optional<long> expectedVersion = default) {
-			if (_aggregates.ContainsKey(streamName))
+		/// <param name="transaction">The <see cref="Transaction"/>.</param>
+		/// <exception cref="ArgumentException">Thrown when <see cref="aggregate"/> has already been attached.</exception>
+		public void Attach(Transaction transaction) {
+			if (_transactions.Contains(transaction.StreamName))
 				throw new ArgumentException();
-			_aggregates.Add(streamName, (aggregate, expectedVersion));
+			_transactions.Add(transaction);
 		}
 
 		/// <summary>
@@ -55,11 +54,11 @@ namespace Transacto.Framework {
 		/// <returns><c>true</c> if the aggregate was found, otherwise <c>false</c>.</returns>
 		public bool TryGet(string streamName, out AggregateRoot? aggregate) {
 			aggregate = null;
-			if (!_aggregates.TryGetValue(streamName, out var x)) {
+			if (!_transactions.TryGetValue(streamName, out var transaction)) {
 				return false;
 			}
 
-			aggregate = x.aggregate;
+			aggregate = transaction.Aggregate;
 			return true;
 		}
 
@@ -69,15 +68,17 @@ namespace Transacto.Framework {
 		/// <returns>
 		///   <c>true</c> if this instance has aggregates with state changes; otherwise, <c>false</c>.
 		/// </returns>
-		public bool HasChanges => _aggregates.Values.Any(_ => _.aggregate.HasChanges);
+		public bool HasChanges => _transactions.Any(_ => _.Aggregate.HasChanges);
 
 		/// <summary>
 		/// Gets the aggregates with state changes.
 		/// </summary>
-		/// <returns>An enumeration of <see cref="AggregateRoot"/>.</returns>
-		public IEnumerable<(string streamName, AggregateRoot aggregate, Optional<long> expectedVersion)> GetChanges() =>
-			_aggregates.Where(_ => _.Value.aggregate.HasChanges)
-				.Select(_ => (_.Key, _.Value.aggregate, _.Value.expectedVersion));
+		/// <returns>An enumeration of <see cref="Transaction"/>.</returns>
+		public IEnumerable<Transaction> GetChanges() => _transactions.Where(_ => _.Aggregate.HasChanges);
+
+		private class TransactionCollection : KeyedCollection<string, Transaction> {
+			protected override string GetKeyForItem(Transaction item) => item.StreamName;
+		}
 
 		private class DisposableAction : IDisposable {
 			private readonly Action _onDispose;

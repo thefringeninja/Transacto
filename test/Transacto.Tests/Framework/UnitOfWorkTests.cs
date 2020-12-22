@@ -18,7 +18,7 @@ namespace Transacto.Framework {
 			var aggregate = new TestAggregate();
 
 			using var _ = UnitOfWork.Start();
-			UnitOfWork.Current.Attach("stream", aggregate, Optional<long>.Empty);
+			UnitOfWork.Current.Attach(new("stream", aggregate, Optional<long>.Empty));
 			Assert.True(UnitOfWork.Current.TryGet("stream", out var result));
 			Assert.Same(aggregate, result);
 		}
@@ -28,7 +28,7 @@ namespace Transacto.Framework {
 			var aggregate = new TestAggregate();
 
 			using var _ = UnitOfWork.Start();
-			UnitOfWork.Current.Attach("stream", aggregate, Optional<long>.Empty);
+			UnitOfWork.Current.Attach(new ("stream", aggregate, Optional<long>.Empty));
 			aggregate.DoSomething();
 			Assert.True(UnitOfWork.Current.HasChanges);
 			Assert.Single(UnitOfWork.Current.GetChanges());

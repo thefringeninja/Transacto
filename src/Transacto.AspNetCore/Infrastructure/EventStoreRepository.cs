@@ -51,12 +51,12 @@ namespace Transacto.Infrastructure {
 					_messageTypeMapper.Map(e.OriginalEvent.EventType),
 					_serializerOptions)!));
 
-			UnitOfWork.Current.Attach(streamName, aggregate, version);
+			UnitOfWork.Current.Attach(new (streamName, aggregate, version));
 
 			return aggregate;
 		}
 
 		public void Add(TAggregateRoot aggregateRoot) =>
-			UnitOfWork.Current.Attach(aggregateRoot.Id, aggregateRoot);
+			UnitOfWork.Current.Attach(new (aggregateRoot.Id, aggregateRoot));
 	}
 }

@@ -51,7 +51,7 @@ namespace Transacto.Infrastructure {
 
 			generalLedger.LoadFromHistory(stack);
 
-			UnitOfWork.Current.Attach(GeneralLedger.Identifier, generalLedger, streamPosition.ToInt64());
+			UnitOfWork.Current.Attach(new (GeneralLedger.Identifier, generalLedger, streamPosition.ToInt64()));
 
 			return generalLedger;
 		}
