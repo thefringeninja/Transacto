@@ -3,31 +3,30 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
-using EventStore.Client;
 
 namespace Transacto.Framework.ProcessManagers {
-	public class ProcessManagerEventHandlerModule : IEnumerable<MessageHandler<Position>> {
-		private readonly List<MessageHandler<Position>> _handlers;
+	public class ProcessManagerEventHandlerModule : IEnumerable<MessageHandler<Checkpoint>> {
+		private readonly List<MessageHandler<Checkpoint>> _handlers;
 
 		protected ProcessManagerEventHandlerModule() {
-			_handlers = new List<MessageHandler<Position>>();
+			_handlers = new List<MessageHandler<Checkpoint>>();
 		}
 
-		protected IMessageHandlerBuilder<TEvent, Position> Build<TEvent>() where TEvent : class =>
-			new MessageHandlerBuilder<TEvent, Position>(handler => {
-				_handlers.Add(new MessageHandler<Position>(typeof(TEvent),
+		protected IMessageHandlerBuilder<TEvent, Checkpoint> Build<TEvent>() where TEvent : class =>
+			new MessageHandlerBuilder<TEvent, Checkpoint>(handler => {
+				_handlers.Add(new MessageHandler<Checkpoint>(typeof(TEvent),
 					(command, token) => handler((TEvent)command, token)));
 			});
 
-		protected void Handle<TEvent>(Func<TEvent, CancellationToken, ValueTask<Position>> handler) =>
-			_handlers.Add(new MessageHandler<Position>(typeof(TEvent),
+		protected void Handle<TEvent>(Func<TEvent, CancellationToken, ValueTask<Checkpoint>> handler) =>
+			_handlers.Add(new MessageHandler<Checkpoint>(typeof(TEvent),
 				(command, token) => handler((TEvent)command, token)));
 
-		public MessageHandler<Position>[] Handlers => _handlers.ToArray();
+		public MessageHandler<Checkpoint>[] Handlers => _handlers.ToArray();
 
-		public MessageHandlerEnumerator<Position> GetEnumerator() => new(Handlers);
+		public MessageHandlerEnumerator<Checkpoint> GetEnumerator() => new MessageHandlerEnumerator<Checkpoint>(Handlers);
 
-		IEnumerator<MessageHandler<Position>> IEnumerable<MessageHandler<Position>>.GetEnumerator() => GetEnumerator();
+		IEnumerator<MessageHandler<Checkpoint>> IEnumerable<MessageHandler<Checkpoint>>.GetEnumerator() => GetEnumerator();
 
 		IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
 	}

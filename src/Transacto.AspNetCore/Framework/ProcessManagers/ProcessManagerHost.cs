@@ -17,7 +17,7 @@ namespace Transacto.Framework.ProcessManagers {
 		private int _subscribed;
 		private StreamSubscription? _subscription;
 		private CancellationTokenRegistration? _stoppedRegistration;
-		private Position _checkpoint;
+		private Checkpoint _checkpoint;
 
 		public ProcessManagerHost(EventStoreClient eventStore, IMessageTypeMapper messageTypeMapper,
 			string checkpointStreamName, ProcessManagerEventHandlerModule eventHandlerModule) {
@@ -30,7 +30,7 @@ namespace Transacto.Framework.ProcessManagers {
 			_subscription = null;
 			_stoppedRegistration = null;
 			_dispatcher = new ProcessManagerEventDispatcher(eventHandlerModule);
-			_checkpoint = Position.Start;
+			_checkpoint = Checkpoint.None;
 		}
 
 		public async Task StartAsync(CancellationToken cancellationToken) {
@@ -68,14 +68,11 @@ namespace Transacto.Framework.ProcessManagers {
 					StreamPosition.End, cancellationToken: cancellationToken);
 
 				_checkpoint = await result.ReadState == ReadState.StreamNotFound
-					? Position.Start
-					: await result
-						.Select(e => new Position(BitConverter.ToUInt64(e.Event.Data.Slice(0, 8).Span),
-							BitConverter.ToUInt64(e.Event.Data.Slice(8, 8).Span)))
-						.FirstOrDefaultAsync(cancellationToken);
+					? Checkpoint.None
+					: await result.Select(e => new Checkpoint(e.Event.Data)).FirstOrDefaultAsync(cancellationToken);
 
 				return await _eventStore.SubscribeToAllAsync(
-					_checkpoint, HandleAsync, subscriptionDropped: (_, reason, _) => {
+					_checkpoint.ToEventStorePosition(), HandleAsync, subscriptionDropped: (_, reason, _) => {
 						if (reason == SubscriptionDroppedReason.Disposed) {
 							return;
 						}
@@ -97,17 +94,12 @@ namespace Transacto.Framework.ProcessManagers {
 
 				_checkpoint = await _dispatcher.Handle(message, ct);
 
-				if (_checkpoint <= Position.Start) {
+				if (_checkpoint == Checkpoint.None) {
 					return;
 				}
 
-				var checkpointBytes = new byte[16];
-
-				BitConverter.TryWriteBytes(checkpointBytes, _checkpoint.CommitPosition);
-				BitConverter.TryWriteBytes(new Span<byte>(checkpointBytes).Slice(8), _checkpoint.PreparePosition);
-
 				await _eventStore.AppendToStreamAsync(_checkpointStreamName, StreamState.Any, new[] {
-					new EventData(Uuid.NewUuid(), "checkpoint", checkpointBytes,
+					new EventData(Uuid.NewUuid(), "checkpoint", _checkpoint.Memory,
 						contentType: "application/octet-stream")
 				}, cancellationToken: ct);
 			}

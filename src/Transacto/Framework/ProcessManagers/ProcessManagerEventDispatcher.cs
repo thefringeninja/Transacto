@@ -1,16 +1,15 @@
 using System.Threading;
 using System.Threading.Tasks;
-using EventStore.Client;
 
 namespace Transacto.Framework.ProcessManagers {
 	public class ProcessManagerEventDispatcher {
-		private readonly MessageHandlerResolver<Position> _resolver;
+		private readonly MessageHandlerResolver<Checkpoint> _resolver;
 
 		public ProcessManagerEventDispatcher(ProcessManagerEventHandlerModule eventHandlerModule) {
 			_resolver = ProcessManagerEventResolve.WhenEqualToHandlerMessageType(eventHandlerModule);
 		}
 
-		public ValueTask<Position> Handle(object @event, CancellationToken cancellationToken = default) =>
+		public ValueTask<Checkpoint> Handle(object @event, CancellationToken cancellationToken = default) =>
 			_resolver.Invoke(@event).Handler(@event, cancellationToken);
 	}
 }

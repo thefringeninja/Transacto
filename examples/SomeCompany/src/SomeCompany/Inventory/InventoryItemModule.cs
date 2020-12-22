@@ -14,7 +14,7 @@ namespace SomeCompany.Inventory {
 				.Handle(async (command, ct) => {
 					await handlers.Handle(command, ct);
 
-					return Position.Start;
+					return Checkpoint.None;
 				});
 		}
 	}

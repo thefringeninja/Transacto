@@ -16,7 +16,7 @@ namespace Transacto.Plugins.ChartOfAccounts {
 				.Handle(async (command, ct) => {
 					await handlers.Handle(command, ct);
 
-					return Position.Start;
+					return Checkpoint.None;
 				});
 
 			Build<DeactivateAccount>()
@@ -25,7 +25,7 @@ namespace Transacto.Plugins.ChartOfAccounts {
 				.Handle(async (command, ct) => {
 					await handlers.Handle(command, ct);
 
-					return Position.Start;
+					return Checkpoint.None;
 				});
 
 			Build<ReactivateAccount>()
@@ -34,7 +34,7 @@ namespace Transacto.Plugins.ChartOfAccounts {
 				.Handle(async (command, ct) => {
 					await handlers.Handle(command, ct);
 
-					return Position.Start;
+					return Checkpoint.None;
 				});
 
 			Build<RenameAccount>()
@@ -43,7 +43,7 @@ namespace Transacto.Plugins.ChartOfAccounts {
 				.Handle(async (command, ct) => {
 					await handlers.Handle(command, ct);
 
-					return Position.Start;
+					return Checkpoint.None;
 				});
 		}
 	}

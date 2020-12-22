@@ -16,14 +16,14 @@ namespace Transacto.Plugins.GeneralLedger {
 				.UnitOfWork(eventStore, messageTypeMapper)
 				.Handle(async (command, ct) => {
 					await handlers.Handle(command, ct);
-					return Position.Start;
+					return Checkpoint.None;
 				});
 			Build<BeginClosingAccountingPeriod>()
 				.Log()
 				.UnitOfWork(eventStore, messageTypeMapper)
 				.Handle(async (command, ct) => {
 					await handlers.Handle(command, ct);
-					return Position.Start;
+					return Checkpoint.None;
 				});
 		}
 	}

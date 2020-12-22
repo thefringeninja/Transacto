@@ -7,8 +7,8 @@ using EventStore.Client;
 
 namespace Transacto.Framework {
 	public static class UnitOfWorkExtensions {
-		public static IMessageHandlerBuilder<TCommand, Position> UnitOfWork<TCommand>(
-			this IMessageHandlerBuilder<TCommand, Position> builder, EventStoreClient eventStore,
+		public static IMessageHandlerBuilder<TCommand, Checkpoint> UnitOfWork<TCommand>(
+			this IMessageHandlerBuilder<TCommand, Checkpoint> builder, EventStoreClient eventStore,
 			IMessageTypeMapper messageTypeMapper)
 			where TCommand : class => builder.Pipe(next => async (message, ct) => {
 			using var _ = Framework.UnitOfWork.Start();
@@ -16,13 +16,13 @@ namespace Transacto.Framework {
 			await next(message, ct);
 
 			if (!Framework.UnitOfWork.Current.HasChanges) {
-				return Position.Start;
+				return Checkpoint.None;
 			}
 
 			return await Commit(eventStore, messageTypeMapper, ct);
 		});
 
-		private static async Task<Position> Commit(EventStoreClient eventStore,
+		private static async Task<Checkpoint> Commit(EventStoreClient eventStore,
 			IMessageTypeMapper messageTypeMapper, CancellationToken ct) {
 			var (streamName, aggregateRoot, expectedVersion) = Framework.UnitOfWork.Current.GetChanges().Single();
 
@@ -34,7 +34,7 @@ namespace Transacto.Framework {
 
 			aggregateRoot.MarkChangesAsCommitted();
 
-			return result.LogPosition;
+			return result.LogPosition.ToCheckpoint();
 
 			Task<IWriteResult> Append() => expectedVersion.HasValue
 				? eventStore.AppendToStreamAsync(streamName,
