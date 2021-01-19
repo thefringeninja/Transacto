@@ -146,11 +146,19 @@ namespace Transacto.Plugins.BalanceSheet {
 				});
 				foreach (var posted in _postedEntries.Values.Where(x => x.CreatedOn <= thru)) {
 					foreach (var (accountNumber, amount) in posted.Debits) {
-						groupings[accountNumber].LineItems[0].Balance.DecimalValue += amount;
+						groupings[accountNumber].LineItems[0] = groupings[accountNumber].LineItems[0] with {
+							Balance = groupings[accountNumber].LineItems[0].Balance with {
+								DecimalValue = groupings[accountNumber].LineItems[0].Balance.DecimalValue + amount
+							}
+						};
 					}
 
 					foreach (var (accountNumber, amount) in posted.Credits) {
-						groupings[accountNumber].LineItems[0].Balance.DecimalValue -= amount;
+						groupings[accountNumber].LineItems[0] = groupings[accountNumber].LineItems[0] with {
+							Balance = groupings[accountNumber].LineItems[0].Balance with {
+								DecimalValue = groupings[accountNumber].LineItems[0].Balance.DecimalValue - amount
+							}
+						};
 					}
 				}
 
@@ -169,11 +177,19 @@ namespace Transacto.Plugins.BalanceSheet {
 				});
 				foreach (var posted in _postedEntries.Values.Where(x => x.CreatedOn <= thru)) {
 					foreach (var (accountNumber, amount) in posted.Debits) {
-						groupings[accountNumber].Balance.DecimalValue += amount;
+						groupings[accountNumber] = groupings[accountNumber] with {
+							Balance = groupings[accountNumber].Balance with {
+								DecimalValue = groupings[accountNumber].Balance.DecimalValue + amount
+							}
+						};
 					}
 
 					foreach (var (accountNumber, amount) in posted.Credits) {
-						groupings[accountNumber].Balance.DecimalValue -= amount;
+						groupings[accountNumber] = groupings[accountNumber] with {
+							Balance = groupings[accountNumber].Balance with {
+								DecimalValue = groupings[accountNumber].Balance.DecimalValue - amount
+							}
+						};
 					}
 				}
 
