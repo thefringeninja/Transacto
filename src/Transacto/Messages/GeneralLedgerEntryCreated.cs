@@ -1,12 +1,11 @@
 using System;
 
 namespace Transacto.Messages {
-    public class GeneralLedgerEntryCreated {
-        public Guid GeneralLedgerEntryId { get; set; }
-        public string Number { get; set; } = null!;
-        public DateTimeOffset CreatedOn { get; set; }
-        public string Period { get; set; } = null!;
-
+    public record GeneralLedgerEntryCreated {
+	    public Guid GeneralLedgerEntryId;
+        public string Number = default!;
+        public DateTimeOffset CreatedOn;
+        public string Period = default!;
         public override string ToString() => $"General ledger entry {Number} was created.";
     }
 }

@@ -1,7 +1,7 @@
 namespace Transacto.Messages {
-    public class AccountRenamed {
-	    public string NewAccountName { get; set; } = null!;
-        public int AccountNumber { get; set; }
+    public record AccountRenamed {
+	    public string NewAccountName = default!;
+	    public int AccountNumber;
 
         public override string ToString() => $"Account {AccountNumber} was renamed to {NewAccountName}.";
     }

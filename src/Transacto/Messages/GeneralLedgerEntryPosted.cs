@@ -1,10 +1,10 @@
 using System;
 
 namespace Transacto.Messages {
-    public class GeneralLedgerEntryPosted {
-        public Guid GeneralLedgerEntryId { get; set; }
-        public string Period { get; set; } = null!;
+	public record GeneralLedgerEntryPosted {
+		public Guid GeneralLedgerEntryId;
+		public string Period = default!;
 
-        public override string ToString() => "General ledger entry was posted.";
-    }
+		public override string ToString() => "General ledger entry was posted.";
+	}
 }

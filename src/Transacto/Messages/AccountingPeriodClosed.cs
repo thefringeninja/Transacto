@@ -1,11 +1,11 @@
 using System;
 
 namespace Transacto.Messages {
-	public class AccountingPeriodClosed {
-		public string Period { get; set; } = null!;
-		public Guid[] GeneralLedgerEntryIds { get; set; } = Array.Empty<Guid>();
-		public BalanceLineItem[] Balance { get; set; } = Array.Empty<BalanceLineItem>();
-		public Guid ClosingGeneralLedgerEntryId { get; set; }
+	public record AccountingPeriodClosed {
+		public string Period = default!;
+		public Guid[] GeneralLedgerEntryIds = Array.Empty<Guid>();
+		public BalanceLineItem[] Balance = Array.Empty<BalanceLineItem>();
+		public Guid ClosingGeneralLedgerEntryId;
 
 		public override string ToString() => $"Accounting period {Period} has been closed.";
 	}
