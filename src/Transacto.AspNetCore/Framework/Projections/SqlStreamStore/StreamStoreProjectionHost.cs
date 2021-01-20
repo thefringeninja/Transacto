@@ -55,9 +55,9 @@ namespace Transacto.Framework.Projections.SqlStreamStore {
 				await registration.Value.DisposeAsync();
 			}
 
-			var projections = await ReadCheckpoints();
+			var projections = await GetProjectors();
 			var projector = new CheckpointAwareProjector(_streamStore, _messageTypeMap, projections);
-			var checkpoint = projections.Select(x => x.checkpoint).Min();
+			var checkpoint = projections.Select(x => x.Checkpoint).Min();
 
 			Interlocked.Exchange(ref _subscription, await _eventStore.SubscribeToAllAsync(checkpoint,
 				projector.ProjectAsync,
@@ -81,24 +81,24 @@ namespace Transacto.Framework.Projections.SqlStreamStore {
 
 			_stoppedRegistration = _stopped.Token.Register(_subscription.Dispose);
 
-			Task<(Projection<IStreamStore> projection, Position checkpoint)[]> ReadCheckpoints() =>
-				Task.WhenAll(Array.ConvertAll(_projections,
-					async projection => ((Projection<IStreamStore>)projection,
-						await projection.ReadCheckpoint(_streamStore, cancellationToken))));
+			Task<CheckpointedProjector[]> GetProjectors() => Task.WhenAll(Array.ConvertAll(_projections,
+				async projection => new CheckpointedProjector(
+					new Projector<IStreamStore>(Resolve.WhenEqualToHandlerMessageType(projection.Handlers)),
+					await projection.ReadCheckpoint(_streamStore, cancellationToken))));
 		}
+
+		private record CheckpointedProjector(Projector<IStreamStore> Projector, Position Checkpoint);
 
 		private class CheckpointAwareProjector {
 			private readonly IStreamStore _streamStore;
 			private readonly IMessageTypeMapper _messageTypeMapper;
-			private readonly (Position checkpoint, Projector<IStreamStore> projector)[] _projectors;
+			private readonly CheckpointedProjector[] _projectors;
 
-			public CheckpointAwareProjector(IStreamStore streamStore,
-				IMessageTypeMapper messageTypeMapper,
-				(Projection<IStreamStore> projection, Position checkpoint)[] projections) {
+			public CheckpointAwareProjector(IStreamStore streamStore, IMessageTypeMapper messageTypeMapper,
+				CheckpointedProjector[] projections) {
 				_streamStore = streamStore;
 				_messageTypeMapper = messageTypeMapper;
-				_projectors = Array.ConvertAll(projections, _ => (_.checkpoint,
-					new Projector<IStreamStore>(Resolve.WhenEqualToHandlerMessageType(_.projection.Handlers))));
+				_projectors = projections;
 			}
 
 			public Task ProjectAsync(StreamSubscription subscription, ResolvedEvent e,
@@ -108,8 +108,8 @@ namespace Transacto.Framework.Projections.SqlStreamStore {
 				}
 
 				var message = JsonSerializer.Deserialize(e.Event.Data.Span, type!, TransactoSerializerOptions.Events)!;
-				return Task.WhenAll(_projectors.Where(x => x.checkpoint < e.OriginalPosition)
-					.Select(_ => _.projector.ProjectAsync(_streamStore,
+				return Task.WhenAll(_projectors.Where(x => x.Checkpoint < e.OriginalPosition)
+					.Select(_ => _.Projector.ProjectAsync(_streamStore,
 						Envelope.Create(message, e.OriginalEvent.Position), cancellationToken)));
 			}
 		}

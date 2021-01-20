@@ -30,9 +30,8 @@ namespace Transacto.Framework.Projections {
 			_subscription = null;
 			_stoppedRegistration = null;
 
-			_projector =
-				new Projector<InMemorySession>(
-					Resolve.WhenEqualToHandlerMessageType(projections.SelectMany(_ => _).ToArray()));
+			_projector = new Projector<InMemorySession>(
+				Resolve.WhenEqualToHandlerMessageType(projections.SelectMany(_ => _).ToArray()));
 		}
 
 		public Task StartAsync(CancellationToken cancellationToken) => Subscribe(cancellationToken);
@@ -66,7 +65,7 @@ namespace Transacto.Framework.Projections {
 			Task ProjectAsync(StreamSubscription s, ResolvedEvent e, CancellationToken ct) =>
 				_messageTypeMapper.TryMap(e.Event.EventType, out var type)
 					?_projector.ProjectAsync(_target, Envelope.Create(JsonSerializer.Deserialize(
-						e.Event.Data.Span, type!, TransactoSerializerOptions.Events)!, e.OriginalEvent.Position), ct)
+						e.Event.Data.Span, type, TransactoSerializerOptions.Events)!, e.OriginalEvent.Position), ct)
 					: Task.CompletedTask;
 		}
 

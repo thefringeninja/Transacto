@@ -9,8 +9,7 @@ namespace Transacto.Plugins.GeneralLedger {
 	internal class GeneralLedgerModule : CommandHandlerModule {
 		public GeneralLedgerModule(EventStoreClient eventStore, IMessageTypeMapper messageTypeMapper) {
 			var handlers =
-				new GeneralLedgerHandlers(
-					new GeneralLedgerEventStoreRepository(eventStore, messageTypeMapper));
+				new GeneralLedgerHandlers(new GeneralLedgerEventStoreRepository(eventStore, messageTypeMapper));
 			Build<OpenGeneralLedger>()
 				.Log()
 				.UnitOfWork(eventStore, messageTypeMapper)

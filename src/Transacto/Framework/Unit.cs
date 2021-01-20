@@ -1,5 +1,5 @@
 namespace Transacto.Framework {
-	public class Unit {
+	public record Unit {
 		public static readonly Unit Instance = new();
 	}
 }
