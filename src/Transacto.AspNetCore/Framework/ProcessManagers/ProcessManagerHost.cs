@@ -1,4 +1,3 @@
-using System;
 using System.Linq;
 using System.Text.Json;
 using System.Threading;
@@ -89,8 +88,7 @@ namespace Transacto.Framework.ProcessManagers {
 					return;
 				}
 
-				var message = JsonSerializer.Deserialize(
-					e.Event.Data.Span, type!, TransactoSerializerOptions.Events)!;
+				var message = JsonSerializer.Deserialize(e.Event.Data.Span, type, TransactoSerializerOptions.Events)!;
 
 				_checkpoint = await _dispatcher.Handle(message, ct);
 

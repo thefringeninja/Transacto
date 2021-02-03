@@ -1,8 +1,6 @@
 using System.IO;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using Microsoft.AspNetCore.Hosting;
 using Transacto.Framework;
 
 namespace Transacto {

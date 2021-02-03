@@ -24,16 +24,16 @@ namespace Transacto.Framework {
 			_storageTypeToType = _typeToStorageType.ToDictionary(pair => pair.Value, pair => pair.Key);
 		}
 
-		public bool TryMap(string storageType, out Type? type) => _storageTypeToType.TryGetValue(storageType, out type);
-		public bool TryMap(Type type, out string? storageType) => _typeToStorageType.TryGetValue(type, out storageType);
+		public bool TryMap(string storageType, out Type type) => _storageTypeToType.TryGetValue(storageType, out type!);
+		public bool TryMap(Type type, out string storageType) => _typeToStorageType.TryGetValue(type, out storageType!);
 
 		private class TransactoMessageTypeMapper : IMessageTypeMapper {
 			public static readonly IMessageTypeMapper Instance = new TransactoMessageTypeMapper();
 
 			private readonly IMessageTypeMapper _inner;
 
-			public bool TryMap(string storageType, out Type? type) => _inner.TryMap(storageType, out type);
-			public bool TryMap(Type type, out string? storageType) => _inner.TryMap(type, out storageType);
+			public bool TryMap(string storageType, out Type type) => _inner.TryMap(storageType, out type);
+			public bool TryMap(Type type, out string storageType) => _inner.TryMap(type, out storageType);
 
 			public IEnumerable<string> StorageTypes => _inner.StorageTypes;
 			public IEnumerable<Type> Types => _inner.Types;
@@ -61,8 +61,8 @@ namespace Transacto.Framework {
 				_messageTypeMappers = messageTypeMappers;
 			}
 
-			public bool TryMap(string storageType, out Type? type) {
-				type = default;
+			public bool TryMap(string storageType, out Type type) {
+				type = default!;
 				foreach (var messageTypeMapper in _messageTypeMappers) {
 					if (messageTypeMapper.TryMap(storageType, out type)) {
 						return true;
@@ -72,8 +72,8 @@ namespace Transacto.Framework {
 				return false;
 			}
 
-			public bool TryMap(Type type, out string? storageType) {
-				storageType = default;
+			public bool TryMap(Type type, out string storageType) {
+				storageType = default!;
 				foreach (var messageTypeMapper in _messageTypeMappers) {
 					if (messageTypeMapper.TryMap(type, out storageType)) {
 						return true;
@@ -98,8 +98,8 @@ namespace Transacto.Framework {
 			private static Func<Type, bool> IsMessageType(string messageNamespace) => type =>
 				type.Namespace?.Equals(messageNamespace) ?? false;
 
-			public bool TryMap(string storageType, out Type? type) => _inner.TryMap(storageType, out type);
-			public bool TryMap(Type type, out string? storageType) => _inner.TryMap(type, out storageType);
+			public bool TryMap(string storageType, out Type type) => _inner.TryMap(storageType, out type);
+			public bool TryMap(Type type, out string storageType) => _inner.TryMap(type, out storageType);
 			public IEnumerable<string> StorageTypes => _inner.StorageTypes;
 			public IEnumerable<Type> Types => _inner.Types;
 		}

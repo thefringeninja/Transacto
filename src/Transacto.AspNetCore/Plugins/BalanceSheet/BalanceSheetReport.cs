@@ -3,7 +3,7 @@ using System.Linq;
 using Transacto.Domain;
 
 namespace Transacto.Plugins.BalanceSheet {
-    partial class LineItemGrouping {
+    partial record LineItemGrouping {
         public decimal Total => LineItems.Sum(x => x.Balance.DecimalValue);
 
         public LineItemGrouping() {
@@ -13,24 +13,24 @@ namespace Transacto.Plugins.BalanceSheet {
         }
     }
 
-    partial class LineItem {
+    partial record LineItem {
 	    public LineItem() {
 		    Name = null!;
 		    Balance = new Decimal();
 	    }
     }
 
-    partial class Decimal {
+    partial record Decimal {
 	    public Decimal() {
 		    Value = "0";
 	    }
 	    public decimal DecimalValue {
 		    get => decimal.TryParse(Value, out var value) ? value : decimal.Zero;
-		    set => Value = value.ToString();
+		    init => Value = value.ToString();
 	    }
     }
 
-    partial class BalanceSheetReport {
+    partial record BalanceSheetReport {
 	    public BalanceSheetReport() {
 		    LineItemGroupings = new List<LineItemGrouping>();
 		    LineItems = new List<LineItem>();

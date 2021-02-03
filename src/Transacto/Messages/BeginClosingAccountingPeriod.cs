@@ -1,7 +1,7 @@
 using System;
 
 namespace Transacto.Messages {
-	partial class BeginClosingAccountingPeriod {
+	partial record BeginClosingAccountingPeriod {
 		public BeginClosingAccountingPeriod() {
 			GeneralLedgerEntryIds = Array.Empty<Guid>();
 		}

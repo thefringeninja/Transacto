@@ -1,5 +1,5 @@
 namespace Transacto.Messages {
-    partial class ReactivateAccount {
+    partial record ReactivateAccount {
         public override string ToString() => $"Reactivating account {AccountNumber}.";
     }
 }

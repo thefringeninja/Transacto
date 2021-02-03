@@ -1,5 +1,5 @@
 namespace Transacto.Messages {
-    partial class DefineAccount {
+    partial record DefineAccount {
 	    public DefineAccount() {
 		    AccountName = null!;
 	    }
