@@ -136,7 +136,9 @@ namespace Transacto.Plugins.BalanceSheet {
 					Name = pair.Value,
 					LineItems = {
 						new LineItem {
-							AccountNumber = pair.Key, Name = pair.Value, Balance = {
+							AccountNumber = pair.Key,
+							Name = pair.Value,
+							Balance = new() {
 								DecimalValue = _closedBalance.TryGetValue(pair.Key, out var amount)
 									? amount
 									: decimal.Zero
@@ -170,7 +172,7 @@ namespace Transacto.Plugins.BalanceSheet {
 			public IList<LineItem> GetLines(DateTime thru) {
 				var groupings = _accountNames.ToDictionary(x => x.Key, pair => new LineItem {
 					Name = pair.Value,
-					Balance = {
+					Balance = new() {
 						DecimalValue = decimal.Zero
 					},
 					AccountNumber = pair.Key
