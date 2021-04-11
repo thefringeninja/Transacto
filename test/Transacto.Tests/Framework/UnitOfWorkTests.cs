@@ -38,6 +38,9 @@ namespace Transacto.Framework {
 			public override string Id { get; } = nameof(TestAggregate);
 
 			public void DoSomething() => Apply(new object());
+
+			protected override void ApplyEvent(object e) {
+			}
 		}
 	}
 }
