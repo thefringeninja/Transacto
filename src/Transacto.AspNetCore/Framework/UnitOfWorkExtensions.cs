@@ -28,7 +28,7 @@ namespace Transacto.Framework {
 
 			var eventData = aggregateRoot.GetChanges().Select(e => new EventData(Uuid.NewUuid(),
 				messageTypeMapper.Map(e.GetType()),
-				JsonSerializer.SerializeToUtf8Bytes(e, TransactoSerializerOptions.Events)));
+				JsonSerializer.SerializeToUtf8Bytes(e, e.GetType(), TransactoSerializerOptions.Events)));
 
 			var result = await Append();
 

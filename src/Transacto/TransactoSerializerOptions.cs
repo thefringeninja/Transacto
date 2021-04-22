@@ -9,11 +9,13 @@ namespace Transacto {
 	public static class TransactoSerializerOptions {
 		public static readonly JsonSerializerOptions Events = new() {
 			PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-			PropertyNameCaseInsensitive = true
+			PropertyNameCaseInsensitive = true,
+			IncludeFields = true
 		};
 
 		public static JsonSerializerOptions BusinessTransactions(params Type[] businessTransactionTypes) =>
 			new() {
+				IncludeFields = true,
 				PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
 				PropertyNameCaseInsensitive = true,
 				Converters = {new BusinessTransactionConverter(businessTransactionTypes)}
@@ -21,7 +23,8 @@ namespace Transacto {
 
 		public static readonly JsonSerializerOptions Commands = new() {
 			PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-			PropertyNameCaseInsensitive = true
+			PropertyNameCaseInsensitive = true,
+			IncludeFields = true
 		};
 
 		private class BusinessTransactionConverter : JsonConverter<IBusinessTransaction?> {
