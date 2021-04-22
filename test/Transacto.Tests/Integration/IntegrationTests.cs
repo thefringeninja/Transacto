@@ -40,7 +40,7 @@ namespace Transacto.Integration {
 			_eventStore = new Builder()
 				.UseContainer()
 				.WithName("transacto-es-test")
-				.UseImage("eventstore/eventstore:20.6.1-buster-slim")
+				.UseImage("eventstore/eventstore:21.2.0-buster-slim")
 				.ReuseIfExists()
 				.ExposePort(2113, 2113)
 				.WithEnvironment("EVENTSTORE_ENABLE_ATOM_PUB_OVER_HTTP=true",
@@ -123,6 +123,7 @@ namespace Transacto.Integration {
 						settings.ConnectivitySettings.Address = new UriBuilder {
 							Port = 2113
 						}.Uri;
+						settings.ConnectivitySettings.Insecure = true;
 						settings.OperationOptions.ThrowOnAppendFailure = true;
 						settings.CreateHttpMessageHandler = () => new SocketsHttpHandler {
 							SslOptions = {
