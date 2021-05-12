@@ -1,3 +1,4 @@
+using System;
 using System.Threading;
 using System.Threading.Tasks;
 using Transacto.Domain;
@@ -18,16 +19,24 @@ namespace Transacto.Application {
 		}
 
 		public async ValueTask Handle(AccountingPeriodClosing @event, CancellationToken cancellationToken) {
-			var retainedEarningsAccountNumber = new AccountNumber(@event.RetainedEarningsAccountNumber);
-			AccountType.OfAccountNumber(retainedEarningsAccountNumber).MustBe(AccountType.Equity);
-			var generalLedger = await _generalLedger.Get(cancellationToken);
+			var generalLedgerEntryIdentifiers =
+				Array.ConvertAll(@event.GeneralLedgerEntryIds, id => new GeneralLedgerEntryIdentifier(id));
+
+			var accountingPeriodClosingProcess = new AccountingPeriodClosingProcess(
+				Period.Parse(@event.Period), @event.ClosingOn, generalLedgerEntryIdentifiers,
+				new GeneralLedgerEntryIdentifier(@event.ClosingGeneralLedgerEntryId),
+				new AccountNumber(@event.RetainedEarningsAccountNumber), _accountIsDeactivated);
+
 			foreach (var id in @event.GeneralLedgerEntryIds) {
 				var generalLedgerEntry =
 					await _generalLedgerEntries.Get(new GeneralLedgerEntryIdentifier(id), cancellationToken);
-				generalLedger.TransferEntry(generalLedgerEntry);
+				accountingPeriodClosingProcess.TransferEntry(generalLedgerEntry);
 			}
 
-			generalLedger.CompleteClosingPeriod(_accountIsDeactivated, retainedEarningsAccountNumber);
+			var generalLedger = await _generalLedger.Get(cancellationToken);
+
+			generalLedger.CompleteClosingPeriod(generalLedgerEntryIdentifiers,
+				accountingPeriodClosingProcess.Complete(), accountingPeriodClosingProcess.TrialBalance);
 		}
 	}
 }
