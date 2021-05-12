@@ -1,5 +1,5 @@
 using System;
-using System.Collections.Generic;
+using System.Collections.Immutable;
 using Transacto.Framework;
 using Transacto.Messages;
 
@@ -8,26 +8,28 @@ namespace Transacto.Domain {
 		public const string Identifier = "chartOfAccounts";
 		public static readonly Func<ChartOfAccounts> Factory = () => new ChartOfAccounts();
 
-		private readonly HashSet<AccountNumber> _accountNumbers;
-		private readonly HashSet<AccountNumber> _deactivatedAccountNumbers;
-
 		public override string Id { get; } = Identifier;
 
+		private State _state;
+
 		private ChartOfAccounts() {
-			_accountNumbers = new HashSet<AccountNumber>();
-			_deactivatedAccountNumbers = new HashSet<AccountNumber>();
-			Register<AccountDefined>(e => _accountNumbers.Add(new AccountNumber(e.AccountNumber)));
-			Register<AccountDeactivated>(e => {
-				var accountNumber = new AccountNumber(e.AccountNumber);
-				_accountNumbers.Remove(accountNumber);
-				_deactivatedAccountNumbers.Add(accountNumber);
-			});
-			Register<AccountReactivated>(e => {
-				var accountNumber = new AccountNumber(e.AccountNumber);
-				_accountNumbers.Add(accountNumber);
-				_deactivatedAccountNumbers.Remove(accountNumber);
-			});
+			_state = new State();
 		}
+
+		protected override void ApplyEvent(object _) => _state = _ switch {
+			AccountDefined e => _state with {
+				AccountNumbers = _state.AccountNumbers.Add(new AccountNumber(e.AccountNumber))
+			},
+			AccountDeactivated e => _state with {
+				AccountNumbers = _state.AccountNumbers.Remove(new AccountNumber(e.AccountNumber)),
+				DeactivatedAccountNumbers = _state.DeactivatedAccountNumbers.Add(new AccountNumber(e.AccountNumber))
+			},
+			AccountReactivated e => _state with {
+				DeactivatedAccountNumbers = _state.DeactivatedAccountNumbers.Remove(new AccountNumber(e.AccountNumber)),
+				AccountNumbers = _state.AccountNumbers.Add(new AccountNumber(e.AccountNumber))
+			},
+			_ => _state
+		};
 
 		public void DefineAccount(AccountName accountName, AccountNumber accountNumber) {
 			MustNotContainAccountNumber(accountNumber);
@@ -87,8 +89,16 @@ namespace Transacto.Domain {
 			throw new AccountNotFoundException(accountNumber);
 		}
 
-		private bool IsInactive(AccountNumber accountNumber) => _deactivatedAccountNumbers.Contains(accountNumber);
+		private bool IsInactive(AccountNumber accountNumber) => _state.DeactivatedAccountNumbers.Contains(accountNumber);
 
-		private bool IsActive(AccountNumber accountNumber) => _accountNumbers.Contains(accountNumber);
+		private bool IsActive(AccountNumber accountNumber) => _state.AccountNumbers.Contains(accountNumber);
+
+		private record State {
+			public ImmutableHashSet<AccountNumber> AccountNumbers { get; init; } =
+				ImmutableHashSet<AccountNumber>.Empty;
+
+			public ImmutableHashSet<AccountNumber> DeactivatedAccountNumbers { get; init; } =
+				ImmutableHashSet<AccountNumber>.Empty;
+		}
 	}
 }
