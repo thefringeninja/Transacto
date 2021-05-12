@@ -25,7 +25,7 @@ namespace Transacto.Integration {
 						checkpointSource.TrySetResult(
 							new Position(
 								BitConverter.ToUInt64(e.Event.Data.Span),
-								BitConverter.ToUInt64(e.Event.Data.Span.Slice(8))));
+								BitConverter.ToUInt64(e.Event.Data.Span[8..])));
 						break;
 				}
 
