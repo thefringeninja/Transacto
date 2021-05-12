@@ -27,16 +27,11 @@ namespace Transacto.Domain {
 			new(dateTimeOffset.UtcDateTime.Month, dateTimeOffset.UtcDateTime.Year);
 
 		private Period(int month, int year) {
-			MustBeAMonth(month);
-
-			Month = month;
+			Month = month switch {
+				< 1 or > 12 => throw new ArgumentOutOfRangeException(nameof(month)),
+				_ => month
+			};
 			Year = year;
-		}
-
-		private static void MustBeAMonth(int month) {
-			if (month < 1 || month > 12) {
-				throw new ArgumentOutOfRangeException(nameof(month));
-			}
 		}
 
 		public Period Next() => Month == 12

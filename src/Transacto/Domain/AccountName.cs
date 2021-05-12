@@ -5,17 +5,11 @@ namespace Transacto.Domain {
 		public const int MaxLength = 256;
 		private readonly string _value;
 
-		public AccountName(string value) {
-			switch (value.Length) {
-				case 0:
-					throw new ArgumentException("Input was empty.", nameof(value));
-				case > MaxLength:
-					throw new ArgumentException("Input was too long.", nameof(value));
-				default:
-					_value = value;
-					break;
-			}
-		}
+		public AccountName(string value) => _value = value.Length switch {
+			0 => throw new ArgumentException("Input was empty.", nameof(value)),
+			> MaxLength => throw new ArgumentException("Input was too long.", nameof(value)),
+			_ => value
+		};
 
 		public bool Equals(AccountName other) => _value == other._value;
 		public override bool Equals(object? obj) => obj is AccountName other && Equals(other);
