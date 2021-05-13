@@ -4,14 +4,16 @@ using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
 using EventStore.Client;
+using NodaTime;
 using Transacto.Domain;
 using Transacto.Messages;
 using Xunit;
+using Period = Transacto.Domain.Period;
 
 namespace Transacto.Integration {
 	public class AccountingPeriodClosingProcessIntegrationTests : IntegrationTests {
 		[Theory, AutoTransactoData(1)]
-		public async Task when_closing_the_period(DateTimeOffset createdOn,
+		public async Task when_closing_the_period(LocalDateTime createdOn,
 			GeneralLedgerEntryIdentifier closingEntryIdentifier) {
 			var accountingPeriodClosedSource = new TaskCompletionSource<ResolvedEvent>();
 			var checkpointSource = new TaskCompletionSource<Position>();
@@ -37,11 +39,11 @@ namespace Transacto.Integration {
 				}
 			});
 
-			var period = Period.Open(createdOn);
+			var period = Period.Open(createdOn.Date);
 			await OpenBooks(createdOn).LastAsync();
 
 			var command = new BeginClosingAccountingPeriod {
-				ClosingOn = createdOn,
+				ClosingOn = createdOn.ToDateTimeUnspecified(),
 				ClosingGeneralLedgerEntryId = closingEntryIdentifier.ToGuid(),
 				RetainedEarningsAccountNumber = 3900
 			};

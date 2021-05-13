@@ -1,10 +1,12 @@
 using System;
 using System.Linq;
 using System.Threading.Tasks;
+using NodaTime;
 using Transacto.Domain;
 using Transacto.Messages;
 using Transacto.Testing;
 using Xunit;
+using Period = Transacto.Domain.Period;
 
 namespace Transacto.Application {
 	public class AccountClosingProcessTests {
@@ -22,19 +24,18 @@ namespace Transacto.Application {
 		}
 
 		[Theory, AutoTransactoData]
-		public Task period_closing_started(DateTimeOffset openedOn,
+		public Task period_closing_started(LocalDate openedOn,
 			GeneralLedgerEntryIdentifier[] generalLedgerEntryIdentifiers,
-			GeneralLedgerEntryIdentifier closingGeneralLedgerEntryIdentifier,
-			Money amount) {
+			GeneralLedgerEntryIdentifier closingGeneralLedgerEntryIdentifier, Money amount) {
 			var period = Period.Open(openedOn);
 			var cashAccountNumber = new AccountNumber(new Random().Next(1000, 1999));
 			var incomeAccountNumber = new AccountNumber(new Random().Next(4000, 4999));
 
-			var closingOn = new DateTimeOffset(new DateTime(period.Year, period.Month, 2));
+			var closingOn = openedOn.PlusDays(1).AtMidnight();
 
 			var accountingPeriodClosing = new AccountingPeriodClosing {
 				Period = period.ToString(),
-				ClosingOn = closingOn,
+				ClosingOn = Time.Format.LocalDateTime(closingOn),
 				RetainedEarningsAccountNumber = _retainedEarnings.ToInt32(),
 				ClosingGeneralLedgerEntryId = closingGeneralLedgerEntryIdentifier.ToGuid(),
 				GeneralLedgerEntryIds =
@@ -45,7 +46,7 @@ namespace Transacto.Application {
 						new GeneralLedgerEntryCreated {
 							Number = $"sale-{index}",
 							Period = period.ToString(),
-							CreatedOn = openedOn,
+							CreatedOn = Time.Format.LocalDate(openedOn),
 							GeneralLedgerEntryId = identifier.ToGuid()
 						},
 						new DebitApplied {
@@ -80,14 +81,14 @@ namespace Transacto.Application {
 					})
 				.Given(GeneralLedger.Identifier,
 					new GeneralLedgerOpened {
-						OpenedOn = openedOn
+						OpenedOn = Time.Format.LocalDate(openedOn)
 					},
 					accountingPeriodClosing)
 				.Given(generalLedgerEntryFacts)
 				.When(accountingPeriodClosing)
 				.Then(GeneralLedger.Identifier,
 					new GeneralLedgerEntryCreated {
-						CreatedOn = closingOn,
+						CreatedOn = Time.Format.LocalDateTime(closingOn),
 						GeneralLedgerEntryId = closingGeneralLedgerEntryIdentifier.ToGuid(),
 						Number = $"jec-{period}",
 						Period = period.ToString()

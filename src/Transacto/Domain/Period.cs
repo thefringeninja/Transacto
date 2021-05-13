@@ -1,10 +1,14 @@
 using System;
+using NodaTime;
+using NodaTime.Text;
 
 namespace Transacto.Domain {
 	public readonly struct Period : IEquatable<Period>, IComparable<Period> {
 		public static readonly Period Empty = default;
-		public int Month { get; }
-		public int Year { get; }
+		private static readonly YearMonthPattern Pattern = YearMonthPattern.CreateWithInvariantCulture("yyyyMM");
+
+		private readonly YearMonth _value;
+
 
 		public static bool TryParse(string period, out Period value) {
 			if (string.IsNullOrEmpty(period) || period.Length != 6 ||
@@ -14,7 +18,7 @@ namespace Transacto.Domain {
 				return false;
 			}
 
-			value = new Period(month, year);
+			value = new Period(new YearMonth(year, month));
 			return true;
 		}
 
@@ -23,44 +27,32 @@ namespace Transacto.Domain {
 				? period
 				: throw new FormatException();
 
-		public static Period Open(DateTimeOffset dateTimeOffset) =>
-			new(dateTimeOffset.UtcDateTime.Month, dateTimeOffset.UtcDateTime.Year);
+		public static Period Open(LocalDate value) => new(value.ToYearMonth());
 
-		private Period(int month, int year) {
-			Month = month switch {
-				< 1 or > 12 => throw new ArgumentOutOfRangeException(nameof(month)),
-				_ => month
-			};
-			Year = year;
-		}
+		private Period(YearMonth value) => _value = value;
 
-		public Period Next() => Month == 12
-			? new Period(1, Year + 1)
-			: new Period(Month + 1, Year);
+		public Period Next() => new(_value.OnDayOfMonth(1).Plus(NodaTime.Period.FromMonths(1)).ToYearMonth());
 
-		public bool Contains(DateTimeOffset dateTimeOffset) =>
-			dateTimeOffset.UtcDateTime.Month == Month && dateTimeOffset.UtcDateTime.Year == Year;
+		public bool Contains(LocalDate date) => date.ToYearMonth() == _value;
 
-		public void MustNotBeAfter(DateTimeOffset closingOn) {
-			if (closingOn.UtcDateTime < new DateTime(Year, Month, 1, 0, 0, 0, DateTimeKind.Utc)) {
-				throw new ClosingDateBeforePeriodException(this, closingOn);
+		public void MustNotBeAfter(LocalDate date) {
+			if (date < _value.OnDayOfMonth(1)) {
+				throw new ClosingDateBeforePeriodException(this, date);
 			}
 		}
 
-		public int CompareTo(Period other) {
-			var yearComparison = Year.CompareTo(other.Year);
-			return yearComparison != 0 ? yearComparison : Month.CompareTo(other.Month);
-		}
+		public int CompareTo(Period other) => _value.CompareTo(other._value);
 
-		public bool Equals(Period other) => Month == other.Month && Year == other.Year;
+		public bool Equals(Period other) => _value.Equals(other._value);
 		public override bool Equals(object? obj) => obj is Period other && Equals(other);
 		public static bool operator ==(Period left, Period right) => left.Equals(right);
 		public static bool operator !=(Period left, Period right) => !left.Equals(right);
-		public override string ToString() => $"{Year:D4}{Month:D2}";
-		public override int GetHashCode() => HashCode.Combine(Month, Year);
+		public override int GetHashCode() => _value.GetHashCode();
 		public static bool operator <(Period left, Period right) => left.CompareTo(right) < 0;
 		public static bool operator >(Period left, Period right) => left.CompareTo(right) > 0;
 		public static bool operator <=(Period left, Period right) => left.CompareTo(right) <= 0;
 		public static bool operator >=(Period left, Period right) => left.CompareTo(right) >= 0;
+
+		public override string ToString() => Pattern.Format(_value);
 	}
 }

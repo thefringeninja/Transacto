@@ -8,6 +8,8 @@ using EventStore.Client;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
+using NodaTime;
+using Transacto.Domain;
 using Transacto.Framework;
 using Transacto.Framework.Projections;
 using Transacto.Messages;
@@ -20,13 +22,13 @@ namespace Transacto.Plugins.BalanceSheet {
 			.MapGet("{thru}", context => {
 				var readModel = context.RequestServices.GetRequiredService<ReadModel>();
 
-				var thru = DateTimeOffset.Parse(context.GetRouteValue("thru")!.ToString()!);
+				var thru = Time.Parse.LocalDate(context.GetRouteValue("thru")!.ToString()!);
 
 				return new ValueTask<Response>(new HalResponse(context.Request,
 					new BalanceSheetReportRepresentation(), ETag.Create(readModel.Checkpoint), new BalanceSheetReport {
-						Thru = thru.UtcDateTime,
-						LineItems = readModel.GetLines(thru.UtcDateTime),
-						LineItemGroupings = readModel.GetGroupings(thru.UtcDateTime)
+						Thru = thru.ToDateTimeUnspecified(),
+						LineItems = readModel.GetLines(thru),
+						LineItemGroupings = readModel.GetGroupings(thru)
 					}));
 			});
 
@@ -40,7 +42,7 @@ namespace Transacto.Plugins.BalanceSheet {
 				When<AccountDefined>((readModel, e) => readModel.Account(e.AccountNumber, e.AccountName));
 				When<AccountRenamed>((readModel, e) => readModel.Account(e.AccountNumber, e.NewAccountName));
 				When<GeneralLedgerEntryCreated>((readModel, e) =>
-					readModel.GeneralLedgerEntryCreated(e.GeneralLedgerEntryId, e.CreatedOn));
+					readModel.GeneralLedgerEntryCreated(e.GeneralLedgerEntryId, Time.Parse.LocalDateTime(e.CreatedOn)));
 				When<DebitApplied>((readModel, e) =>
 					readModel.DebitApplied(e.GeneralLedgerEntryId, e.AccountNumber, e.Amount));
 				When<CreditApplied>((readModel, e) =>
@@ -70,9 +72,9 @@ namespace Transacto.Plugins.BalanceSheet {
 			public void Account(int accountNumber, string accountName) =>
 				Interlocked.Exchange(ref _accountNames, _accountNames.SetItem(accountNumber, accountName));
 
-			public void GeneralLedgerEntryCreated(Guid generalLedgerEntryId, DateTimeOffset createdOn) =>
+			public void GeneralLedgerEntryCreated(Guid generalLedgerEntryId, LocalDateTime createdOn) =>
 				Interlocked.Exchange(ref _unpostedEntries, _unpostedEntries.SetItem(generalLedgerEntryId, new Entry {
-					CreatedOn = createdOn.UtcDateTime
+					CreatedOn = createdOn
 				}));
 
 			public void DebitApplied(Guid generalLedgerEntryId, int accountNumber, decimal amount) {
@@ -131,7 +133,7 @@ namespace Transacto.Plugins.BalanceSheet {
 				}
 			}
 
-			public IList<LineItemGrouping> GetGroupings(DateTime thru) {
+			public IList<LineItemGrouping> GetGroupings(LocalDate thru) {
 				var groupings = _accountNames.ToDictionary(x => x.Key, pair => new LineItemGrouping {
 					Name = pair.Value,
 					LineItems = {
@@ -146,7 +148,7 @@ namespace Transacto.Plugins.BalanceSheet {
 						}
 					}
 				});
-				foreach (var posted in _postedEntries.Values.Where(x => x.CreatedOn <= thru)) {
+				foreach (var posted in _postedEntries.Values.Where(x => x.CreatedOn.Date <= thru)) {
 					foreach (var (accountNumber, amount) in posted.Debits) {
 						groupings[accountNumber].LineItems[0] = groupings[accountNumber].LineItems[0] with {
 							Balance = groupings[accountNumber].LineItems[0].Balance with {
@@ -169,7 +171,7 @@ namespace Transacto.Plugins.BalanceSheet {
 					.ToList();
 			}
 
-			public IList<LineItem> GetLines(DateTime thru) {
+			public IList<LineItem> GetLines(LocalDate thru) {
 				var groupings = _accountNames.ToDictionary(x => x.Key, pair => new LineItem {
 					Name = pair.Value,
 					Balance = new() {
@@ -177,7 +179,7 @@ namespace Transacto.Plugins.BalanceSheet {
 					},
 					AccountNumber = pair.Key
 				});
-				foreach (var posted in _postedEntries.Values.Where(x => x.CreatedOn <= thru)) {
+				foreach (var posted in _postedEntries.Values.Where(x => x.CreatedOn.Date <= thru)) {
 					foreach (var (accountNumber, amount) in posted.Debits) {
 						groupings[accountNumber] = groupings[accountNumber] with {
 							Balance = groupings[accountNumber].Balance with {
@@ -202,7 +204,7 @@ namespace Transacto.Plugins.BalanceSheet {
 		}
 
 		private class Entry {
-			public DateTime CreatedOn { get; set; }
+			public LocalDateTime CreatedOn { get; set; }
 			public Dictionary<int, decimal> Credits { get; } = new();
 			public Dictionary<int, decimal> Debits { get; } = new();
 		}

@@ -1,11 +1,11 @@
-using System;
 using System.Collections.Generic;
 using System.Linq;
+using NodaTime;
 
 namespace Transacto.Domain {
 	public class AccountingPeriodClosingProcess {
 		private readonly Period _period;
-		private readonly DateTimeOffset _closingOn;
+		private readonly LocalDateTime _closingOn;
 		private readonly GeneralLedgerEntryIdentifier _closingGeneralLedgerEntryIdentifier;
 		private readonly AccountNumber _retainedEarningsAccountNumber;
 		private readonly AccountIsDeactivated _accountIsDeactivated;
@@ -15,7 +15,7 @@ namespace Transacto.Domain {
 		public ProfitAndLoss ProfitAndLoss { get; }
 
 		public AccountingPeriodClosingProcess(Period period,
-			DateTimeOffset closingOn,
+			LocalDateTime closingOn,
 			GeneralLedgerEntryIdentifier[] generalLedgerEntryIdentifiers,
 			GeneralLedgerEntryIdentifier closingGeneralLedgerEntryIdentifier,
 			AccountNumber retainedEarningsAccountNumber,

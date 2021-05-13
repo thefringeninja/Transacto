@@ -1,6 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
 	<ItemGroup>
+		<PackageReference Include="NodaTime" Version="3.0.5" />
 		<PackageReference Include="Transacto.Tasks" Version="0.1.0-rc.1.3" />
 	</ItemGroup>
 	<ItemGroup>

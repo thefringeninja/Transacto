@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using AutoFixture;
+using NodaTime;
 using Xunit;
 
 namespace Transacto.Domain {
@@ -32,42 +33,34 @@ namespace Transacto.Domain {
 		}
 
 		[Theory, AutoTransactoData]
-		public void DateNotInPeriodThrows(DateTimeOffset value) {
-			var period = Period.Open(value);
-			var ex = Assert.Throws<ClosingDateBeforePeriodException>(() => period.MustNotBeAfter(value.AddMonths(-1)));
-			Assert.Equal(value.AddMonths(-1), ex.Date);
+		public void DateNotInPeriodThrows(LocalDateTime value) {
+			var period = Period.Open(value.Date);
+			var ex = Assert.Throws<ClosingDateBeforePeriodException>(() =>
+				period.MustNotBeAfter(value.PlusMonths(-1).Date));
+			Assert.Equal(value.PlusMonths(-1).Date, ex.Date);
 			Assert.Equal(period, ex.Period);
 		}
 
 		public static IEnumerable<object[]> ContainsCases() {
 			var fixture = new ScenarioFixture();
-			var period = fixture.Create<Period>();
+			var date = fixture.Create<LocalDate>().ToYearMonth().OnDayOfMonth(1);
 
-			var daysInMonth = CultureInfo.InvariantCulture.Calendar.GetDaysInMonth(period.Year, period.Month);
-			foreach (var day in Enumerable.Range(1, daysInMonth)) {
-				yield return new object[]
-					{period, new DateTimeOffset(new DateTime(period.Year, period.Month, day), TimeSpan.Zero), true};
+			var period = Period.Open(date);
+
+			var daysInMonth = CalendarSystem.Iso.GetDaysInMonth(date.Year, date.Month);
+
+			for (var day = 0; day < daysInMonth; day++) {
+				yield return new object[] {period, date.PlusDays(day), true};
 			}
 
-			yield return new object[] {
-				period,
-				new DateTimeOffset(new DateTime(period.Year, period.Month, daysInMonth).AddDays(1), TimeSpan.Zero),
-				false
-			};
+			yield return new object[] {period, date.PlusDays(daysInMonth), false};
 
-			yield return new object[]
-				{period, new DateTimeOffset(new DateTime(period.Year, period.Month, 1).AddDays(-1), TimeSpan.Zero), false};
-
-			yield return new object[]
-				{period, new DateTimeOffset(new DateTime(period.Year, period.Month, 1), TimeSpan.FromHours(-1)), true};
-
-			yield return new object[]
-				{period, new DateTimeOffset(new DateTime(period.Year, period.Month, 1), TimeSpan.FromHours(1)), true};
+			yield return new object[] {period, date.PlusDays(-1), false};
 
 		}
 
 		[Theory, MemberData(nameof(ContainsCases))]
-		public void ContainsReturnsExpectedResult(Period period, DateTimeOffset value, bool expected) {
+		public void ContainsReturnsExpectedResult(Period period, LocalDate value, bool expected) {
 			Assert.Equal(expected, period.Contains(value));
 		}
 
@@ -108,9 +101,9 @@ namespace Transacto.Domain {
 		}
 
 		[Theory, AutoTransactoData]
-		public void ToStringReturnsExpectedResult(Period sut) {
-			var actual = sut.ToString();
-			Assert.Equal($"{sut.Year:D4}{sut.Month:D2}", actual);
+		public void ToStringReturnsExpectedResult(LocalDate value) {
+			var actual = Period.Open(value).ToString();
+			Assert.Equal($"{value.Year:D4}{value.Month:D2}", actual);
 		}
 	}
 }

@@ -22,8 +22,9 @@ namespace Transacto.Application {
 			var generalLedgerEntryIdentifiers =
 				Array.ConvertAll(@event.GeneralLedgerEntryIds, id => new GeneralLedgerEntryIdentifier(id));
 
+
 			var accountingPeriodClosingProcess = new AccountingPeriodClosingProcess(
-				Period.Parse(@event.Period), @event.ClosingOn, generalLedgerEntryIdentifiers,
+				Period.Parse(@event.Period), Time.Parse.LocalDateTime(@event.ClosingOn), generalLedgerEntryIdentifiers,
 				new GeneralLedgerEntryIdentifier(@event.ClosingGeneralLedgerEntryId),
 				new AccountNumber(@event.RetainedEarningsAccountNumber), _accountIsDeactivated);
 

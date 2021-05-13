@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
+using NodaTime;
 using Transacto.Framework;
 using Transacto.Messages;
 
@@ -24,15 +25,15 @@ namespace Transacto.Domain {
 			$"generalLedgerEntry-{identifier}";
 
 		internal GeneralLedgerEntry(GeneralLedgerEntryIdentifier identifier,
-			GeneralLedgerEntryNumber number, Period period, DateTimeOffset createdOn) : this() {
-			if (!period.Contains(createdOn)) {
+			GeneralLedgerEntryNumber number, Period period, LocalDateTime createdOn) : this() {
+			if (!period.Contains(createdOn.Date)) {
 				throw new GeneralLedgerEntryNotInPeriodException(number, createdOn, period);
 			}
 
 			Apply(new GeneralLedgerEntryCreated {
 				GeneralLedgerEntryId = identifier.ToGuid(),
 				Number = number.ToString(),
-				CreatedOn = createdOn,
+				CreatedOn = Time.Format.LocalDateTime(createdOn),
 				Period = period.ToString()
 			});
 		}
