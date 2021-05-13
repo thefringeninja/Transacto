@@ -1,5 +1,3 @@
-using System;
-
 namespace Transacto.Messages {
 	public record GeneralLedgerOpened {
 		public string OpenedOn { get; init; } = default!;

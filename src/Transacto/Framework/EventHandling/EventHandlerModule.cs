@@ -24,7 +24,7 @@ namespace Transacto.Framework.EventHandling {
 
 		public MessageHandler<Checkpoint>[] Handlers => _handlers.ToArray();
 
-		public MessageHandlerEnumerator<Checkpoint> GetEnumerator() => new MessageHandlerEnumerator<Checkpoint>(Handlers);
+		public MessageHandlerEnumerator<Checkpoint> GetEnumerator() => new(Handlers);
 
 		IEnumerator<MessageHandler<Checkpoint>> IEnumerable<MessageHandler<Checkpoint>>.GetEnumerator() => GetEnumerator();
 

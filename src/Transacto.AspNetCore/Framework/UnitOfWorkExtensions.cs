@@ -15,11 +15,9 @@ namespace Transacto.Framework {
 
 			await next(message, ct);
 
-			if (!Framework.UnitOfWork.Current.HasChanges) {
-				return Checkpoint.None;
-			}
-
-			return await Commit(eventStore, messageTypeMapper, ct);
+			return !Framework.UnitOfWork.Current.HasChanges
+				? Checkpoint.None
+				: await Commit(eventStore, messageTypeMapper, ct);
 		});
 
 		private static async Task<Checkpoint> Commit(EventStoreClient eventStore,

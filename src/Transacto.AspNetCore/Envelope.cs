@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Concurrent;
-using System.Runtime.Intrinsics.Arm;
 using EventStore.Client;
 
 namespace Transacto {
