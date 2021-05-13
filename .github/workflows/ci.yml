@@ -1,0 +1,37 @@
+name: Build
+
+on:
+  pull_request:
+  push:
+    branches:
+    - master
+    tags:
+    - v*
+defaults:
+  run:
+    shell: bash
+jobs:
+  build:
+    timeout-minutes: 5
+    runs-on: ubuntu-latest
+    name: Build
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v2
+    - name: Install net5.0
+      uses: actions/setup-dotnet@v1
+      with:
+        dotnet-version: 5.0.x
+    - name: Compile
+      run: |
+        dotnet build --configuration release
+    - name: Test
+      run: |
+        dotnet test --configuration release --framework=net5.0 \
+          --logger:html --logger:"console;verbosity=normal" \
+          --results-directory=$(pwd)/.test-results
+    - name: Publish Test Results
+      uses: actions/upload-artifact@v2
+      with:
+        path: .test-results/
+        name: test-results
