@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using NodaTime;
 using Transacto.Domain;
 using Transacto.Messages;
 using Transacto.Testing;
@@ -23,11 +24,11 @@ namespace Transacto.Application {
 
 		[Theory, AutoTransactoData]
 		public Task entry_not_in_balance_throws(GeneralLedgerEntryIdentifier generalLedgerEntryIdentifier,
-			int sequenceNumber, DateTimeOffset openedOn, AccountName accountName, AccountNumber accountNumber) {
+			int sequenceNumber, LocalDate openedOn, AccountName accountName, AccountNumber accountNumber) {
 			var scenario = new Scenario()
 				.Given(GeneralLedger.Identifier,
 					new GeneralLedgerOpened {
-						OpenedOn = openedOn
+						OpenedOn = Time.Format.LocalDate(openedOn)
 					})
 				.Given(ChartOfAccounts.Identifier,
 					new AccountDefined {
@@ -35,12 +36,12 @@ namespace Transacto.Application {
 						AccountNumber = accountNumber.ToInt32()
 					})
 				.When(new PostGeneralLedgerEntry {
-					Period = Period.Open(openedOn).ToString(),
+					Period = AccountingPeriod.Open(openedOn).ToString(),
 					BusinessTransaction = new BadTransaction {
 						Account = accountNumber,
 						ReferenceNumber = sequenceNumber
 					},
-					CreatedOn = openedOn,
+					CreatedOn = openedOn.ToDateTimeUnspecified(),
 					GeneralLedgerEntryId = generalLedgerEntryIdentifier.ToGuid()
 				})
 				.Throws(new GeneralLedgerEntryNotInBalanceException(generalLedgerEntryIdentifier));

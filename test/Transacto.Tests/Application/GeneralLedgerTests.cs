@@ -1,5 +1,6 @@
 using System;
 using System.Threading.Tasks;
+using NodaTime;
 using Transacto.Domain;
 using Transacto.Messages;
 using Transacto.Testing;
@@ -19,74 +20,74 @@ namespace Transacto.Application {
 		}
 
 		[Theory, AutoTransactoData]
-		public Task opening_the_period(DateTimeOffset openedOn) =>
+		public Task opening_the_period(LocalDate openedOn) =>
 			new Scenario()
 				.GivenNone()
 				.When(new OpenGeneralLedger {
-					OpenedOn = openedOn
+					OpenedOn = openedOn.ToDateTimeUnspecified()
 				})
 				.Then(GeneralLedger.Identifier, new GeneralLedgerOpened {
-					OpenedOn = openedOn
+					OpenedOn = Time.Format.LocalDate(openedOn)
 				})
 				.Assert(_handler, _facts);
 
 		[Theory, AutoTransactoData]
-		public Task closing_an_open_period(Period period,
+		public Task closing_an_open_period(YearMonth openedOn,
 			GeneralLedgerEntryIdentifier[] generalLedgerEntryIdentifiers,
 			GeneralLedgerEntryIdentifier closingGeneralLedgerEntryIdentifier) =>
 			new Scenario()
 				.Given(GeneralLedger.Identifier, new GeneralLedgerOpened {
-					OpenedOn = new DateTimeOffset(new DateTime(period.Year, period.Month, 2))
+					OpenedOn = Time.Format.LocalDate(openedOn.OnDayOfMonth(1))
 				})
 				.When(new BeginClosingAccountingPeriod {
 					GeneralLedgerEntryIds = Array.ConvertAll(generalLedgerEntryIdentifiers, x => x.ToGuid()),
-					ClosingOn = new DateTimeOffset(new DateTime(period.Year, period.Month, 2)),
+					ClosingOn = openedOn.OnDayOfMonth(2).AtMidnight().ToDateTimeUnspecified(),
 					RetainedEarningsAccountNumber = _retainedEarnings.ToInt32(),
 					ClosingGeneralLedgerEntryId = closingGeneralLedgerEntryIdentifier.ToGuid()
 				})
 				.Then(GeneralLedger.Identifier, new AccountingPeriodClosing {
-					Period = period.ToString(),
+					Period = AccountingPeriod.Open(openedOn.OnDayOfMonth(1)).ToString(),
 					GeneralLedgerEntryIds = Array.ConvertAll(generalLedgerEntryIdentifiers, x => x.ToGuid()),
-					ClosingOn = new DateTimeOffset(new DateTime(period.Year, period.Month, 2)),
+					ClosingOn = Time.Format.LocalDateTime(openedOn.OnDayOfMonth(2).AtMidnight()),
 					RetainedEarningsAccountNumber = _retainedEarnings.ToInt32(),
 					ClosingGeneralLedgerEntryId = closingGeneralLedgerEntryIdentifier.ToGuid()
 				})
 				.Assert(_handler, _facts);
 
 		[Theory, AutoTransactoData]
-		public Task closing_a_closed_period(Period period,
+		public Task closing_a_closed_period(YearMonth openedOn,
 			GeneralLedgerEntryIdentifier closingGeneralLedgerEntryIdentifier) =>
 			new Scenario()
 				.Given(GeneralLedger.Identifier, new GeneralLedgerOpened {
-						OpenedOn = new DateTimeOffset(new DateTime(period.Year, period.Month, 1))
+						OpenedOn = Time.Format.LocalDate(openedOn.OnDayOfMonth(1))
 					},
 					new AccountingPeriodClosing {
-						Period = period.ToString(),
-						ClosingOn = new DateTimeOffset(new DateTime(period.Year, period.Month, 2)),
+						Period = AccountingPeriod.Open(openedOn.OnDayOfMonth(1)).ToString(),
+						ClosingOn = Time.Format.LocalDateTime(openedOn.OnDayOfMonth(2).AtMidnight()),
 						RetainedEarningsAccountNumber = _retainedEarnings.ToInt32(),
 						ClosingGeneralLedgerEntryId = closingGeneralLedgerEntryIdentifier.ToGuid()
 					})
 				.When(new BeginClosingAccountingPeriod {
-					ClosingOn = new DateTimeOffset(new DateTime(period.Year, period.Month, 2)),
+					ClosingOn = openedOn.OnDayOfMonth(2).AtMidnight().ToDateTimeUnspecified(),
 					RetainedEarningsAccountNumber = _retainedEarnings.ToInt32(),
 					ClosingGeneralLedgerEntryId = closingGeneralLedgerEntryIdentifier.ToGuid()
 				})
-				.Throws(new PeriodClosingInProcessException(period))
+				.Throws(new PeriodClosingInProcessException(AccountingPeriod.Open(openedOn.OnDayOfMonth(1))))
 				.Assert(_handler, _facts);
 
 		[Theory, AutoTransactoData]
-		public Task closing_the_period_before_the_period_has_started(DateTimeOffset openedOn,
+		public Task closing_the_period_before_the_period_has_started(LocalDate openedOn,
 			GeneralLedgerEntryIdentifier closingGeneralLedgerEntryIdentifier) =>
 			new Scenario()
 				.Given(GeneralLedger.Identifier, new GeneralLedgerOpened {
-					OpenedOn = openedOn
+					OpenedOn = Time.Format.LocalDate(openedOn)
 				})
 				.When(new BeginClosingAccountingPeriod {
-					ClosingOn = openedOn.AddMonths(-1),
+					ClosingOn = openedOn.PlusMonths(-1).ToDateTimeUnspecified(),
 					RetainedEarningsAccountNumber = _retainedEarnings.ToInt32(),
 					ClosingGeneralLedgerEntryId = closingGeneralLedgerEntryIdentifier.ToGuid()
 				})
-				.Throws(new ClosingDateBeforePeriodException(Period.Open(openedOn), openedOn.AddMonths(-1)))
+				.Throws(new ClosingDateBeforePeriodException(AccountingPeriod.Open(openedOn), openedOn.PlusMonths(-1)))
 				.Assert(_handler, _facts);
 	}
 }

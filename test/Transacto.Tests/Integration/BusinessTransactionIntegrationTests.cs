@@ -1,5 +1,6 @@
 using System;
 using System.Threading.Tasks;
+using NodaTime;
 using Transacto.Domain;
 using Transacto.Framework;
 using Transacto.Framework.Projections.SqlStreamStore;
@@ -10,8 +11,8 @@ namespace Transacto.Integration {
 	public class BusinessTransactionIntegrationTests : IntegrationTests {
 		[Fact]
 		public async Task Somewthing() {
-			var now = DateTimeOffset.UtcNow;
-			var period = Period.Open(now);
+			var now = DateTime.UtcNow;
+			var period = AccountingPeriod.Open(LocalDate.FromDateTime(now));
 			var transactionId = Guid.NewGuid();
 			await HttpClient.SendCommand("/transactions", new PostGeneralLedgerEntry {
 				BusinessTransaction = new BusinessTransaction {

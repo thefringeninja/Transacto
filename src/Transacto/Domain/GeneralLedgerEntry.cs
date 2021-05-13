@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
+using NodaTime;
 using Transacto.Framework;
 using Transacto.Messages;
 
@@ -24,16 +25,16 @@ namespace Transacto.Domain {
 			$"generalLedgerEntry-{identifier}";
 
 		internal GeneralLedgerEntry(GeneralLedgerEntryIdentifier identifier,
-			GeneralLedgerEntryNumber number, Period period, DateTimeOffset createdOn) : this() {
-			if (!period.Contains(createdOn)) {
-				throw new GeneralLedgerEntryNotInPeriodException(number, createdOn, period);
+			GeneralLedgerEntryNumber number, AccountingPeriod accountingPeriod, LocalDateTime createdOn) : this() {
+			if (!accountingPeriod.Contains(createdOn.Date)) {
+				throw new GeneralLedgerEntryNotInPeriodException(number, createdOn, accountingPeriod);
 			}
 
 			Apply(new GeneralLedgerEntryCreated {
 				GeneralLedgerEntryId = identifier.ToGuid(),
 				Number = number.ToString(),
-				CreatedOn = createdOn,
-				Period = period.ToString()
+				CreatedOn = Time.Format.LocalDateTime(createdOn),
+				Period = accountingPeriod.ToString()
 			});
 		}
 
@@ -44,7 +45,7 @@ namespace Transacto.Domain {
 		protected override void ApplyEvent(object _) => _state = _ switch {
 			GeneralLedgerEntryCreated e => _state with {
 				Identifier = new GeneralLedgerEntryIdentifier(e.GeneralLedgerEntryId),
-				Period = Period.Parse(e.Period)
+				AccountingPeriod = AccountingPeriod.Parse(e.Period)
 			},
 			CreditApplied e => _state with {
 				Credits = _state.Credits.Add(new Credit(new AccountNumber(e.AccountNumber), new Money(e.Amount)))
@@ -103,7 +104,7 @@ namespace Transacto.Domain {
 
 			Apply(new GeneralLedgerEntryPosted {
 				GeneralLedgerEntryId = _state.Identifier.ToGuid(),
-				Period = _state.Period.ToString()
+				Period = _state.AccountingPeriod.ToString()
 			});
 		}
 
@@ -130,7 +131,7 @@ namespace Transacto.Domain {
 			public bool Posted { get; init; }
 			public ImmutableList<Debit> Debits { get; init; } = ImmutableList<Debit>.Empty;
 			public ImmutableList<Credit> Credits { get; init; } = ImmutableList<Credit>.Empty;
-			public Period Period { get; init; }
+			public AccountingPeriod AccountingPeriod { get; init; }
 
 			public Money Balance => Debits.Select(x => x.Amount).Sum() -
 			                        Credits.Select(x => x.Amount).Sum();

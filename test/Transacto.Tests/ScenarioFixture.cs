@@ -3,7 +3,9 @@ using AutoFixture;
 namespace Transacto {
     internal class ScenarioFixture : Fixture {
         public ScenarioFixture() {
-            this.CustomizePeriodIdentifier();
+	        this.CustomizeNodaTime();
+
+	        this.CustomizeAccountingPeriod();
 
             this.CustomizeAccountName();
 

@@ -4,6 +4,7 @@ using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
 using EventStore.Client;
+using NodaTime;
 using Transacto.Domain;
 using Transacto.Messages;
 using Xunit;
@@ -11,7 +12,7 @@ using Xunit;
 namespace Transacto.Integration {
 	public class AccountingPeriodClosingProcessIntegrationTests : IntegrationTests {
 		[Theory, AutoTransactoData(1)]
-		public async Task when_closing_the_period(DateTimeOffset createdOn,
+		public async Task when_closing_the_period(LocalDateTime createdOn,
 			GeneralLedgerEntryIdentifier closingEntryIdentifier) {
 			var accountingPeriodClosedSource = new TaskCompletionSource<ResolvedEvent>();
 			var checkpointSource = new TaskCompletionSource<Position>();
@@ -37,11 +38,11 @@ namespace Transacto.Integration {
 				}
 			});
 
-			var period = Period.Open(createdOn);
+			var period = AccountingPeriod.Open(createdOn.Date);
 			await OpenBooks(createdOn).LastAsync();
 
 			var command = new BeginClosingAccountingPeriod {
-				ClosingOn = createdOn,
+				ClosingOn = createdOn.ToDateTimeUnspecified(),
 				ClosingGeneralLedgerEntryId = closingEntryIdentifier.ToGuid(),
 				RetainedEarningsAccountNumber = 3900
 			};
@@ -54,7 +55,7 @@ namespace Transacto.Integration {
 				TransactoSerializerOptions.Events)!;
 			var checkpoint = await checkpointSource.Task;
 
-			Assert.Equal(period, Period.Parse(accountingPeriodClosed.Period));
+			Assert.Equal(period, AccountingPeriod.Parse(accountingPeriodClosed.Period));
 			Assert.Equal(closingEntryIdentifier,
 				new GeneralLedgerEntryIdentifier(accountingPeriodClosed.ClosingGeneralLedgerEntryId));
 			Assert.Equal(accountingPeriodClosedEvent.OriginalPosition!.Value, checkpoint);

@@ -2,6 +2,7 @@ using System;
 using System.Threading;
 using AutoFixture;
 using AutoFixture.Kernel;
+using NodaTime;
 using Transacto.Domain;
 
 namespace Transacto {
@@ -18,10 +19,8 @@ namespace Transacto {
 			fixture.Customize<AccountType>(composer =>
 				composer.FromFactory<Random>(r => AccountType.All[r.Next(0, AccountType.All.Count)]));
 
-		public static void CustomizePeriodIdentifier(this IFixture fixture) {
-			fixture.Customize<DateTimeOffset>(_ => new IncreasingDateTimeOffsetGenerator(DateTimeOffset.Now));
-			fixture.Customize<Period>(composer => composer.FromFactory<DateTimeOffset>(Period.Open));
-		}
+		public static void CustomizeAccountingPeriod(this IFixture fixture) =>
+			fixture.Customize<AccountingPeriod>(composer => composer.FromFactory<LocalDate>(AccountingPeriod.Open));
 
 		public static void CustomizeMoney(this IFixture fixture) =>
 			fixture.Customize<Money>(composer =>
@@ -40,6 +39,15 @@ namespace Transacto {
 				composer.FromFactory<Random, int>((r, i) =>
 					new GeneralLedgerEntryNumber(
 						new string('a', r.Next(1, GeneralLedgerEntryNumber.MaxPrefixLength)), i)));
+
+		public static void CustomizeNodaTime(this IFixture fixture) {
+			fixture.Customize<DateTimeOffset>(_ => new IncreasingDateTimeOffsetGenerator(DateTimeOffset.Now));
+			fixture.Customize<OffsetDateTime>(composer =>
+				composer.FromFactory<DateTimeOffset>(OffsetDateTime.FromDateTimeOffset));
+			fixture.Customize<LocalDateTime>(composer => composer.FromFactory<OffsetDateTime>(x => x.LocalDateTime));
+			fixture.Customize<LocalDate>(composer => composer.FromFactory<OffsetDateTime>(x => x.Date));
+			fixture.Customize<YearMonth>(composer => composer.FromFactory<LocalDate>(x => x.ToYearMonth()));
+		}
 
 		private class IncreasingDateTimeOffsetGenerator : ISpecimenBuilder {
 			private readonly DateTimeOffset _seed;

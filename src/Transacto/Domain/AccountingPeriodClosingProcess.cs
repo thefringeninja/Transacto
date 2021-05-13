@@ -1,11 +1,11 @@
-using System;
 using System.Collections.Generic;
 using System.Linq;
+using NodaTime;
 
 namespace Transacto.Domain {
 	public class AccountingPeriodClosingProcess {
-		private readonly Period _period;
-		private readonly DateTimeOffset _closingOn;
+		private readonly AccountingPeriod _accountingPeriod;
+		private readonly LocalDateTime _closingOn;
 		private readonly GeneralLedgerEntryIdentifier _closingGeneralLedgerEntryIdentifier;
 		private readonly AccountNumber _retainedEarningsAccountNumber;
 		private readonly AccountIsDeactivated _accountIsDeactivated;
@@ -14,22 +14,22 @@ namespace Transacto.Domain {
 		public TrialBalance TrialBalance { get; }
 		public ProfitAndLoss ProfitAndLoss { get; }
 
-		public AccountingPeriodClosingProcess(Period period,
-			DateTimeOffset closingOn,
+		public AccountingPeriodClosingProcess(AccountingPeriod accountingPeriod,
+			LocalDateTime closingOn,
 			GeneralLedgerEntryIdentifier[] generalLedgerEntryIdentifiers,
 			GeneralLedgerEntryIdentifier closingGeneralLedgerEntryIdentifier,
 			AccountNumber retainedEarningsAccountNumber,
 			AccountIsDeactivated accountIsDeactivated) {
 			AccountType.OfAccountNumber(retainedEarningsAccountNumber).MustBe(AccountType.Equity);
 
-			_period = period;
+			_accountingPeriod = accountingPeriod;
 			_closingOn = closingOn;
 			_closingGeneralLedgerEntryIdentifier = closingGeneralLedgerEntryIdentifier;
 			_retainedEarningsAccountNumber = retainedEarningsAccountNumber;
 			_accountIsDeactivated = accountIsDeactivated;
 			_generalLedgerEntryIdentifiers = new HashSet<GeneralLedgerEntryIdentifier>(generalLedgerEntryIdentifiers);
 			TrialBalance = TrialBalance.None;
-			ProfitAndLoss = new ProfitAndLoss(period);
+			ProfitAndLoss = new ProfitAndLoss(accountingPeriod);
 		}
 
 		public void TransferEntry(GeneralLedgerEntry generalLedgerEntry) {
@@ -44,7 +44,7 @@ namespace Transacto.Domain {
 
 		public GeneralLedgerEntry Complete() {
 			if (_generalLedgerEntryIdentifiers.Count > 0) {
-				throw new PeriodContainsUntransferredEntriesException(_period,
+				throw new PeriodContainsUntransferredEntriesException(_accountingPeriod,
 					_generalLedgerEntryIdentifiers.ToArray());
 			}
 

@@ -3,6 +3,7 @@ using System.Linq;
 using System.Net;
 using System.Text.Json;
 using System.Threading.Tasks;
+using NodaTime;
 using Transacto.Domain;
 using Transacto.Messages;
 using Transacto.Plugins.BalanceSheet;
@@ -12,8 +13,8 @@ namespace Transacto.Integration {
 	public class BalanceSheetIntegrationTests : IntegrationTests {
 		[Theory, AutoTransactoData(1)]
 		public async Task when_an_entry_is_posted(
-			GeneralLedgerEntryIdentifier generalLedgerEntryIdentifier, DateTimeOffset createdOn, Money[] amounts) {
-			var period = Period.Open(createdOn);
+			GeneralLedgerEntryIdentifier generalLedgerEntryIdentifier, LocalDateTime createdOn, Money[] amounts) {
+			var period = AccountingPeriod.Open(createdOn.Date);
 			var accounts = await OpenBooks(createdOn).ToArrayAsync();
 
 			var debits = Array.ConvertAll(amounts, amount =>
@@ -24,7 +25,7 @@ namespace Transacto.Integration {
 
 			var command = new PostGeneralLedgerEntry {
 				GeneralLedgerEntryId = generalLedgerEntryIdentifier.ToGuid(),
-				CreatedOn = createdOn,
+				CreatedOn = createdOn.ToDateTimeUnspecified(),
 				BusinessTransaction = new JournalEntry {
 					ReferenceNumber = 1,
 					Credits = Array.ConvertAll(credits, credit => new JournalEntry.Item {
@@ -42,7 +43,9 @@ namespace Transacto.Integration {
 			var position = await HttpClient.SendCommand("/general-ledger/entries", command,
 				TransactoSerializerOptions.BusinessTransactions(typeof(JournalEntry)));
 
-			using var response = await HttpClient.ConditionalGetAsync($"/balance-sheet/{createdOn.AddDays(1):O}", position);
+			using var response =
+				await HttpClient.ConditionalGetAsync($"/balance-sheet/{Time.Format.LocalDate(createdOn.Date.PlusDays(1))}",
+					position);
 			Assert.Equal(HttpStatusCode.OK, response.StatusCode);
 			var json = await response.Content.ReadAsStringAsync();
 			var balanceSheet = JsonSerializer.Deserialize<BalanceSheetReport>(json, TransactoSerializerOptions.Events)!;

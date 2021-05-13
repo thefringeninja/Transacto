@@ -1,0 +1,12 @@
+{
+  "version": 1,
+  "isRoot": true,
+  "tools": {
+    "gpr": {
+      "version": "0.1.273",
+      "commands": [
+        "gpr"
+      ]
+    }
+  }
+}

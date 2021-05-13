@@ -13,6 +13,7 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.DependencyInjection;
+using NodaTime;
 using Polly;
 using Polly.Retry;
 using SqlStreamStore;
@@ -63,9 +64,9 @@ namespace Transacto.Integration {
 		}
 
 		protected async IAsyncEnumerable<(AccountNumber accountNumber, AccountName accountName)>
-			OpenBooks(DateTimeOffset now) {
+			OpenBooks(LocalDateTime now) {
 			await HttpClient.SendCommand("/general-ledger", new OpenGeneralLedger {
-				OpenedOn = now
+				OpenedOn = now.ToDateTimeUnspecified()
 			}, TransactoSerializerOptions.Commands);
 			foreach (var (accountNumber, accountName) in GetChartOfAccounts().OrderBy(_ => Guid.NewGuid())) {
 				await HttpClient.SendCommand("/chart-of-accounts", new DefineAccount {

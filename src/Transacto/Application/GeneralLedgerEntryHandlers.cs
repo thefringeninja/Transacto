@@ -1,6 +1,7 @@
 using System;
 using System.Threading;
 using System.Threading.Tasks;
+using NodaTime;
 using Transacto.Domain;
 using Transacto.Messages;
 
@@ -26,7 +27,8 @@ namespace Transacto.Application {
 			}
 
 			var entry = generalLedger.Create(new GeneralLedgerEntryIdentifier(command.GeneralLedgerEntryId),
-				command.BusinessTransaction.ReferenceNumber, command.CreatedOn);
+				command.BusinessTransaction.ReferenceNumber,
+				OffsetDateTime.FromDateTimeOffset(command.CreatedOn).LocalDateTime);
 			command.BusinessTransaction.Apply(entry, _accountIsDeactivated);
 
 			entry.Post();
