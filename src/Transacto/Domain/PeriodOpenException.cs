@@ -2,10 +2,10 @@ using System;
 
 namespace Transacto.Domain {
 	public class PeriodOpenException : Exception {
-		public Period Period { get; }
+		public AccountingPeriod AccountingPeriod { get; }
 
-		public PeriodOpenException(Period period) : base($"Period {period} is still open.") {
-			Period = period;
+		public PeriodOpenException(AccountingPeriod accountingPeriod) : base($"Period {accountingPeriod} is still open.") {
+			AccountingPeriod = accountingPeriod;
 		}
 	}
 }

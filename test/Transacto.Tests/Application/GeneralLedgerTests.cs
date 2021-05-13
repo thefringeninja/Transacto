@@ -5,7 +5,6 @@ using Transacto.Domain;
 using Transacto.Messages;
 using Transacto.Testing;
 using Xunit;
-using Period = Transacto.Domain.Period;
 
 namespace Transacto.Application {
 	public class GeneralLedgerTests {
@@ -47,7 +46,7 @@ namespace Transacto.Application {
 					ClosingGeneralLedgerEntryId = closingGeneralLedgerEntryIdentifier.ToGuid()
 				})
 				.Then(GeneralLedger.Identifier, new AccountingPeriodClosing {
-					Period = Period.Open(openedOn.OnDayOfMonth(1)).ToString(),
+					Period = AccountingPeriod.Open(openedOn.OnDayOfMonth(1)).ToString(),
 					GeneralLedgerEntryIds = Array.ConvertAll(generalLedgerEntryIdentifiers, x => x.ToGuid()),
 					ClosingOn = Time.Format.LocalDateTime(openedOn.OnDayOfMonth(2).AtMidnight()),
 					RetainedEarningsAccountNumber = _retainedEarnings.ToInt32(),
@@ -63,7 +62,7 @@ namespace Transacto.Application {
 						OpenedOn = Time.Format.LocalDate(openedOn.OnDayOfMonth(1))
 					},
 					new AccountingPeriodClosing {
-						Period = Period.Open(openedOn.OnDayOfMonth(1)).ToString(),
+						Period = AccountingPeriod.Open(openedOn.OnDayOfMonth(1)).ToString(),
 						ClosingOn = Time.Format.LocalDateTime(openedOn.OnDayOfMonth(2).AtMidnight()),
 						RetainedEarningsAccountNumber = _retainedEarnings.ToInt32(),
 						ClosingGeneralLedgerEntryId = closingGeneralLedgerEntryIdentifier.ToGuid()
@@ -73,7 +72,7 @@ namespace Transacto.Application {
 					RetainedEarningsAccountNumber = _retainedEarnings.ToInt32(),
 					ClosingGeneralLedgerEntryId = closingGeneralLedgerEntryIdentifier.ToGuid()
 				})
-				.Throws(new PeriodClosingInProcessException(Period.Open(openedOn.OnDayOfMonth(1))))
+				.Throws(new PeriodClosingInProcessException(AccountingPeriod.Open(openedOn.OnDayOfMonth(1))))
 				.Assert(_handler, _facts);
 
 		[Theory, AutoTransactoData]
@@ -88,7 +87,7 @@ namespace Transacto.Application {
 					RetainedEarningsAccountNumber = _retainedEarnings.ToInt32(),
 					ClosingGeneralLedgerEntryId = closingGeneralLedgerEntryIdentifier.ToGuid()
 				})
-				.Throws(new ClosingDateBeforePeriodException(Period.Open(openedOn), openedOn.PlusMonths(-1)))
+				.Throws(new ClosingDateBeforePeriodException(AccountingPeriod.Open(openedOn), openedOn.PlusMonths(-1)))
 				.Assert(_handler, _facts);
 	}
 }

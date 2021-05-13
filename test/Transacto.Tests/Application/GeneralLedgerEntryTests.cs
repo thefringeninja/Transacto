@@ -7,7 +7,6 @@ using Transacto.Messages;
 using Transacto.Testing;
 using Xunit;
 using Xunit.Abstractions;
-using Period = Transacto.Domain.Period;
 
 namespace Transacto.Application {
 	public class GeneralLedgerEntryTests {
@@ -37,7 +36,7 @@ namespace Transacto.Application {
 						AccountNumber = accountNumber.ToInt32()
 					})
 				.When(new PostGeneralLedgerEntry {
-					Period = Period.Open(openedOn).ToString(),
+					Period = AccountingPeriod.Open(openedOn).ToString(),
 					BusinessTransaction = new BadTransaction {
 						Account = accountNumber,
 						ReferenceNumber = sequenceNumber

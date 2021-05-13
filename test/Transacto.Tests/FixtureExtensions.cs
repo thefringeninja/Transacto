@@ -4,7 +4,6 @@ using AutoFixture;
 using AutoFixture.Kernel;
 using NodaTime;
 using Transacto.Domain;
-using Period = Transacto.Domain.Period;
 
 namespace Transacto {
 	public static class FixtureExtensions {
@@ -20,8 +19,8 @@ namespace Transacto {
 			fixture.Customize<AccountType>(composer =>
 				composer.FromFactory<Random>(r => AccountType.All[r.Next(0, AccountType.All.Count)]));
 
-		public static void CustomizePeriodIdentifier(this IFixture fixture) =>
-			fixture.Customize<Period>(composer => composer.FromFactory<LocalDate>(Period.Open));
+		public static void CustomizeAccountingPeriod(this IFixture fixture) =>
+			fixture.Customize<AccountingPeriod>(composer => composer.FromFactory<LocalDate>(AccountingPeriod.Open));
 
 		public static void CustomizeMoney(this IFixture fixture) =>
 			fixture.Customize<Money>(composer =>

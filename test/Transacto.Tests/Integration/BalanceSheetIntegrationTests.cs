@@ -8,14 +8,13 @@ using Transacto.Domain;
 using Transacto.Messages;
 using Transacto.Plugins.BalanceSheet;
 using Xunit;
-using Period = Transacto.Domain.Period;
 
 namespace Transacto.Integration {
 	public class BalanceSheetIntegrationTests : IntegrationTests {
 		[Theory, AutoTransactoData(1)]
 		public async Task when_an_entry_is_posted(
 			GeneralLedgerEntryIdentifier generalLedgerEntryIdentifier, LocalDateTime createdOn, Money[] amounts) {
-			var period = Period.Open(createdOn.Date);
+			var period = AccountingPeriod.Open(createdOn.Date);
 			var accounts = await OpenBooks(createdOn).ToArrayAsync();
 
 			var debits = Array.ConvertAll(amounts, amount =>

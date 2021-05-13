@@ -1,51 +1,49 @@
 using System;
 using System.Collections.Generic;
-using System.Globalization;
-using System.Linq;
 using AutoFixture;
 using NodaTime;
 using Xunit;
 
 namespace Transacto.Domain {
-	public class PeriodTests {
+	public class AccountingPeriodTests {
 		[Theory, AutoTransactoData]
-		public void Equality(Period sut) {
-			var copy = Period.Parse(sut.ToString());
+		public void Equality(AccountingPeriod sut) {
+			var copy = AccountingPeriod.Parse(sut.ToString());
 			Assert.Equal(sut, copy);
 		}
 
 		[Theory, AutoTransactoData]
-		public void EqualityOperator(Period sut) {
-			var copy = Period.Parse(sut.ToString());
+		public void EqualityOperator(AccountingPeriod sut) {
+			var copy = AccountingPeriod.Parse(sut.ToString());
 			Assert.True(sut == copy);
 		}
 
 		[Theory, AutoTransactoData]
-		public void InequalityOperator(Period left, Period right) {
+		public void InequalityOperator(AccountingPeriod left, AccountingPeriod right) {
 			Assert.False(left == right);
 		}
 
 		[Theory, AutoTransactoData]
-		public void NextReturnsExpectedResult(Period period) {
-			var sut = period.Next();
-			Assert.True(sut > period);
+		public void NextReturnsExpectedResult(AccountingPeriod accountingPeriod) {
+			var sut = accountingPeriod.Next();
+			Assert.True(sut > accountingPeriod);
 			Assert.True(sut < sut.Next());
 		}
 
 		[Theory, AutoTransactoData]
 		public void DateNotInPeriodThrows(LocalDateTime value) {
-			var period = Period.Open(value.Date);
+			var period = AccountingPeriod.Open(value.Date);
 			var ex = Assert.Throws<ClosingDateBeforePeriodException>(() =>
 				period.MustNotBeAfter(value.PlusMonths(-1).Date));
 			Assert.Equal(value.PlusMonths(-1).Date, ex.Date);
-			Assert.Equal(period, ex.Period);
+			Assert.Equal(period, ex.AccountingPeriod);
 		}
 
 		public static IEnumerable<object[]> ContainsCases() {
 			var fixture = new ScenarioFixture();
 			var date = fixture.Create<LocalDate>().ToYearMonth().OnDayOfMonth(1);
 
-			var period = Period.Open(date);
+			var period = AccountingPeriod.Open(date);
 
 			var daysInMonth = CalendarSystem.Iso.GetDaysInMonth(date.Year, date.Month);
 
@@ -60,8 +58,8 @@ namespace Transacto.Domain {
 		}
 
 		[Theory, MemberData(nameof(ContainsCases))]
-		public void ContainsReturnsExpectedResult(Period period, LocalDate value, bool expected) {
-			Assert.Equal(expected, period.Contains(value));
+		public void ContainsReturnsExpectedResult(AccountingPeriod accountingPeriod, LocalDate value, bool expected) {
+			Assert.Equal(expected, accountingPeriod.Contains(value));
 		}
 
 		public static IEnumerable<object[]> MonthOutOfRangeCases() {
@@ -71,7 +69,7 @@ namespace Transacto.Domain {
 
 		[Theory, MemberData(nameof(MonthOutOfRangeCases))]
 		public void MonthOutOfRangeThrows(int month) {
-			var ex = Assert.Throws<ArgumentOutOfRangeException>(() => Period.Parse($"2020{month:D2}"));
+			var ex = Assert.Throws<ArgumentOutOfRangeException>(() => AccountingPeriod.Parse($"2020{month:D2}"));
 			Assert.Equal("month", ex.ParamName);
 		}
 
@@ -85,24 +83,24 @@ namespace Transacto.Domain {
 
 		[Theory, MemberData(nameof(InvalidValueCases))]
 		public void ParseInvalidValueReturnsExpectedResult(string value) {
-			Assert.Throws<FormatException>(() => Period.Parse(value));
+			Assert.Throws<FormatException>(() => AccountingPeriod.Parse(value));
 		}
 
 		[Theory, AutoTransactoData]
-		public void TryParseValidValueReturnsExpectedResult(Period period) {
-			Assert.True(Period.TryParse(period.ToString(), out var sut));
-			Assert.Equal(period, sut);
+		public void TryParseValidValueReturnsExpectedResult(AccountingPeriod accountingPeriod) {
+			Assert.True(AccountingPeriod.TryParse(accountingPeriod.ToString(), out var sut));
+			Assert.Equal(accountingPeriod, sut);
 		}
 
 		[Theory, MemberData(nameof(InvalidValueCases))]
 		public void TryParseInvalidValueReturnsExpectedResult(string value) {
-			Assert.False(Period.TryParse(value, out var sut));
+			Assert.False(AccountingPeriod.TryParse(value, out var sut));
 			Assert.Equal(default, sut);
 		}
 
 		[Theory, AutoTransactoData]
 		public void ToStringReturnsExpectedResult(LocalDate value) {
-			var actual = Period.Open(value).ToString();
+			var actual = AccountingPeriod.Open(value).ToString();
 			Assert.Equal($"{value.Year:D4}{value.Month:D2}", actual);
 		}
 	}

@@ -8,7 +8,6 @@ using NodaTime;
 using Transacto.Domain;
 using Transacto.Messages;
 using Xunit;
-using Period = Transacto.Domain.Period;
 
 namespace Transacto.Integration {
 	public class AccountingPeriodClosingProcessIntegrationTests : IntegrationTests {
@@ -39,7 +38,7 @@ namespace Transacto.Integration {
 				}
 			});
 
-			var period = Period.Open(createdOn.Date);
+			var period = AccountingPeriod.Open(createdOn.Date);
 			await OpenBooks(createdOn).LastAsync();
 
 			var command = new BeginClosingAccountingPeriod {
@@ -56,7 +55,7 @@ namespace Transacto.Integration {
 				TransactoSerializerOptions.Events)!;
 			var checkpoint = await checkpointSource.Task;
 
-			Assert.Equal(period, Period.Parse(accountingPeriodClosed.Period));
+			Assert.Equal(period, AccountingPeriod.Parse(accountingPeriodClosed.Period));
 			Assert.Equal(closingEntryIdentifier,
 				new GeneralLedgerEntryIdentifier(accountingPeriodClosed.ClosingGeneralLedgerEntryId));
 			Assert.Equal(accountingPeriodClosedEvent.OriginalPosition!.Value, checkpoint);

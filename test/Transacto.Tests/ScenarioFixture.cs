@@ -5,7 +5,7 @@ namespace Transacto {
         public ScenarioFixture() {
 	        this.CustomizeNodaTime();
 
-	        this.CustomizePeriodIdentifier();
+	        this.CustomizeAccountingPeriod();
 
             this.CustomizeAccountName();
 

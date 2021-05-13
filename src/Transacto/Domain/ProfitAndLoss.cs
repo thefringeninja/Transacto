@@ -7,12 +7,12 @@ namespace Transacto.Domain {
 	public class ProfitAndLoss {
 		private static bool IgnoreInactiveAccount(AccountNumber _) => false;
 
-		private readonly Period _period;
+		private readonly AccountingPeriod _accountingPeriod;
 		private readonly IDictionary<AccountNumber, Money> _income;
 		private readonly IDictionary<AccountNumber, Money> _expenses;
 
-		public ProfitAndLoss(Period period) {
-			_period = period;
+		public ProfitAndLoss(AccountingPeriod accountingPeriod) {
+			_accountingPeriod = accountingPeriod;
 			_income = new Dictionary<AccountNumber, Money>();
 			_expenses = new Dictionary<AccountNumber, Money>();
 		}
@@ -21,7 +21,7 @@ namespace Transacto.Domain {
 			AccountNumber retainedEarningsAccountNumber, LocalDateTime closedOn,
 			GeneralLedgerEntryIdentifier closingGeneralLedgerEntryIdentifier) {
 			var entry = new GeneralLedgerEntry(closingGeneralLedgerEntryIdentifier,
-				new GeneralLedgerEntryNumber("jec", int.Parse(_period.ToString())), _period, closedOn);
+				new GeneralLedgerEntryNumber("jec", int.Parse(_accountingPeriod.ToString())), _accountingPeriod, closedOn);
 			foreach (var (accountNumber, amount) in _income) {
 				if (amount == Money.Zero) {
 					continue;

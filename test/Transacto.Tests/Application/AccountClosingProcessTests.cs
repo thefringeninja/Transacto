@@ -6,7 +6,6 @@ using Transacto.Domain;
 using Transacto.Messages;
 using Transacto.Testing;
 using Xunit;
-using Period = Transacto.Domain.Period;
 
 namespace Transacto.Application {
 	public class AccountClosingProcessTests {
@@ -27,7 +26,7 @@ namespace Transacto.Application {
 		public Task period_closing_started(LocalDate openedOn,
 			GeneralLedgerEntryIdentifier[] generalLedgerEntryIdentifiers,
 			GeneralLedgerEntryIdentifier closingGeneralLedgerEntryIdentifier, Money amount) {
-			var period = Period.Open(openedOn);
+			var period = AccountingPeriod.Open(openedOn);
 			var cashAccountNumber = new AccountNumber(new Random().Next(1000, 1999));
 			var incomeAccountNumber = new AccountNumber(new Random().Next(4000, 4999));
 

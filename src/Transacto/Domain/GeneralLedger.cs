@@ -26,43 +26,43 @@ namespace Transacto.Domain {
 
 		protected override void ApplyEvent(object _) => _state = _ switch {
 			GeneralLedgerOpened e => _state with {
-				Period = Period.Open(Time.Parse.LocalDate(e.OpenedOn))
+				AccountingPeriod = AccountingPeriod.Open(Time.Parse.LocalDate(e.OpenedOn))
 			},
 			AccountingPeriodClosing e => _state with {
 				PeriodClosing = true,
-				Period = Period.Parse(e.Period)
+				AccountingPeriod = AccountingPeriod.Parse(e.Period)
 			},
 			AccountingPeriodClosed e => _state with {
 				PeriodClosing = false,
-				Period = Period.Parse(e.Period)
+				AccountingPeriod = AccountingPeriod.Parse(e.Period)
 			},
 			_ => _state
 		};
 
 		public GeneralLedgerEntry Create(GeneralLedgerEntryIdentifier identifier, GeneralLedgerEntryNumber number,
 			LocalDateTime createdOn) => _state.PeriodClosing
-			? Create(identifier, number, createdOn, _state.Period.Next())
-			: Create(identifier, number, createdOn, _state.Period.Contains(createdOn.Date)
-				? _state.Period :
-				_state.Period.Next());
+			? Create(identifier, number, createdOn, _state.AccountingPeriod.Next())
+			: Create(identifier, number, createdOn, _state.AccountingPeriod.Contains(createdOn.Date)
+				? _state.AccountingPeriod :
+				_state.AccountingPeriod.Next());
 
 		private static GeneralLedgerEntry Create(GeneralLedgerEntryIdentifier identifier,
-			GeneralLedgerEntryNumber number, LocalDateTime createdOn, Period period) =>
-			new(identifier, number, period, createdOn);
+			GeneralLedgerEntryNumber number, LocalDateTime createdOn, AccountingPeriod accountingPeriod) =>
+			new(identifier, number, accountingPeriod, createdOn);
 
 		public void BeginClosingPeriod(AccountNumber retainedEarningsAccountNumber,
 			GeneralLedgerEntryIdentifier closingGeneralLedgerEntryIdentifier,
 			GeneralLedgerEntryIdentifier[] generalLedgerEntryIdentifiers, LocalDateTime closingOn) {
 			if (_state.PeriodClosing) {
-				throw new PeriodClosingInProcessException(_state.Period);
+				throw new PeriodClosingInProcessException(_state.AccountingPeriod);
 			}
 
 			AccountType.OfAccountNumber(retainedEarningsAccountNumber).MustBe(AccountType.Equity);
 
-			_state.Period.MustNotBeAfter(closingOn.Date);
+			_state.AccountingPeriod.MustNotBeAfter(closingOn.Date);
 
 			Apply(new AccountingPeriodClosing {
-				Period = _state.Period.ToString(),
+				Period = _state.AccountingPeriod.ToString(),
 				GeneralLedgerEntryIds = Array.ConvertAll(generalLedgerEntryIdentifiers, id => id.ToGuid()),
 				ClosingOn = Time.Format.LocalDateTime(closingOn),
 				RetainedEarningsAccountNumber = retainedEarningsAccountNumber.ToInt32(),
@@ -73,7 +73,7 @@ namespace Transacto.Domain {
 		public void CompleteClosingPeriod(GeneralLedgerEntryIdentifier[] generalLedgerEntryIdentifiers,
 			GeneralLedgerEntry closingEntry, TrialBalance trialBalance) {
 			if (!_state.PeriodClosing) {
-				throw new PeriodOpenException(_state.Period);
+				throw new PeriodOpenException(_state.AccountingPeriod);
 			}
 
 			foreach (var change in closingEntry.GetChanges()) {
@@ -88,7 +88,7 @@ namespace Transacto.Domain {
 				GeneralLedgerEntryIds =
 					Array.ConvertAll(generalLedgerEntryIdentifiers, identifier => identifier.ToGuid()),
 				ClosingGeneralLedgerEntryId = closingEntry.Identifier.ToGuid(),
-				Period = _state.Period.ToString(),
+				Period = _state.AccountingPeriod.ToString(),
 				Balance = trialBalance.Select(x => new BalanceLineItem {
 					Amount = x.Value.ToDecimal(),
 					AccountNumber = x.Key.ToInt32()
@@ -97,7 +97,7 @@ namespace Transacto.Domain {
 		}
 
 		private record State {
-			public Period Period { get; init; } = Period.Empty;
+			public AccountingPeriod AccountingPeriod { get; init; } = AccountingPeriod.Empty;
 			public bool PeriodClosing { get; init; }
 		}
 	}

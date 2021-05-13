@@ -5,14 +5,14 @@ namespace Transacto.Domain {
 	public class GeneralLedgerEntryNotInPeriodException : Exception {
 		public GeneralLedgerEntryNumber Number { get; }
 		public LocalDateTime CreatedOn { get; }
-		public Period Period { get; }
+		public AccountingPeriod AccountingPeriod { get; }
 
 		public GeneralLedgerEntryNotInPeriodException(GeneralLedgerEntryNumber number, LocalDateTime createdOn,
-			Period period) : base(
-			$"General ledger entry {number} had a creation date of {createdOn}, but the current period is {period}") {
+			AccountingPeriod accountingPeriod) : base(
+			$"General ledger entry {number} had a creation date of {createdOn}, but the current period is {accountingPeriod}") {
 			Number = number;
 			CreatedOn = createdOn;
-			Period = period;
+			AccountingPeriod = accountingPeriod;
 		}
 	}
 }
