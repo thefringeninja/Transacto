@@ -32,8 +32,7 @@ namespace Transacto {
 			fixture.Customize<AccountingPeriod>(composer => composer.FromFactory<LocalDate>(AccountingPeriod.Open));
 
 		public static void CustomizeMoney(this IFixture fixture) =>
-			fixture.Customize<Money>(composer =>
-				composer.FromFactory<Random>(r => new Money(Math.Abs(Convert.ToDecimal(r.Next(1, 10000) / 100)))));
+			fixture.Customize<Money>(composer => composer.FromFactory<decimal>(d => new Money(d)));
 
 		public static void CustomizeCredit(this IFixture fixture) =>
 			fixture.Customize<Credit>(composer =>
@@ -66,13 +65,10 @@ namespace Transacto {
 				_seed = seed;
 				_baseValue = 0;
 			}
-			public object Create(object request, ISpecimenContext context) {
-				if (!typeof(DateTimeOffset).Equals(request)) {
-					return new NoSpecimen();
-				}
-
-				return _seed.AddMonths(Interlocked.Increment(ref _baseValue));
-			}
+			public object Create(object request, ISpecimenContext context) =>
+				typeof(DateTimeOffset) != request?.GetType()
+					? new NoSpecimen()
+					: _seed.AddMonths(Interlocked.Increment(ref _baseValue));
 		}
 	}
 }

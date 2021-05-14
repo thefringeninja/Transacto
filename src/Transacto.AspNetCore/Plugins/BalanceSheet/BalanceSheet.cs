@@ -25,7 +25,7 @@ namespace Transacto.Plugins.BalanceSheet {
 				var thru = Time.Parse.LocalDate(context.GetRouteValue("thru")!.ToString()!);
 
 				return new ValueTask<Response>(new HalResponse(context.Request,
-					new BalanceSheetReportRepresentation(), ETag.Create(readModel.Checkpoint), new BalanceSheetReport {
+					new BalanceSheetReportRepresentation(), readModel.Checkpoint, new BalanceSheetReport {
 						Thru = thru.ToDateTimeUnspecified(),
 						LineItems = readModel.GetLines(thru),
 						LineItemGroupings = readModel.GetGroupings(thru)

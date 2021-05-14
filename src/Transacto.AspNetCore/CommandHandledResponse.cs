@@ -11,7 +11,9 @@ namespace Transacto {
 			_checkpoint = checkpoint;
 		}
 
-		protected internal override ValueTask WriteBody(Stream stream, CancellationToken cancellationToken) =>
-			stream.WriteAsync(_checkpoint.Memory, cancellationToken);
+		protected internal override async ValueTask WriteBody(Stream stream, CancellationToken cancellationToken) {
+			await using var writer = new StreamWriter(stream, leaveOpen: true);
+			await writer.WriteAsync(_checkpoint.ToString());
+		}
 	}
 }

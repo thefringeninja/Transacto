@@ -23,8 +23,7 @@ namespace Transacto.Plugins.ChartOfAccounts {
 				var readModel = context.RequestServices.GetRequiredService<ReadModel>();
 
 				var response = new HalResponse(context.Request, new ChartOfAccountsRepresentation(),
-					ETag.Create(readModel.Checkpoint),
-					readModel);
+					readModel.Checkpoint, readModel);
 				if (response.StatusCode != HttpStatusCode.NotAcceptable) {
 					response.StatusCode = HttpStatusCode.OK;
 				}

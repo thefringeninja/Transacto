@@ -8,12 +8,12 @@ namespace Transacto {
 			if (position == Position.Start)
 				return Checkpoint.None;
 
-			var checkpoint = new byte[16];
+			Span<byte> checkpoint = stackalloc byte[16];
 
-			BitConverter.GetBytes(position.CommitPosition).CopyTo(checkpoint, 0);
-			BitConverter.GetBytes(position.PreparePosition).CopyTo(checkpoint, 8);
+			BitConverter.TryWriteBytes(checkpoint, position.CommitPosition);
+			BitConverter.TryWriteBytes(checkpoint[8..], position.PreparePosition);
 
-			return new Checkpoint(checkpoint.AsMemory());
+			return new Checkpoint(checkpoint.ToArray());
 		}
 	}
 }

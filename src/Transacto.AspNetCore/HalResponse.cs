@@ -8,6 +8,7 @@ using System.Text;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
+using EventStore.Client;
 using Hallo;
 using Hallo.Serialization;
 using Microsoft.AspNetCore.Http;
@@ -18,7 +19,7 @@ using RazorLight;
 using Transacto.Framework;
 
 namespace Transacto {
-	public class HalResponse : Response {
+	public class HalResponse : Response, IHaveEventStorePosition {
 		private static readonly object EmptyBody = new();
 		private static readonly MediaType HalJson = new("application/hal+json");
 		private static readonly MediaType Html = new("text/html");
@@ -27,19 +28,17 @@ namespace Transacto {
 
 		public override ResponseHeaders Headers => _inner.Headers;
 		public override HttpStatusCode StatusCode { get => _inner.StatusCode; set => _inner.StatusCode = value; }
+		public Optional<Position> Position { get; }
 
-		public HalResponse(HttpRequest request, IHal hal, ETag etag = default) : this(request, hal,
-			etag, null!) {
-		}
-
-		public HalResponse(HttpRequest request, IHal hal, ETag etag, Optional<object> resource) {
+		public HalResponse(HttpRequest request, IHal hal, Optional<Position> position, Optional<object> resource) {
 			_inner = request.Headers["accept"].Count == 0
 				? new HalJsonResponse(hal, resource)
 				: request.Headers["accept"].Select(MediaType).Select(Negotiate).FirstOrDefault() ??
 				  NotAcceptableResponse.Instance;
+			Position = position;
 
-			if (etag != ETag.None) {
-				_inner.Headers.ETag = new EntityTagHeaderValue($@"""{etag.ToString()}""");
+			if (position.HasValue) {
+				_inner.Headers.ETag = new EntityTagHeaderValue(@$"""{position.Value.ToCheckpoint()}""");
 			}
 
 			Response Negotiate(MediaType m) =>
