@@ -18,6 +18,7 @@ namespace Transacto.Application {
 			_handler = new AccountingPeriodClosingHandlers(
 				new GeneralLedgerTestRepository(_facts),
 				new GeneralLedgerEntryTestRepository(_facts),
+				new ChartOfAccountsTestRepository(_facts),
 				_ => false);
 			_retainedEarnings = new AccountNumber(new Random().Next(3000, 3999));
 		}
@@ -117,13 +118,13 @@ namespace Transacto.Application {
 								Amount = amount.ToDecimal() * generalLedgerEntryIdentifiers.Length
 							},
 							new BalanceLineItem {
+								AccountNumber = _retainedEarnings.ToInt32(),
+								Amount = amount.ToDecimal() * generalLedgerEntryIdentifiers.Length
+							},
+							new BalanceLineItem {
 								AccountNumber = incomeAccountNumber.ToInt32(),
 								Amount = Money.Zero.ToDecimal()
 							},
-							new BalanceLineItem {
-								AccountNumber = _retainedEarnings.ToInt32(),
-								Amount = -(amount.ToDecimal() * generalLedgerEntryIdentifiers.Length)
-							}
 						}
 					})
 				.Assert(_handler, _facts);

@@ -1,40 +1,40 @@
 using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace Transacto.Domain {
-	public class TrialBalance : IEnumerable<KeyValuePair<AccountNumber, Money>> {
-		public static TrialBalance None => new();
+	public class TrialBalance : IEnumerable<Account> {
+		private readonly ChartOfAccounts _chartOfAccounts;
+		private readonly AccountCollection _current;
 
-		private readonly IDictionary<AccountNumber, Money> _inner;
-
-		private TrialBalance() {
-			_inner = new Dictionary<AccountNumber, Money>();
+		public TrialBalance(ChartOfAccounts chartOfAccounts) {
+			_chartOfAccounts = chartOfAccounts;
+			_current = new AccountCollection();
 		}
 
 		public void Transfer(GeneralLedgerEntry generalLedgerEntry) {
 			foreach (var debit in generalLedgerEntry.Debits) {
-				_inner[debit.AccountNumber] = _inner.TryGetValue(debit.AccountNumber, out var amount)
-					? amount + debit.Amount
-					: debit.Amount;
+				_current.AddOrUpdate(debit.AccountNumber, () => _chartOfAccounts[debit.AccountNumber],
+					account => account.Debit(debit.Amount));
 			}
 
 			foreach (var credit in generalLedgerEntry.Credits) {
-				_inner[credit.AccountNumber] = _inner.TryGetValue(credit.AccountNumber, out var amount)
-					? amount - credit.Amount
-					: -credit.Amount;
+				_current.AddOrUpdate(credit.AccountNumber, () => _chartOfAccounts[credit.AccountNumber],
+					account => account.Credit(credit.Amount));
 			}
 		}
 
-		public void Apply(AccountNumber accountNumber, Money amount) => _inner[accountNumber] = amount;
-
 		public void MustBeInBalance() {
-			var balance = _inner.Values.Sum();
+			var balance = _current.Select(account => account switch {
+				ExpenseAccount or AssetAccount => account.Balance,
+				_ => -account.Balance
+			}).Sum();
 			if (balance != Money.Zero) {
 				throw new TrialBalanceFailedException(balance);
 			}
 		}
 
-		public IEnumerator<KeyValuePair<AccountNumber, Money>> GetEnumerator() => _inner.GetEnumerator();
-		IEnumerator IEnumerable.GetEnumerator() => ((IEnumerable)_inner).GetEnumerator();
+		public IEnumerator<Account> GetEnumerator() => _current.OrderBy(x => x.AccountNumber.ToInt32()).GetEnumerator();
+		IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
 	}
 }

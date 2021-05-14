@@ -15,9 +15,18 @@ namespace Transacto {
 			fixture.Customize<AccountNumber>(composer =>
 				composer.FromFactory<Random>(r => new AccountNumber(r.Next(1000, 8999))));
 
-		public static void CustomizeAccountType(this IFixture fixture) =>
-			fixture.Customize<AccountType>(composer =>
-				composer.FromFactory<Random>(r => AccountType.All[r.Next(0, AccountType.All.Count)]));
+		public static void CustomizeAccount(this IFixture fixture) {
+			fixture.CustomizeAccount<AssetAccount>(1000);
+			fixture.CustomizeAccount<LiabilityAccount>(2000);
+			fixture.CustomizeAccount<EquityAccount>(3000);
+			fixture.CustomizeAccount<IncomeAccount>(4000);
+			fixture.CustomizeAccount<ExpenseAccount>(5000);
+		}
+
+		private static void CustomizeAccount<TAccount>(this IFixture fixture, int lowestAccountNumber)
+			where TAccount : Account => fixture.Customize<TAccount>(composer => composer.FromFactory<AccountName, int>(
+			(name, value) => (TAccount)Account.For(name, new AccountNumber(lowestAccountNumber + value % 1000))));
+
 
 		public static void CustomizeAccountingPeriod(this IFixture fixture) =>
 			fixture.Customize<AccountingPeriod>(composer => composer.FromFactory<LocalDate>(AccountingPeriod.Open));

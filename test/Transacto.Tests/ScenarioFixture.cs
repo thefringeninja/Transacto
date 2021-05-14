@@ -11,7 +11,7 @@ namespace Transacto {
 
             this.CustomizeAccountNumber();
 
-            this.CustomizeAccountType();
+            this.CustomizeAccount();
 
             this.CustomizeGeneralLedgerEntryNumber();
 

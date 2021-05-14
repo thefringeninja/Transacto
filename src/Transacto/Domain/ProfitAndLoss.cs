@@ -1,4 +1,3 @@
-using System.Collections.Generic;
 using System.Linq;
 using NodaTime;
 
@@ -7,41 +6,44 @@ namespace Transacto.Domain {
 		private static bool IgnoreInactiveAccount(AccountNumber _) => false;
 
 		private readonly AccountingPeriod _accountingPeriod;
-		private readonly IDictionary<AccountNumber, Money> _income;
-		private readonly IDictionary<AccountNumber, Money> _expenses;
+		private readonly ChartOfAccounts _chartOfAccounts;
+		private readonly AccountCollection _current;
 
-		public ProfitAndLoss(AccountingPeriod accountingPeriod) {
+		public ProfitAndLoss(AccountingPeriod accountingPeriod, ChartOfAccounts chartOfAccounts) {
 			_accountingPeriod = accountingPeriod;
-			_income = new Dictionary<AccountNumber, Money>();
-			_expenses = new Dictionary<AccountNumber, Money>();
+			_chartOfAccounts = chartOfAccounts;
+			_current = new AccountCollection();
 		}
 
 		public GeneralLedgerEntry GetClosingEntry(AccountIsDeactivated accountIsDeactivated,
-			AccountNumber retainedEarningsAccountNumber, LocalDateTime closedOn,
+			EquityAccount retainedEarningsAccount, LocalDateTime closedOn,
 			GeneralLedgerEntryIdentifier closingGeneralLedgerEntryIdentifier) {
 			var entry = new GeneralLedgerEntry(closingGeneralLedgerEntryIdentifier,
-				new GeneralLedgerEntryNumber("jec", int.Parse(_accountingPeriod.ToString())), _accountingPeriod, closedOn);
-			foreach (var (accountNumber, amount) in _income) {
-				if (amount == Money.Zero) {
-					continue;
-				}
+				new GeneralLedgerEntryNumber("jec", int.Parse(_accountingPeriod.ToString())), _accountingPeriod,
+				closedOn);
 
-				if (amount > Money.Zero) {
-					entry.ApplyCredit(new Credit(accountNumber, amount), IgnoreInactiveAccount);
-				} else {
-					entry.ApplyDebit(new Debit(accountNumber, -amount), IgnoreInactiveAccount);
-				}
-			}
+			foreach (var account in _current.Where(x => x.Balance != Money.Zero)
+				.OrderBy(x => x.AccountNumber.ToInt32())) {
+				switch (account) {
+					case IncomeAccount: {
+						if (account.Balance > Money.Zero) {
+							entry.ApplyDebit(new(account.AccountNumber, account.Balance), IgnoreInactiveAccount);
+						} else {
+							entry.ApplyCredit(new(account.AccountNumber, -account.Balance), IgnoreInactiveAccount);
+						}
 
-			foreach (var (accountNumber, amount) in _expenses) {
-				if (amount == Money.Zero) {
-					continue;
-				}
+						continue;
+					}
+					case ExpenseAccount:
+						if (account.Balance > Money.Zero) {
+							entry.ApplyCredit(new(account.AccountNumber, -account.Balance), IgnoreInactiveAccount);
+						} else {
+							entry.ApplyDebit(new(account.AccountNumber, account.Balance), IgnoreInactiveAccount);
+						}
 
-				if (amount < Money.Zero) {
-					entry.ApplyCredit(new Credit(accountNumber, amount), IgnoreInactiveAccount);
-				} else {
-					entry.ApplyDebit(new Debit(accountNumber, -amount), IgnoreInactiveAccount);
+						continue;
+					default:
+						continue;
 				}
 			}
 
@@ -49,10 +51,9 @@ namespace Transacto.Domain {
 			                       entry.Credits.Select(x => x.Amount).Sum();
 
 			if (retainedEarnings < Money.Zero) {
-				entry.ApplyDebit(new Debit(retainedEarningsAccountNumber, -retainedEarnings), accountIsDeactivated);
+				entry.ApplyDebit(new(retainedEarningsAccount.AccountNumber, -retainedEarnings), accountIsDeactivated);
 			} else if (retainedEarnings > Money.Zero) {
-				entry.ApplyCredit(new Credit(retainedEarningsAccountNumber, retainedEarnings),
-					accountIsDeactivated);
+				entry.ApplyCredit(new(retainedEarningsAccount.AccountNumber, retainedEarnings), accountIsDeactivated);
 			}
 
 			entry.Post();
@@ -62,40 +63,13 @@ namespace Transacto.Domain {
 
 		public void Transfer(GeneralLedgerEntry generalLedgerEntry) {
 			foreach (var credit in generalLedgerEntry.Credits) {
-				var accountType = AccountType.OfAccountNumber(credit.AccountNumber);
-				switch (accountType) {
-					case AccountType.ExpenseAccount: {
-						_expenses[credit.AccountNumber] =
-							_expenses.TryGetValue(credit.AccountNumber, out var amount)
-								? amount + credit.Amount
-								: credit.Amount;
-						break;
-					}
-					case AccountType.IncomeAccount: {
-						_income[credit.AccountNumber] = _income.TryGetValue(credit.AccountNumber, out var amount)
-							? amount - credit.Amount
-							: -credit.Amount;
-						break;
-					}
-				}
+				_current.AddOrUpdate(credit.AccountNumber, () => _chartOfAccounts[credit.AccountNumber],
+					account => account.Credit(credit.Amount));
 			}
 
 			foreach (var debit in generalLedgerEntry.Debits) {
-				var accountType = AccountType.OfAccountNumber(debit.AccountNumber);
-				switch (accountType) {
-					case AccountType.ExpenseAccount: {
-						_expenses[debit.AccountNumber] = _expenses.TryGetValue(debit.AccountNumber, out var amount)
-							? amount - debit.Amount
-							: -debit.Amount;
-						break;
-					}
-					case AccountType.IncomeAccount: {
-						_income[debit.AccountNumber] = _income.TryGetValue(debit.AccountNumber, out var amount)
-							? amount + debit.Amount
-							: debit.Amount;
-						break;
-					}
-				}
+				_current.AddOrUpdate(debit.AccountNumber, () => _chartOfAccounts[debit.AccountNumber],
+					account => account.Debit(debit.Amount));
 			}
 		}
 	}

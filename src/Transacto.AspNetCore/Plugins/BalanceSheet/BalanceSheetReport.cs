@@ -36,15 +36,15 @@ namespace Transacto.Plugins.BalanceSheet {
 		    LineItems = new List<LineItem>();
 	    }
 
-	    public decimal TotalAssets => LineItems.Where(x =>
-			    AccountType.OfAccountNumber(new AccountNumber(x.AccountNumber)) is AccountType.AssetAccount)
+	    public decimal TotalAssets => LineItems
+		    .Where(x => Account.For(default, new AccountNumber(x.AccountNumber)) is AssetAccount)
 		    .Sum(x => x.Balance.DecimalValue);
-	    public decimal TotalLiabilities => LineItems.Where(x =>
-			    AccountType.OfAccountNumber(new AccountNumber(x.AccountNumber)) is AccountType.LiabilityAccount)
+	    public decimal TotalLiabilities => LineItems
+		    .Where(x => Account.For(default, new AccountNumber(x.AccountNumber)) is LiabilityAccount)
 		    .Sum(x => x.Balance.DecimalValue);
 
-	    public decimal TotalEquity => LineItems.Where(x =>
-			    AccountType.OfAccountNumber(new AccountNumber(x.AccountNumber)) is AccountType.EquityAccount)
+	    public decimal TotalEquity => LineItems
+		    .Where(x => Account.For(default, new AccountNumber(x.AccountNumber)) is EquityAccount)
 		    .Sum(x => x.Balance.DecimalValue);
     }
 }

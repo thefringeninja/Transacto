@@ -5,8 +5,6 @@ namespace Transacto.Domain {
 		public Money Amount { get; }
 		public AccountNumber AccountNumber { get; }
 
-		private readonly AccountType _accountType;
-
 		public Debit(AccountNumber accountNumber) : this(accountNumber, Money.Zero) {
 		}
 
@@ -17,11 +15,8 @@ namespace Transacto.Domain {
 
 			Amount = amount;
 			AccountNumber = accountNumber;
-			_accountType = AccountType.OfAccountNumber(accountNumber);
 		}
 
-		public bool AppearsOnBalanceSheet => _accountType.AppearsOnBalanceSheet;
-		public bool AppearsOnProfitAndLoss => _accountType.AppearsOnProfitAndLoss;
 		public override int GetHashCode() => HashCode.Combine(Amount, AccountNumber);
 		public bool Equals(Debit other) => Amount.Equals(other.Amount) && AccountNumber.Equals(other.AccountNumber);
 		public override bool Equals(object? obj) => obj is Debit other && Equals(other);

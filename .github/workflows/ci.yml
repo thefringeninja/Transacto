@@ -40,6 +40,7 @@ jobs:
           --results-directory=$(pwd)/.test-results
     - name: Publish Test Results
       uses: actions/upload-artifact@v2
+      if: ${{ always() }}
       with:
         path: .test-results/
         name: test-results
