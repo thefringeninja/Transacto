@@ -42,21 +42,19 @@ namespace Transacto.Domain {
 			LocalDateTime createdOn) => _state.PeriodClosing
 			? Create(identifier, number, createdOn, _state.AccountingPeriod.Next())
 			: Create(identifier, number, createdOn, _state.AccountingPeriod.Contains(createdOn.Date)
-				? _state.AccountingPeriod :
-				_state.AccountingPeriod.Next());
+				? _state.AccountingPeriod
+				: _state.AccountingPeriod.Next());
 
 		private static GeneralLedgerEntry Create(GeneralLedgerEntryIdentifier identifier,
 			GeneralLedgerEntryNumber number, LocalDateTime createdOn, AccountingPeriod accountingPeriod) =>
 			new(identifier, number, accountingPeriod, createdOn);
 
-		public void BeginClosingPeriod(AccountNumber retainedEarningsAccountNumber,
+		public void BeginClosingPeriod(EquityAccount retainedEarningsAccount,
 			GeneralLedgerEntryIdentifier closingGeneralLedgerEntryIdentifier,
 			GeneralLedgerEntryIdentifier[] generalLedgerEntryIdentifiers, LocalDateTime closingOn) {
 			if (_state.PeriodClosing) {
 				throw new PeriodClosingInProcessException(_state.AccountingPeriod);
 			}
-
-			AccountType.OfAccountNumber(retainedEarningsAccountNumber).MustBe(AccountType.Equity);
 
 			_state.AccountingPeriod.MustNotBeAfter(closingOn.Date);
 
@@ -64,7 +62,7 @@ namespace Transacto.Domain {
 				Period = _state.AccountingPeriod.ToString(),
 				GeneralLedgerEntryIds = Array.ConvertAll(generalLedgerEntryIdentifiers, id => id.ToGuid()),
 				ClosingOn = Time.Format.LocalDateTime(closingOn),
-				RetainedEarningsAccountNumber = retainedEarningsAccountNumber.ToInt32(),
+				RetainedEarningsAccountNumber = retainedEarningsAccount.AccountNumber.ToInt32(),
 				ClosingGeneralLedgerEntryId = closingGeneralLedgerEntryIdentifier.ToGuid()
 			});
 		}
@@ -89,8 +87,8 @@ namespace Transacto.Domain {
 				ClosingGeneralLedgerEntryId = closingEntry.Identifier.ToGuid(),
 				Period = _state.AccountingPeriod.ToString(),
 				Balance = trialBalance.Select(x => new BalanceLineItem {
-					Amount = x.Value.ToDecimal(),
-					AccountNumber = x.Key.ToInt32()
+					Amount = x.Balance.ToDecimal(),
+					AccountNumber = x.AccountNumber.ToInt32()
 				}).ToArray()
 			});
 		}

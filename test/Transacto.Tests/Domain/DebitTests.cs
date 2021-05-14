@@ -36,20 +36,6 @@ namespace Transacto.Domain {
 		}
 
 		[Theory, AutoTransactoData]
-		public void AppearsOnBalanceSheet(AccountNumber accountNumber, Money amount) {
-			var accountType = AccountType.OfAccountNumber(accountNumber);
-			var sut = new Debit(accountNumber, amount);
-			Assert.Equal(accountType.AppearsOnBalanceSheet, sut.AppearsOnBalanceSheet);
-		}
-
-		[Theory, AutoTransactoData]
-		public void AppearsOnProfitAndLoss(AccountNumber accountNumber, Money amount) {
-			var accountType = AccountType.OfAccountNumber(accountNumber);
-			var sut = new Debit(accountNumber, amount);
-			Assert.Equal(accountType.AppearsOnProfitAndLoss, sut.AppearsOnProfitAndLoss);
-		}
-
-		[Theory, AutoTransactoData]
 		public void MoneyAdditionOperator(Debit sut, Money amount) {
 			var result = sut + amount;
 			Assert.Equal(sut.AccountNumber, result.AccountNumber);

@@ -23,7 +23,8 @@ namespace Transacto.Application {
 			CancellationToken cancellationToken = default) {
 			var generalLedger = await _generalLedger.Get(cancellationToken);
 
-			generalLedger.BeginClosingPeriod(new AccountNumber(command.RetainedEarningsAccountNumber),
+			generalLedger.BeginClosingPeriod(
+				(EquityAccount)Account.For(default, new AccountNumber(command.RetainedEarningsAccountNumber)),
 				new GeneralLedgerEntryIdentifier(command.ClosingGeneralLedgerEntryId),
 				command.GeneralLedgerEntryIds.Select(id => new GeneralLedgerEntryIdentifier(id)).ToArray(),
 				LocalDateTime.FromDateTime(command.ClosingOn.DateTime));

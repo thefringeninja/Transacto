@@ -12,13 +12,20 @@ namespace Transacto.Domain {
 
 		private State _state;
 
+		public Account this[AccountNumber accountNumber] =>
+			_state.AccountNames.TryGetValue(accountNumber, out var accountName)
+				? Account.For(accountName, accountNumber)
+				: Account.For(default, accountNumber);
+
 		private ChartOfAccounts() {
 			_state = new State();
 		}
 
 		protected override void ApplyEvent(object _) => _state = _ switch {
 			AccountDefined e => _state with {
-				AccountNumbers = _state.AccountNumbers.Add(new AccountNumber(e.AccountNumber))
+				AccountNumbers = _state.AccountNumbers.Add(new AccountNumber(e.AccountNumber)),
+				AccountNames = _state.AccountNames.Add(new AccountNumber(e.AccountNumber),
+					new AccountName(e.AccountName))
 			},
 			AccountDeactivated e => _state with {
 				AccountNumbers = _state.AccountNumbers.Remove(new AccountNumber(e.AccountNumber)),
@@ -27,6 +34,10 @@ namespace Transacto.Domain {
 			AccountReactivated e => _state with {
 				DeactivatedAccountNumbers = _state.DeactivatedAccountNumbers.Remove(new AccountNumber(e.AccountNumber)),
 				AccountNumbers = _state.AccountNumbers.Add(new AccountNumber(e.AccountNumber))
+			},
+			AccountRenamed e => _state with {
+				AccountNames = _state.AccountNames.SetItem(new AccountNumber(e.AccountNumber),
+					new AccountName(e.NewAccountName))
 			},
 			_ => _state
 		};
@@ -43,7 +54,7 @@ namespace Transacto.Domain {
 		public void DeactivateAccount(AccountNumber accountNumber) {
 			MustContainAccountNumber(accountNumber);
 
-			if (!IsActive(accountNumber)) {
+			if (IsInactive(accountNumber)) {
 				return;
 			}
 
@@ -74,19 +85,15 @@ namespace Transacto.Domain {
 		}
 
 		private void MustNotContainAccountNumber(AccountNumber accountNumber) {
-			if (!IsActive(accountNumber) && !IsInactive(accountNumber)) {
-				return;
+			if (_state.AccountNames.ContainsKey(accountNumber)) {
+				throw new AccountExistsException(accountNumber);
 			}
-
-			throw new AccountExistsException(accountNumber);
 		}
 
 		private void MustContainAccountNumber(AccountNumber accountNumber) {
-			if (IsActive(accountNumber) || IsInactive(accountNumber)) {
-				return;
+			if (!_state.AccountNames.ContainsKey(accountNumber)) {
+				throw new AccountNotFoundException(accountNumber);
 			}
-
-			throw new AccountNotFoundException(accountNumber);
 		}
 
 		private bool IsInactive(AccountNumber accountNumber) => _state.DeactivatedAccountNumbers.Contains(accountNumber);
@@ -99,6 +106,9 @@ namespace Transacto.Domain {
 
 			public ImmutableHashSet<AccountNumber> DeactivatedAccountNumbers { get; init; } =
 				ImmutableHashSet<AccountNumber>.Empty;
+
+			public ImmutableDictionary<AccountNumber, AccountName> AccountNames { get; init; } =
+				ImmutableDictionary<AccountNumber, AccountName>.Empty;
 		}
 	}
 }

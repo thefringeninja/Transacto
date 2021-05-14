@@ -7,20 +7,21 @@ namespace Transacto.Domain {
 		private readonly AccountingPeriod _accountingPeriod;
 		private readonly LocalDateTime _closingOn;
 		private readonly GeneralLedgerEntryIdentifier _closingGeneralLedgerEntryIdentifier;
-		private readonly AccountNumber _retainedEarningsAccountNumber;
+		private readonly EquityAccount _retainedEarningsAccountNumber;
 		private readonly AccountIsDeactivated _accountIsDeactivated;
 		private readonly HashSet<GeneralLedgerEntryIdentifier> _generalLedgerEntryIdentifiers;
 
 		public TrialBalance TrialBalance { get; }
 		public ProfitAndLoss ProfitAndLoss { get; }
 
-		public AccountingPeriodClosingProcess(AccountingPeriod accountingPeriod,
+		public AccountingPeriodClosingProcess(
+			ChartOfAccounts chartOfAccounts,
+			AccountingPeriod accountingPeriod,
 			LocalDateTime closingOn,
 			GeneralLedgerEntryIdentifier[] generalLedgerEntryIdentifiers,
 			GeneralLedgerEntryIdentifier closingGeneralLedgerEntryIdentifier,
-			AccountNumber retainedEarningsAccountNumber,
+			EquityAccount retainedEarningsAccountNumber,
 			AccountIsDeactivated accountIsDeactivated) {
-			AccountType.OfAccountNumber(retainedEarningsAccountNumber).MustBe(AccountType.Equity);
 
 			_accountingPeriod = accountingPeriod;
 			_closingOn = closingOn;
@@ -28,17 +29,17 @@ namespace Transacto.Domain {
 			_retainedEarningsAccountNumber = retainedEarningsAccountNumber;
 			_accountIsDeactivated = accountIsDeactivated;
 			_generalLedgerEntryIdentifiers = new HashSet<GeneralLedgerEntryIdentifier>(generalLedgerEntryIdentifiers);
-			TrialBalance = TrialBalance.None;
-			ProfitAndLoss = new ProfitAndLoss(accountingPeriod);
+			TrialBalance = new TrialBalance(chartOfAccounts);
+			ProfitAndLoss = new ProfitAndLoss(accountingPeriod, chartOfAccounts);
 		}
 
 		public void TransferEntry(GeneralLedgerEntry generalLedgerEntry) {
 			generalLedgerEntry.MustBeInBalance();
 			generalLedgerEntry.MustBePosted();
 
+			ProfitAndLoss.Transfer(generalLedgerEntry);
 			TrialBalance.Transfer(generalLedgerEntry);
 			TrialBalance.MustBeInBalance();
-			ProfitAndLoss.Transfer(generalLedgerEntry);
 			_generalLedgerEntryIdentifiers.Remove(generalLedgerEntry.Identifier);
 		}
 

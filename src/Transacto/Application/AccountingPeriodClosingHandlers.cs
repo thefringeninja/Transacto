@@ -8,13 +8,16 @@ namespace Transacto.Application {
 	public class AccountingPeriodClosingHandlers {
 		private readonly IGeneralLedgerRepository _generalLedger;
 		private readonly IGeneralLedgerEntryRepository _generalLedgerEntries;
+		private readonly IChartOfAccountsRepository _chartOfAccounts;
 		private readonly AccountIsDeactivated _accountIsDeactivated;
 
 		public AccountingPeriodClosingHandlers(IGeneralLedgerRepository generalLedger,
 			IGeneralLedgerEntryRepository generalLedgerEntries,
+			IChartOfAccountsRepository chartOfAccounts,
 			AccountIsDeactivated accountIsDeactivated) {
 			_generalLedger = generalLedger;
 			_generalLedgerEntries = generalLedgerEntries;
+			_chartOfAccounts = chartOfAccounts;
 			_accountIsDeactivated = accountIsDeactivated;
 		}
 
@@ -22,11 +25,13 @@ namespace Transacto.Application {
 			var generalLedgerEntryIdentifiers =
 				Array.ConvertAll(@event.GeneralLedgerEntryIds, id => new GeneralLedgerEntryIdentifier(id));
 
+			var chartOfAccounts = await _chartOfAccounts.Get(cancellationToken);
 
 			var accountingPeriodClosingProcess = new AccountingPeriodClosingProcess(
-				AccountingPeriod.Parse(@event.Period), Time.Parse.LocalDateTime(@event.ClosingOn),
+				chartOfAccounts, AccountingPeriod.Parse(@event.Period), Time.Parse.LocalDateTime(@event.ClosingOn),
 				generalLedgerEntryIdentifiers, new GeneralLedgerEntryIdentifier(@event.ClosingGeneralLedgerEntryId),
-				new AccountNumber(@event.RetainedEarningsAccountNumber), _accountIsDeactivated);
+				(EquityAccount)chartOfAccounts[new AccountNumber(@event.RetainedEarningsAccountNumber)],
+				_accountIsDeactivated);
 
 			foreach (var id in @event.GeneralLedgerEntryIds) {
 				var generalLedgerEntry =
