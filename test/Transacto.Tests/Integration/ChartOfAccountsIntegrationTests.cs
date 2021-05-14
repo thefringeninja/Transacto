@@ -4,8 +4,8 @@ using System.Linq;
 using System.Net;
 using System.Text.Json;
 using System.Threading.Tasks;
-using EventStore.Client;
 using Transacto.Domain;
+using Transacto.Framework;
 using Transacto.Messages;
 using Xunit;
 
@@ -13,46 +13,48 @@ namespace Transacto.Integration {
 	public class ChartOfAccountsIntegrationTests : IntegrationTests {
 		[Fact]
 		public async Task hal() {
-			var position = await SetupChartOfAccounts();
+			var checkpoint = await SetupChartOfAccounts();
 
-			using var response = await HttpClient.ConditionalGetAsync("/chart-of-accounts", position);
+			var position = checkpoint.ToEventStorePosition();
+
+			using var response = await HttpClient.ConditionalGetAsync("/chart-of-accounts", checkpoint);
 
 			var body = await response.Content.ReadAsStreamAsync();
 			var chartOfAccounts = await JsonDocument.ParseAsync(body);
 
-			using var resultEnumerator = chartOfAccounts.RootElement.EnumerateObject()
+			var actual = chartOfAccounts.RootElement
+				.EnumerateObject()
 				.Where(x => x.Name != "_links" && x.Name != "_embedded")
-				.GetEnumerator();
-			using var expectEnumerator = ChartOfAccounts.OrderBy(x => x.Item1.ToInt32()).GetEnumerator();
+				.Select(x => new {
+					accountName = x.Value.GetString()!,
+					accountNumber = int.Parse(x.Name)
+				});
+			var expected = ChartOfAccounts
+				.OrderBy(x => x.accountNumber.ToInt32())
+				.Select(x => new {
+					accountName = x.accountName.ToString(),
+					accountNumber = x.accountNumber.ToInt32()
+				});
 
-			while (expectEnumerator.MoveNext() && resultEnumerator.MoveNext()) {
-				Assert.Equal(expectEnumerator.Current.Item1.ToString(), resultEnumerator.Current.Name);
-				Assert.Equal(expectEnumerator.Current.Item2.ToString(), resultEnumerator.Current.Value.ToString());
-			}
-
-			Assert.False(expectEnumerator.MoveNext());
-			Assert.False(resultEnumerator.MoveNext());
+			Assert.Equal(expected, actual);
 
 			Assert.Equal(HttpStatusCode.OK, response.StatusCode);
 		}
 
-		private async Task<Position> SetupChartOfAccounts()
-		{
-			Position position = Position.Start;
+		private async Task<Checkpoint> SetupChartOfAccounts() {
+			Checkpoint checkpoint = Checkpoint.None;
 
-			foreach (var (accountNumber, accountName) in ChartOfAccounts.OrderBy(_ => Guid.NewGuid()))
-			{
-				position = await HttpClient.SendCommand("/chart-of-accounts", new DefineAccount
-				{
+			foreach (var (accountNumber, accountName) in ChartOfAccounts.OrderBy(_ => Guid.NewGuid())) {
+				checkpoint = await HttpClient.SendCommand("/chart-of-accounts", new DefineAccount {
 					AccountName = accountName.ToString(),
 					AccountNumber = accountNumber.ToInt32()
 				}, TransactoSerializerOptions.Commands);
 			}
 
-			return position;
+			return checkpoint;
 		}
 
-		private static IEnumerable<(AccountNumber, AccountName)> ChartOfAccounts {
+		private static IEnumerable<(AccountNumber accountNumber, AccountName accountName)> ChartOfAccounts {
 			get {
 				yield return (new AccountNumber(1000), new AccountName("Bank Checking Account"));
 				yield return (new AccountNumber(1050), new AccountName("Bank Savings Account"));

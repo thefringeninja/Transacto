@@ -2,13 +2,12 @@ using System;
 using System.Linq;
 using System.Text.Json;
 using System.Threading.Tasks;
-using EventStore.Client;
 using Inflector;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Net.Http.Headers;
 using Transacto;
+using Transacto.Framework;
 using Transacto.Plugins;
 
 // ReSharper disable CheckNamespace
@@ -33,14 +32,13 @@ namespace Microsoft.AspNetCore.Builder {
 
 		public static IEndpointRouteBuilder MapGet(this IEndpointRouteBuilder builder, string route,
 			Func<HttpContext, ValueTask<Response>> getResponse) {
-			var separator = new[] {'/'};
 			builder.MapGet(route, async context => {
 				var response = await getResponse(context);
-				if (TryParsePosition(response.Headers.ETag, out var responsePosition)) {
-					var positions = context.Request.GetTypedHeaders()
-						.IfMatch
+				if (response is IHaveEventStorePosition {Position: {HasValue: true}} hasPosition) {
+					var positions = context.Request
+						.GetTypedHeaders().IfMatch
 						.Where(etag => etag.Tag.HasValue)
-						.Select(etag => TryParsePosition(etag, out var position) ? position : Position.Start)
+						.Select(etag => Checkpoint.FromString(etag!.Tag.Value.AsSpan()[1..^1]).ToEventStorePosition())
 						.OrderByDescending(p => p)
 						.ToList();
 
@@ -49,7 +47,7 @@ namespace Microsoft.AspNetCore.Builder {
 						return;
 					}
 
-					if (positions.Any(requestedPosition => responsePosition >= requestedPosition)) {
+					if (positions.Any(requestedPosition => hasPosition.Position.Value >= requestedPosition)) {
 						await response.Write(context.Response);
 						return;
 					}
@@ -63,26 +61,6 @@ namespace Microsoft.AspNetCore.Builder {
 			});
 
 			return builder;
-
-			bool TryParsePosition(EntityTagHeaderValue? etag, out Position position) {
-				position = default;
-				var value = etag?.Tag.ToString();
-				if (value == "*") {
-					position = Position.Start;
-					return true;
-				}
-
-				var parts = value?.Split(separator, 2) ?? Array.Empty<string>();
-
-				if (parts.Length != 2 ||
-				    !ulong.TryParse(parts[0][1..], out var p) ||
-				    !ulong.TryParse(parts[1][..^1], out var c)) {
-					return false;
-				}
-
-				position = new Position(p, c);
-				return true;
-			}
 		}
 
 		public static IEndpointRouteBuilder MapPost<T>(this IEndpointRouteBuilder builder, string route,

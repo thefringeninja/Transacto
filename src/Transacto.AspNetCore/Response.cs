@@ -2,10 +2,15 @@ using System.IO;
 using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
+using EventStore.Client;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Headers;
+using Transacto.Framework;
 
 namespace Transacto {
+	public interface IHaveEventStorePosition {
+		Optional<Position> Position { get; }
+	}
 	public class Response {
 		public virtual ResponseHeaders Headers { get; }
 		public virtual HttpStatusCode StatusCode { get; set; } = HttpStatusCode.OK;
