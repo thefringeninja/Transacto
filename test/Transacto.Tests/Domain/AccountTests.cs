@@ -38,7 +38,7 @@ namespace Transacto.Domain {
 			});
 		[Theory, MemberData(nameof(CreatesExpectedAccountCases))]
 		public void CreatesExpectedAccount(AccountNumber accountNumber, Type expected) =>
-			Assert.IsType(expected, Account.For(_fixture.Create<AccountName>(), accountNumber));
+			Assert.IsType(expected, Account.For(accountNumber, _fixture.Create<AccountName>()));
 
 		public class AssetTests : LeftSideTests<AssetAccount> {}
 		public class LiabilityTests : RightSideTests<LiabilityAccount> {}

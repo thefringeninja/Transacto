@@ -13,9 +13,9 @@ namespace Transacto.Domain {
 		private State _state;
 
 		public Account this[AccountNumber accountNumber] =>
-			_state.AccountNames.TryGetValue(accountNumber, out var accountName)
-				? Account.For(accountName, accountNumber)
-				: Account.For(default, accountNumber);
+			_state.Accounts.TryGetValue(accountNumber, out var account)
+				? Account.For(accountNumber, account.AccountName)
+				: throw new AccountNotFoundException(accountNumber);
 
 		private ChartOfAccounts() {
 			_state = new State();
@@ -23,21 +23,21 @@ namespace Transacto.Domain {
 
 		protected override void ApplyEvent(object _) => _state = _ switch {
 			AccountDefined e => _state with {
-				AccountNumbers = _state.AccountNumbers.Add(new AccountNumber(e.AccountNumber)),
-				AccountNames = _state.AccountNames.Add(new AccountNumber(e.AccountNumber),
-					new AccountName(e.AccountName))
+				Accounts = _state.Accounts.Add(new AccountNumber(e.AccountNumber),
+					new(new AccountName(e.AccountName)))
 			},
 			AccountDeactivated e => _state with {
-				AccountNumbers = _state.AccountNumbers.Remove(new AccountNumber(e.AccountNumber)),
-				DeactivatedAccountNumbers = _state.DeactivatedAccountNumbers.Add(new AccountNumber(e.AccountNumber))
+				Accounts = _state.Accounts.SetItem(new AccountNumber(e.AccountNumber),
+					new(_state.Accounts[new AccountNumber(e.AccountNumber)].AccountName, false))
 			},
 			AccountReactivated e => _state with {
-				DeactivatedAccountNumbers = _state.DeactivatedAccountNumbers.Remove(new AccountNumber(e.AccountNumber)),
-				AccountNumbers = _state.AccountNumbers.Add(new AccountNumber(e.AccountNumber))
+				Accounts = _state.Accounts.SetItem(new AccountNumber(e.AccountNumber),
+					new(_state.Accounts[new AccountNumber(e.AccountNumber)].AccountName))
 			},
 			AccountRenamed e => _state with {
-				AccountNames = _state.AccountNames.SetItem(new AccountNumber(e.AccountNumber),
-					new AccountName(e.NewAccountName))
+				Accounts = _state.Accounts.SetItem(new AccountNumber(e.AccountNumber),
+					new(new AccountName(e.NewAccountName), _state.Accounts[new AccountNumber(e.AccountNumber)]
+						.IsActive))
 			},
 			_ => _state
 		};
@@ -85,30 +85,29 @@ namespace Transacto.Domain {
 		}
 
 		private void MustNotContainAccountNumber(AccountNumber accountNumber) {
-			if (_state.AccountNames.ContainsKey(accountNumber)) {
+			if (_state.Accounts.ContainsKey(accountNumber)) {
 				throw new AccountExistsException(accountNumber);
 			}
 		}
 
 		private void MustContainAccountNumber(AccountNumber accountNumber) {
-			if (!_state.AccountNames.ContainsKey(accountNumber)) {
+			if (!_state.Accounts.ContainsKey(accountNumber)) {
 				throw new AccountNotFoundException(accountNumber);
 			}
 		}
 
-		private bool IsInactive(AccountNumber accountNumber) => _state.DeactivatedAccountNumbers.Contains(accountNumber);
+		private bool IsInactive(AccountNumber accountNumber) =>
+			_state.Accounts.TryGetValue(accountNumber, out var account)
+			&& !account.IsActive;
 
-		private bool IsActive(AccountNumber accountNumber) => _state.AccountNumbers.Contains(accountNumber);
+		private bool IsActive(AccountNumber accountNumber) =>
+			_state.Accounts.TryGetValue(accountNumber, out var account)
+			&& account.IsActive;
 
 		private record State {
-			public ImmutableHashSet<AccountNumber> AccountNumbers { get; init; } =
-				ImmutableHashSet<AccountNumber>.Empty;
-
-			public ImmutableHashSet<AccountNumber> DeactivatedAccountNumbers { get; init; } =
-				ImmutableHashSet<AccountNumber>.Empty;
-
-			public ImmutableDictionary<AccountNumber, AccountName> AccountNames { get; init; } =
-				ImmutableDictionary<AccountNumber, AccountName>.Empty;
+			public ImmutableDictionary<AccountNumber, AccountInfo> Accounts { get; init; }
+			= ImmutableDictionary<AccountNumber, AccountInfo>.Empty;
+			public record AccountInfo(AccountName AccountName, bool IsActive = true);
 		}
 	}
 }

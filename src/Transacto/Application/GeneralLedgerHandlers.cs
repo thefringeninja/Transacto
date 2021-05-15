@@ -8,9 +8,11 @@ using Transacto.Messages;
 namespace Transacto.Application {
 	public class GeneralLedgerHandlers {
 		private readonly IGeneralLedgerRepository _generalLedger;
+		private readonly IChartOfAccountsRepository _chartOfAccounts;
 
-		public GeneralLedgerHandlers(IGeneralLedgerRepository generalLedger) {
+		public GeneralLedgerHandlers(IGeneralLedgerRepository generalLedger, IChartOfAccountsRepository chartOfAccounts) {
 			_generalLedger = generalLedger;
+			_chartOfAccounts = chartOfAccounts;
 		}
 
 		public ValueTask Handle(OpenGeneralLedger command, CancellationToken cancellationToken = default) {
@@ -22,9 +24,10 @@ namespace Transacto.Application {
 		public async ValueTask Handle(BeginClosingAccountingPeriod command,
 			CancellationToken cancellationToken = default) {
 			var generalLedger = await _generalLedger.Get(cancellationToken);
+			var chartOfAccounts = await _chartOfAccounts.Get(cancellationToken);
 
 			generalLedger.BeginClosingPeriod(
-				(EquityAccount)Account.For(default, new AccountNumber(command.RetainedEarningsAccountNumber)),
+				(EquityAccount)chartOfAccounts[new AccountNumber(command.RetainedEarningsAccountNumber)],
 				new GeneralLedgerEntryIdentifier(command.ClosingGeneralLedgerEntryId),
 				command.GeneralLedgerEntryIds.Select(id => new GeneralLedgerEntryIdentifier(id)).ToArray(),
 				LocalDateTime.FromDateTime(command.ClosingOn.DateTime));

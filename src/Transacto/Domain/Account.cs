@@ -7,7 +7,7 @@ namespace Transacto.Domain {
 		public AccountNumber AccountNumber { get; }
 		public Money Balance { get; protected init; }
 
-		public static Account For(AccountName accountName, AccountNumber accountNumber) =>
+		public static Account For(AccountNumber accountNumber, AccountName accountName = default) =>
 			accountNumber.ToInt32() switch {
 				>= 1000 and < 2000 => new AssetAccount(accountName, accountNumber),
 				>= 2000 and < 3000 => new LiabilityAccount(accountName, accountNumber),

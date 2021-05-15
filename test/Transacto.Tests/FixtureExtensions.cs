@@ -25,7 +25,7 @@ namespace Transacto {
 
 		private static void CustomizeAccount<TAccount>(this IFixture fixture, int lowestAccountNumber)
 			where TAccount : Account => fixture.Customize<TAccount>(composer => composer.FromFactory<AccountName, int>(
-			(name, value) => (TAccount)Account.For(name, new AccountNumber(lowestAccountNumber + value % 1000))));
+			(name, value) => (TAccount)Account.For(new AccountNumber(lowestAccountNumber + value % 1000), name)));
 
 
 		public static void CustomizeAccountingPeriod(this IFixture fixture) =>
