@@ -31,7 +31,7 @@ namespace Transacto.Application {
 			var cashAccountNumber = new AccountNumber(new Random().Next(1000, 1999));
 			var incomeAccountNumber = new AccountNumber(new Random().Next(4000, 4999));
 
-			var closingOn = openedOn.PlusDays(1).AtMidnight();
+			var closingOn = openedOn.AtMidnight();
 
 			var accountingPeriodClosing = new AccountingPeriodClosing {
 				Period = period.ToString(),

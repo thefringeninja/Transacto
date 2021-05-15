@@ -19,8 +19,8 @@ namespace Transacto.Domain {
 		}
 
 		[Theory, AutoTransactoData]
-		public void InequalityOperator(AccountingPeriod left, AccountingPeriod right) {
-			Assert.False(left == right);
+		public void InequalityOperator(AccountingPeriod sut) {
+			Assert.False(sut == sut.Next());
 		}
 
 		[Theory, AutoTransactoData]
