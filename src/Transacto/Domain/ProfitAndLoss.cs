@@ -36,9 +36,9 @@ namespace Transacto.Domain {
 					}
 					case ExpenseAccount:
 						if (account.Balance > Money.Zero) {
-							entry.ApplyCredit(new(account.AccountNumber, -account.Balance), IgnoreInactiveAccount);
+							entry.ApplyCredit(new(account.AccountNumber, account.Balance), IgnoreInactiveAccount);
 						} else {
-							entry.ApplyDebit(new(account.AccountNumber, account.Balance), IgnoreInactiveAccount);
+							entry.ApplyDebit(new(account.AccountNumber, -account.Balance), IgnoreInactiveAccount);
 						}
 
 						continue;

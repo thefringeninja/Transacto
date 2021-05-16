@@ -1,7 +1,7 @@
 using System;
 
 namespace Transacto.Domain {
-	public readonly struct Debit {
+	public readonly struct Debit : IEquatable<Debit> {
 		public Money Amount { get; }
 		public AccountNumber AccountNumber { get; }
 

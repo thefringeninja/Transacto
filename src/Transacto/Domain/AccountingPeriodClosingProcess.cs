@@ -7,7 +7,7 @@ namespace Transacto.Domain {
 		private readonly AccountingPeriod _accountingPeriod;
 		private readonly LocalDateTime _closingOn;
 		private readonly GeneralLedgerEntryIdentifier _closingGeneralLedgerEntryIdentifier;
-		private readonly EquityAccount _retainedEarningsAccountNumber;
+		private readonly EquityAccount _retainedEarningsAccount;
 		private readonly AccountIsDeactivated _accountIsDeactivated;
 		private readonly HashSet<GeneralLedgerEntryIdentifier> _generalLedgerEntryIdentifiers;
 
@@ -20,13 +20,12 @@ namespace Transacto.Domain {
 			LocalDateTime closingOn,
 			GeneralLedgerEntryIdentifier[] generalLedgerEntryIdentifiers,
 			GeneralLedgerEntryIdentifier closingGeneralLedgerEntryIdentifier,
-			EquityAccount retainedEarningsAccountNumber,
+			EquityAccount retainedEarningsAccount,
 			AccountIsDeactivated accountIsDeactivated) {
-
 			_accountingPeriod = accountingPeriod;
 			_closingOn = closingOn;
 			_closingGeneralLedgerEntryIdentifier = closingGeneralLedgerEntryIdentifier;
-			_retainedEarningsAccountNumber = retainedEarningsAccountNumber;
+			_retainedEarningsAccount = retainedEarningsAccount;
 			_accountIsDeactivated = accountIsDeactivated;
 			_generalLedgerEntryIdentifiers = new HashSet<GeneralLedgerEntryIdentifier>(generalLedgerEntryIdentifiers);
 			TrialBalance = new TrialBalance(chartOfAccounts);
@@ -51,7 +50,7 @@ namespace Transacto.Domain {
 
 			TrialBalance.MustBeInBalance();
 
-			return ProfitAndLoss.GetClosingEntry(_accountIsDeactivated, _retainedEarningsAccountNumber,
+			return ProfitAndLoss.GetClosingEntry(_accountIsDeactivated, _retainedEarningsAccount,
 				_closingOn, _closingGeneralLedgerEntryIdentifier);
 		}
 	}

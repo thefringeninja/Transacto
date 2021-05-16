@@ -3,8 +3,7 @@ using System.Collections.Generic;
 
 namespace Transacto.Domain {
 	public class JournalEntry : IBusinessTransaction {
-		GeneralLedgerEntryNumber IBusinessTransaction.ReferenceNumber =>
-			new("je", ReferenceNumber);
+		GeneralLedgerEntryNumber IBusinessTransaction.ReferenceNumber => new("je", ReferenceNumber);
 
 		public int ReferenceNumber { get; set; }
 		public Item[] Credits { get; set; } = Array.Empty<Item>();
@@ -19,7 +18,8 @@ namespace Transacto.Domain {
 
 			foreach (var debit in Debits) {
 				generalLedgerEntry.ApplyDebit(
-					new Debit(new AccountNumber(debit.AccountNumber), new Money(debit.Amount)), accountIsDeactivated);
+					new Debit(new AccountNumber(debit.AccountNumber), new Money(debit.Amount)),
+					accountIsDeactivated);
 			}
 		}
 
