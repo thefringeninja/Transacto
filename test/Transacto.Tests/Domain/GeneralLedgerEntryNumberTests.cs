@@ -19,7 +19,7 @@ namespace Transacto.Domain {
 
 		[Theory, AutoTransactoData]
 		public void InequalityOperator(GeneralLedgerEntryNumber left, GeneralLedgerEntryNumber right) {
-			Assert.False(left == right);
+			Assert.True(left != right);
 		}
 
 		public static IEnumerable<object[]> InvalidPrefixCases() {
@@ -71,6 +71,7 @@ namespace Transacto.Domain {
 			yield return new object[] {"a"};
 			yield return new object[] {"a-"};
 			yield return new object[] {"a--1"};
+			yield return new object[] {"-1"};
 			yield return new object[] {" "};
 		}
 

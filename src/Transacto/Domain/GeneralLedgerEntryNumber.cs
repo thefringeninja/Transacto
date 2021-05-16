@@ -33,7 +33,7 @@ namespace Transacto.Domain {
 		public static bool TryParse(string value, out GeneralLedgerEntryNumber generalLedgerEntryNumber) {
 			generalLedgerEntryNumber = default;
 			var indexOfDelimiter = value.IndexOf('-');
-			if (indexOfDelimiter < 1 || indexOfDelimiter != value.LastIndexOf('-')) {
+			if (indexOfDelimiter < 0 || indexOfDelimiter != value.LastIndexOf('-')) {
 				return false;
 			}
 
