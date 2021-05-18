@@ -17,7 +17,7 @@ namespace Transacto.Domain {
 
 		[Theory, AutoTransactoData]
 		public void InequalityOperator(Money left, Money right) {
-			Assert.False(left == right);
+			Assert.True(left != right);
 		}
 
 		[Fact]

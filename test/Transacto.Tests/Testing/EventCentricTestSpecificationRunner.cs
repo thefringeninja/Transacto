@@ -42,7 +42,7 @@ namespace Transacto.Testing {
                 optionalException = ex;
             }
 
-            var then = await _factRecorder.GetFacts().Skip(specification.Givens.Length).ToArrayAsync();
+            var then = _factRecorder.GetFacts().Skip(specification.Givens.Length).ToArray();
             return new EventCentricTestResult(specification,
                 !optionalException.HasValue &&
                 specification.Thens.SequenceEqual(then, new FactEqualityComparer(_comparer))

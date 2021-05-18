@@ -19,7 +19,7 @@ namespace Transacto.Domain {
 
 		[Theory, AutoTransactoData]
 		public void InequalityOperator(Debit left, Debit right) {
-			Assert.False(left == right);
+			Assert.True(left != right);
 		}
 
 		[Theory, AutoTransactoData]

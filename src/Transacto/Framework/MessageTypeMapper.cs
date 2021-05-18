@@ -15,7 +15,7 @@ namespace Transacto.Framework {
 		public static IMessageTypeMapper ScopedFromType(Type type) =>
 			new ReflectionMessageTypeMapper(type.Assembly, type.Namespace);
 
-		public static IMessageTypeMapper Create(params MessageTypeMapper[] messageTypeMappers)
+		public static IMessageTypeMapper Create(params IMessageTypeMapper[] messageTypeMappers)
 			=> new CompositeMessageTypeMapper(messageTypeMappers.Concat(new[] {TransactoMessageTypeMapper.Instance})
 				.ToArray());
 
@@ -88,15 +88,11 @@ namespace Transacto.Framework {
 			private readonly IMessageTypeMapper _inner;
 
 			public ReflectionMessageTypeMapper(Assembly messageAssembly, string? messageNamespace) {
-				if (messageNamespace == null) {
-					throw new ArgumentNullException(messageNamespace);
-				}
-
 				_inner = new MessageTypeMapper(messageAssembly.DefinedTypes.Where(IsMessageType(messageNamespace)));
 			}
 
-			private static Func<Type, bool> IsMessageType(string messageNamespace) => type =>
-				type.Namespace?.Equals(messageNamespace) ?? false;
+			private static Func<Type, bool> IsMessageType(string? messageNamespace) => type =>
+				string.Equals(messageNamespace, type.Namespace);
 
 			public bool TryMap(string storageType, out Type type) => _inner.TryMap(storageType, out type);
 			public bool TryMap(Type type, out string storageType) => _inner.TryMap(type, out storageType);

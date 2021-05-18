@@ -1,22 +1,23 @@
-using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 
 namespace Transacto.Framework.ProcessManagers {
 	public static class ProcessManagerEventResolve {
 		public static MessageHandlerResolver<Checkpoint> WhenEqualToHandlerMessageType(
-			ProcessManagerEventHandlerModule module) {
-			var cache = module.ToLookup(h => h.Message);
+			IEnumerable<MessageHandler<Checkpoint>> handlers) {
+			var cache = handlers.ToLookup(h => h.Message).ToDictionary(x => x.Key, x => x.ToArray());
 
 			return @event => {
 				var type = @event.GetType();
 
-				var handlers = cache[type].ToArray();
+				cache.TryGetValue(type, out var handlers);
 
-				return handlers.Length switch {
-					0 => new MessageHandler<Checkpoint>(type, (_, _) => new ValueTask<Checkpoint>(Checkpoint.None)),
-					1 => new MessageHandler<Checkpoint>(type, handlers[0].Handler),
-					_ => throw new InvalidOperationException()
+				return handlers switch {
+					null or {Length: 0} => new MessageHandler<Checkpoint>(type,
+						(_, _) => new ValueTask<Checkpoint>(Checkpoint.None)),
+					{Length: 1} => handlers[0],
+					_ => throw new ProcessManagerEventResolveException(type, handlers.Length)
 				};
 			};
 		}

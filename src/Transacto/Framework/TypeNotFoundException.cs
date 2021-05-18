@@ -5,7 +5,7 @@ namespace Transacto.Framework {
 		public Type Type { get; }
 
 		public TypeNotFoundException(Type type, Exception? innerException = null)
-			: base($"No storage type for {type} was found.", innerException) {
+			: base($"No storage type for '{type}' was found.", innerException) {
 			Type = type;
 		}
 	}

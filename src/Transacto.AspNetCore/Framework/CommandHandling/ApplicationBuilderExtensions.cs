@@ -40,7 +40,9 @@ namespace Microsoft.AspNetCore.Builder {
 
 				if (!MediaTypeHeaderValue.TryParse(context.Request.ContentType, out var mediaType) ||
 				    !mediaType.MediaType.Equals("multipart/form-data", StringComparison.OrdinalIgnoreCase)) {
-					return new Response {StatusCode = HttpStatusCode.UnsupportedMediaType};
+					return new Response {
+						StatusCode = HttpStatusCode.UnsupportedMediaType
+					};
 				}
 
 				if (!context.Request.Form.TryGetValue("command", out var commandName)) {
@@ -56,8 +58,9 @@ namespace Microsoft.AspNetCore.Builder {
 				}
 
 				if (context.Request.Form.Files.Count != 1) {
-					return new TextResponse("No command was found on the request.")
-						{StatusCode = HttpStatusCode.BadRequest};
+					return new TextResponse("No command was found on the request.") {
+						StatusCode = HttpStatusCode.BadRequest
+					};
 				}
 
 				await using var commandStream = context.Request.Form.Files[0].OpenReadStream();

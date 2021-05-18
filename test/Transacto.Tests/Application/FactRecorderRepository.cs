@@ -15,19 +15,19 @@ namespace Transacto.Application {
 			_factory = factory;
 		}
 
-		public async ValueTask<Optional<T>> GetOptional(string identifier,
+		public ValueTask<Optional<T>> GetOptional(string identifier,
 			CancellationToken cancellationToken = default) {
-			var facts = await _facts.GetFacts().Where(x => x.Identifier == identifier)
-				.ToArrayAsync(cancellationToken);
+			var facts = _facts.GetFacts().Where(x => x.Identifier == identifier)
+				.ToArray();
 
 			if (facts.Length == 0) {
-				return Optional<T>.Empty;
+				return new(Optional<T>.Empty);
 			}
 
 			var aggregateRoot = _factory();
 			aggregateRoot.LoadFromHistory(facts.Select(x => x.Event));
 			_facts.Attach(aggregateRoot.Id, aggregateRoot);
-			return aggregateRoot;
+			return new(aggregateRoot);
 		}
 
 		public void Add(T aggregateRoot) => _facts.Record(aggregateRoot.Id, aggregateRoot.GetChanges());

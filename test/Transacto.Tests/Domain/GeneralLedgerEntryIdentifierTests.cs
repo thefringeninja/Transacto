@@ -19,7 +19,7 @@ namespace Transacto.Domain {
 
 		[Theory, AutoTransactoData]
 		public void InequalityOperator(GeneralLedgerEntryIdentifier left, GeneralLedgerEntryIdentifier right) {
-			Assert.False(left == right);
+			Assert.True(left != right);
 		}
 
 		[Fact]

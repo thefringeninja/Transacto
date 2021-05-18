@@ -16,7 +16,7 @@ namespace Transacto.Framework {
 
 		[Theory, AutoTransactoData]
 		public void InequalityOperator(Checkpoint left, Checkpoint right) {
-			Assert.False(left == right);
+			Assert.True(left != right);
 		}
 	}
 }

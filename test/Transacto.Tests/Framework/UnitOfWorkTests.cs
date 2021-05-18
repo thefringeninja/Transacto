@@ -1,3 +1,4 @@
+using System;
 using Xunit;
 
 namespace Transacto.Framework {
@@ -18,9 +19,16 @@ namespace Transacto.Framework {
 			var aggregate = new TestAggregate();
 
 			using var _ = UnitOfWork.Start();
-			UnitOfWork.Current.Attach(new("stream", aggregate, Optional<long>.Empty));
+			UnitOfWork.Current.Attach(new("stream", aggregate));
 			Assert.True(UnitOfWork.Current.TryGet("stream", out var result));
 			Assert.Same(aggregate, result);
+		}
+
+		[Fact]
+		public void AttachingAnAggregateWhenStreamNameExistsThrows() {
+			using var _ = UnitOfWork.Start();
+			UnitOfWork.Current.Attach(new("stream", new TestAggregate()));
+			Assert.Throws<ArgumentException>(() => UnitOfWork.Current.Attach(new("stream", new TestAggregate())));
 		}
 
 		[Fact]

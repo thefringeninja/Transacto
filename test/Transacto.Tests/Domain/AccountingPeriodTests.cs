@@ -20,7 +20,7 @@ namespace Transacto.Domain {
 
 		[Theory, AutoTransactoData]
 		public void InequalityOperator(AccountingPeriod sut) {
-			Assert.False(sut == sut.Next());
+			Assert.True(sut != sut.Next());
 		}
 
 		[Theory, AutoTransactoData]
@@ -28,6 +28,8 @@ namespace Transacto.Domain {
 			var sut = accountingPeriod.Next();
 			Assert.True(sut > accountingPeriod);
 			Assert.True(sut < sut.Next());
+			Assert.True(sut >= accountingPeriod);
+			Assert.True(sut <= sut.Next());
 		}
 
 		[Theory, AutoTransactoData]
