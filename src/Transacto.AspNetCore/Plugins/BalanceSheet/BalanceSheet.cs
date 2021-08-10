@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
-using System.Threading;
 using System.Threading.Tasks;
 using EventStore.Client;
 using Microsoft.AspNetCore.Builder;
@@ -21,193 +20,130 @@ namespace Transacto.Plugins.BalanceSheet {
 
 		public void Configure(IEndpointRouteBuilder builder) => builder
 			.MapGet("{thru}", context => {
-				var readModel = context.RequestServices.GetRequiredService<ReadModel>();
+				var readModel = context.RequestServices.GetRequiredService<InMemoryProjectionDatabase>()
+					.Get<ReadModel>();
 
-				var thru = Time.Parse.LocalDate(context.GetRouteValue("thru")!.ToString()!);
+				if (!readModel.HasValue) {
+					return new ValueTask<Response>(HalResponse.Create<BalanceSheetReport>(context.Request,
+						new BalanceSheetReportRepresentation(),
+						Optional<Position>.Empty));
+				}
 
-				return new ValueTask<Response>(new HalResponse(context.Request,
-					new BalanceSheetReportRepresentation(), readModel.Checkpoint, new BalanceSheetReport {
+				var thru = Time.Parse.LocalDateTime(context.GetRouteValue("thru")!.ToString()!);
+
+				return new ValueTask<Response>(HalResponse.Create<BalanceSheetReport>(context.Request,
+					new BalanceSheetReportRepresentation(), readModel.Value.Checkpoint, new BalanceSheetReport {
 						Thru = thru.ToDateTimeUnspecified(),
-						LineItems = readModel.GetLines(thru),
-						LineItemGroupings = readModel.GetGroupings(thru)
+						LineItems = readModel.Value.GetLineItems(thru)
 					}));
 			});
 
+		private record Entry(LocalDateTime CreatedOn) {
+			public ImmutableDictionary<int, decimal> Credits { get; init; } = ImmutableDictionary<int, decimal>.Empty;
+			public ImmutableDictionary<int, decimal> Debits { get; init; } = ImmutableDictionary<int, decimal>.Empty;
+		}
+
+		private record ReadModel : MemoryReadModel {
+			public ImmutableDictionary<Guid, Entry> UnpostedEntries { get; init; } =
+				ImmutableDictionary<Guid, Entry>.Empty;
+
+			public ImmutableDictionary<Guid, Entry> PostedEntries { get; init; } =
+				ImmutableDictionary<Guid, Entry>.Empty;
+
+			public ImmutableDictionary<int, decimal> ClosedBalance { get; init; } =
+				ImmutableDictionary<int, decimal>.Empty;
+
+			public ImmutableDictionary<int, string> AccountNames { get; init; } =
+				ImmutableDictionary<int, string>.Empty;
+
+			public ImmutableSortedSet<Entry> PostedEntriesByDate { get; init; } = ImmutableSortedSet<Entry>.Empty;
+
+			public ImmutableArray<LineItem> GetLineItems(LocalDateTime thru) => PostedEntries.Values
+				.Where(entry => entry.CreatedOn < thru)
+				.Aggregate(ClosedBalance, (closedBalance, entry) => entry.Debits.Concat(entry.Credits
+						.Select(x => new KeyValuePair<int, decimal>(x.Key, -x.Value)))
+					.Aggregate(closedBalance, (cb, pair) => cb.SetItem(pair.Key,
+						cb.TryGetValue(pair.Key, out var balance)
+							? balance + pair.Value
+							: pair.Value)))
+				.Select(pair => new LineItem {
+					AccountNumber = pair.Key,
+					Balance = new() { DecimalValue = pair.Value },
+					Name = AccountNames[pair.Key]
+				})
+				.ToImmutableArray();
+
+			public ReadModel Compact() => this with {
+				UnpostedEntries = UnpostedEntries.Compact(),
+				PostedEntries = PostedEntries.Compact(),
+				ClosedBalance = ClosedBalance.Compact(),
+				AccountNames = AccountNames.Compact(),
+				PostedEntriesByDate = PostedEntriesByDate.Compact()
+			};
+		}
+
 		public void ConfigureServices(IServiceCollection services) => services
-			.AddInMemoryProjection<ReadModel>(new BalanceSheetProjection());
+			.AddInMemoryProjection(new InMemoryProjectionBuilder<ReadModel>()
+				.When((readModel, e) => e switch {
+					AccountDefined d => readModel with {
+						AccountNames = readModel.AccountNames.SetItem(d.AccountNumber, d.AccountName)
+					},
+					AccountRenamed r => readModel with {
+						AccountNames = readModel.AccountNames.SetItem(r.AccountNumber, r.NewAccountName)
+					},
+					GeneralLedgerEntryCreated c => readModel with {
+						UnpostedEntries = readModel.UnpostedEntries.SetItem(c.GeneralLedgerEntryId,
+							new Entry(Time.Parse.LocalDateTime(c.CreatedOn)))
+					},
+					DebitApplied a => readModel with {
+						UnpostedEntries = readModel.UnpostedEntries.SetItem(a.GeneralLedgerEntryId,
+							readModel.UnpostedEntries[a.GeneralLedgerEntryId] with {
+								Debits = readModel.UnpostedEntries[a.GeneralLedgerEntryId].Debits
+									.SetItem(a.AccountNumber, readModel.UnpostedEntries[a.GeneralLedgerEntryId].Debits
+										.TryGetValue(a.AccountNumber, out var amount)
+										? amount + a.Amount
+										: a.Amount)
+							})
+					},
+					CreditApplied a => readModel with {
+						UnpostedEntries = readModel.UnpostedEntries.SetItem(a.GeneralLedgerEntryId,
+							readModel.UnpostedEntries[a.GeneralLedgerEntryId] with {
+								Credits = readModel.UnpostedEntries[a.GeneralLedgerEntryId].Credits
+									.SetItem(a.AccountNumber, readModel.UnpostedEntries[a.GeneralLedgerEntryId].Credits
+										.TryGetValue(a.AccountNumber, out var amount)
+										? amount + a.Amount
+										: a.Amount)
+							})
+					},
+					GeneralLedgerEntryPosted p => readModel with {
+						PostedEntries = readModel.PostedEntries.Add(p.GeneralLedgerEntryId,
+							readModel.UnpostedEntries.TryGetValue(p.GeneralLedgerEntryId, out var entry)
+								? entry
+								: throw new InvalidOperationException()),
+						UnpostedEntries = readModel.UnpostedEntries.Remove(p.GeneralLedgerEntryId),
+						PostedEntriesByDate =
+						readModel.PostedEntriesByDate.Add(readModel.UnpostedEntries[p.GeneralLedgerEntryId])
+					},
+					AccountingPeriodClosed c => (readModel with {
+						PostedEntries = c.GeneralLedgerEntryIds.Concat(new[] { c.ClosingGeneralLedgerEntryId })
+							.Aggregate(readModel.PostedEntries, (postedEntries, id) => postedEntries.Remove(id)),
+						ClosedBalance = readModel.PostedEntries.Keys.Aggregate(readModel.ClosedBalance,
+							(closedBalance, id) => readModel.PostedEntries[id].Debits
+								.Concat(readModel.PostedEntries[id].Credits
+									.Select(x => new KeyValuePair<int, decimal>(x.Key, -x.Value)))
+								.Aggregate(closedBalance,
+									(cb, pair) => cb.SetItem(pair.Key,
+										cb.TryGetValue(pair.Key, out var balance)
+											? balance + pair.Value
+											: pair.Value))),
+						PostedEntriesByDate = c.GeneralLedgerEntryIds.Concat(new[] { c.ClosingGeneralLedgerEntryId })
+							.Aggregate(readModel.PostedEntriesByDate,
+								(postedEntries, id) => postedEntries.Remove(readModel.PostedEntries[id]))
+					}).Compact(),
+					_ => readModel
+				})
+				.Build());
 
 		public IEnumerable<Type> MessageTypes => Enumerable.Empty<Type>();
-
-		private class BalanceSheetProjection : InMemoryProjection<ReadModel> {
-			public BalanceSheetProjection() {
-				When<AccountDefined>((readModel, e) => readModel.Account(e.AccountNumber, e.AccountName));
-				When<AccountRenamed>((readModel, e) => readModel.Account(e.AccountNumber, e.NewAccountName));
-				When<GeneralLedgerEntryCreated>((readModel, e) =>
-					readModel.GeneralLedgerEntryCreated(e.GeneralLedgerEntryId, Time.Parse.LocalDateTime(e.CreatedOn)));
-				When<DebitApplied>((readModel, e) =>
-					readModel.DebitApplied(e.GeneralLedgerEntryId, e.AccountNumber, e.Amount));
-				When<CreditApplied>((readModel, e) =>
-					readModel.CreditApplied(e.GeneralLedgerEntryId, e.AccountNumber, e.Amount));
-				When<GeneralLedgerEntryPosted>((readModel, e) =>
-					readModel.GeneralLedgerEntryPosted(e.GeneralLedgerEntryId));
-				When<AccountingPeriodClosed>((readModel, e) =>
-					readModel.AccountingPeriodClosed(e.GeneralLedgerEntryIds, e.ClosingGeneralLedgerEntryId));
-			}
-		}
-
-		private class ReadModel : IMemoryReadModel {
-			public Optional<Position> Checkpoint { get; set; } = Optional<Position>.Empty;
-
-			private ImmutableDictionary<Guid, Entry> _unpostedEntries;
-			private ImmutableDictionary<Guid, Entry> _postedEntries;
-			private ImmutableDictionary<int, decimal> _closedBalance;
-			private ImmutableDictionary<int, string> _accountNames;
-
-			public ReadModel() {
-				_unpostedEntries = ImmutableDictionary<Guid, Entry>.Empty;
-				_postedEntries = ImmutableDictionary<Guid, Entry>.Empty;
-				_closedBalance = ImmutableDictionary<int, decimal>.Empty;
-				_accountNames = ImmutableDictionary<int, string>.Empty;
-			}
-
-			public void Account(int accountNumber, string accountName) =>
-				Interlocked.Exchange(ref _accountNames, _accountNames.SetItem(accountNumber, accountName));
-
-			public void GeneralLedgerEntryCreated(Guid generalLedgerEntryId, LocalDateTime createdOn) =>
-				Interlocked.Exchange(ref _unpostedEntries, _unpostedEntries.SetItem(generalLedgerEntryId, new Entry {
-					CreatedOn = createdOn
-				}));
-
-			public void DebitApplied(Guid generalLedgerEntryId, int accountNumber, decimal amount) {
-				_unpostedEntries[generalLedgerEntryId].Debits[accountNumber] = _unpostedEntries[generalLedgerEntryId]
-					.Debits.ContainsKey(accountNumber)
-					? _unpostedEntries[generalLedgerEntryId]
-						.Debits[accountNumber] + amount
-					: amount;
-			}
-
-			public void CreditApplied(Guid generalLedgerEntryId, int accountNumber, decimal amount) {
-				_unpostedEntries[generalLedgerEntryId].Debits[accountNumber] = _unpostedEntries[generalLedgerEntryId]
-					.Credits.ContainsKey(accountNumber)
-					? _unpostedEntries[generalLedgerEntryId]
-						.Credits[accountNumber] + amount
-					: amount;
-			}
-
-			public void GeneralLedgerEntryPosted(Guid generalLedgerEntryId) {
-				var entry = _unpostedEntries[generalLedgerEntryId];
-				Interlocked.Exchange(ref _unpostedEntries, _unpostedEntries.Remove(generalLedgerEntryId));
-				Interlocked.Exchange(ref _postedEntries, _postedEntries.SetItem(generalLedgerEntryId, entry));
-			}
-
-			public void AccountingPeriodClosed(IEnumerable<Guid> generalLedgerEntryIds,
-				Guid closingGeneralLedgerEntryId) {
-				foreach (var id in EntryIds()) {
-					var entry = _postedEntries[id];
-					Interlocked.Exchange(ref _postedEntries, _postedEntries.Remove(id));
-
-					foreach (var (accountNumber, amount) in entry.Debits) {
-						Interlocked.Exchange(ref _closedBalance, _closedBalance.SetItem(accountNumber,
-							_closedBalance.TryGetValue(accountNumber, out var a)
-								? a + amount
-								: amount));
-					}
-					foreach (var (accountNumber, amount) in entry.Credits) {
-						Interlocked.Exchange(ref _closedBalance, _closedBalance.SetItem(accountNumber,
-							_closedBalance.TryGetValue(accountNumber, out var a)
-								? a - amount
-								: -amount));
-					}
-
-					Interlocked.Exchange(ref _unpostedEntries, _unpostedEntries.Compact());
-					Interlocked.Exchange(ref _postedEntries, _postedEntries.Compact());
-					Interlocked.Exchange(ref _accountNames, _accountNames.Compact());
-					Interlocked.Exchange(ref _closedBalance, _closedBalance.Compact());
-				}
-
-				IEnumerable<Guid> EntryIds() {
-					foreach (var id in generalLedgerEntryIds) {
-						yield return id;
-					}
-
-					yield return closingGeneralLedgerEntryId;
-				}
-			}
-
-			public IList<LineItemGrouping> GetGroupings(LocalDate thru) {
-				var groupings = _accountNames.ToDictionary(x => x.Key, pair => new LineItemGrouping {
-					Name = pair.Value,
-					LineItems = {
-						new LineItem {
-							AccountNumber = pair.Key,
-							Name = pair.Value,
-							Balance = new() {
-								DecimalValue = _closedBalance.TryGetValue(pair.Key, out var amount)
-									? amount
-									: decimal.Zero
-							}
-						}
-					}
-				});
-				foreach (var posted in _postedEntries.Values.Where(x => x.CreatedOn.Date <= thru)) {
-					foreach (var (accountNumber, amount) in posted.Debits) {
-						groupings[accountNumber].LineItems[0] = groupings[accountNumber].LineItems[0] with {
-							Balance = groupings[accountNumber].LineItems[0].Balance with {
-								DecimalValue = groupings[accountNumber].LineItems[0].Balance.DecimalValue + amount
-							}
-						};
-					}
-
-					foreach (var (accountNumber, amount) in posted.Credits) {
-						groupings[accountNumber].LineItems[0] = groupings[accountNumber].LineItems[0] with {
-							Balance = groupings[accountNumber].LineItems[0].Balance with {
-								DecimalValue = groupings[accountNumber].LineItems[0].Balance.DecimalValue - amount
-							}
-						};
-					}
-				}
-
-				return groupings.Keys.OrderBy(x => x)
-					.Select(x => groupings[x])
-					.ToList();
-			}
-
-			public IList<LineItem> GetLines(LocalDate thru) {
-				var groupings = _accountNames.ToDictionary(x => x.Key, pair => new LineItem {
-					Name = pair.Value,
-					Balance = new() {
-						DecimalValue = decimal.Zero
-					},
-					AccountNumber = pair.Key
-				});
-				foreach (var posted in _postedEntries.Values.Where(x => x.CreatedOn.Date <= thru)) {
-					foreach (var (accountNumber, amount) in posted.Debits) {
-						groupings[accountNumber] = groupings[accountNumber] with {
-							Balance = groupings[accountNumber].Balance with {
-								DecimalValue = groupings[accountNumber].Balance.DecimalValue + amount
-							}
-						};
-					}
-
-					foreach (var (accountNumber, amount) in posted.Credits) {
-						groupings[accountNumber] = groupings[accountNumber] with {
-							Balance = groupings[accountNumber].Balance with {
-								DecimalValue = groupings[accountNumber].Balance.DecimalValue - amount
-							}
-						};
-					}
-				}
-
-				return groupings.Keys.OrderBy(x => x)
-					.Select(x => groupings[x])
-					.ToList();
-			}
-		}
-
-		private class Entry {
-			public LocalDateTime CreatedOn { get; set; }
-			public Dictionary<int, decimal> Credits { get; } = new();
-			public Dictionary<int, decimal> Debits { get; } = new();
-		}
 	}
 }

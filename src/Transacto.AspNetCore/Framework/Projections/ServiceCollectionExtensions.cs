@@ -6,13 +6,7 @@ namespace Microsoft.Extensions.DependencyInjection {
 	// ReSharper restore CheckNamespace
 
 	public static partial class ServiceCollectionExtensions {
-		public static IServiceCollection AddInMemoryProjection<T>(this IServiceCollection services,
-			ProjectionHandler<InMemorySession>[] projection) where T : class, IMemoryReadModel, new() {
-			var readModel = new T();
-			return services
-				.AddSingleton(projection)
-				.AddSingleton<IMemoryReadModel>(readModel)
-				.AddSingleton(readModel);
-		}
+		public static IServiceCollection AddInMemoryProjection(this IServiceCollection services,
+			ProjectionHandler<InMemoryProjectionDatabase>[] projection) => services.AddSingleton(projection);
 	}
 }

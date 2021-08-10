@@ -84,7 +84,7 @@ namespace Transacto.Infrastructure.SqlStreamStore {
 
 			Task<CheckpointedProjector[]> GetProjectors() => Task.WhenAll(Array.ConvertAll(_projections,
 				async projection => new CheckpointedProjector(
-					new Projector<IStreamStore>(Resolve.WhenEqualToHandlerMessageType(projection.Handlers)),
+					new Projector<IStreamStore>(Resolve.WhenAssignableToHandlerMessageType(projection.Handlers)),
 					await projection.ReadCheckpoint(_streamStore, cancellationToken))));
 		}
 
@@ -111,7 +111,7 @@ namespace Transacto.Infrastructure.SqlStreamStore {
 				var message = JsonSerializer.Deserialize(e.Event.Data.Span, type!, TransactoSerializerOptions.Events)!;
 				return Task.WhenAll(_projectors.Where(x => x.Checkpoint < e.OriginalPosition)
 					.Select(_ => _.Projector.ProjectAsync(_streamStore,
-						Envelope.Create(message, e.OriginalEvent.Position), cancellationToken)));
+						new Envelope(message, e.OriginalEvent.Position), cancellationToken)));
 			}
 		}
 	}

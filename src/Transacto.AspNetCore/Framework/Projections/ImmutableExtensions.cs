@@ -16,5 +16,11 @@ namespace System.Collections.Immutable {
 			builder.UnionWith(source);
 			return builder.ToImmutable();
 		}
+
+		public static ImmutableSortedSet<T> Compact<T>(this ImmutableSortedSet<T> source) {
+			var builder = ImmutableSortedSet<T>.Empty.ToBuilder();
+			builder.UnionWith(source);
+			return builder.ToImmutable();
+		}
 	}
 }

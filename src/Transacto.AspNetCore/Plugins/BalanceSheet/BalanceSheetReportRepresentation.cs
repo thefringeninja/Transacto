@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using Hallo;
+using Transacto.Framework;
 
 namespace Transacto.Plugins.BalanceSheet {
 	internal class BalanceSheetReportRepresentation : Hal<BalanceSheetReport>, IHalLinks<BalanceSheetReport>,

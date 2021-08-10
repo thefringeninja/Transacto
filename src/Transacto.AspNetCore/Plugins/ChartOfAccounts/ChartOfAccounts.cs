@@ -2,9 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
-using System.Net;
-using System.Threading;
-using System.Threading.Tasks;
 using EventStore.Client;
 using Hallo;
 using Microsoft.AspNetCore.Builder;
@@ -21,15 +18,12 @@ namespace Transacto.Plugins.ChartOfAccounts {
 
 		public void Configure(IEndpointRouteBuilder builder) => builder
 			.MapGet(string.Empty, context => {
-				var readModel = context.RequestServices.GetRequiredService<ReadModel>();
+				var readModel = context.RequestServices.GetRequiredService<InMemoryProjectionDatabase>()
+					.Get<ReadModel>();
 
-				var response = new HalResponse(context.Request, new ChartOfAccountsRepresentation(),
-					readModel.Checkpoint, readModel);
-				if (response.StatusCode != HttpStatusCode.NotAcceptable) {
-					response.StatusCode = HttpStatusCode.OK;
-				}
-
-				return new ValueTask<Response>(response);
+				return new(HalResponse.Create(context.Request, new ChartOfAccountsRepresentation(),
+					readModel.HasValue ? readModel.Value.Checkpoint : Optional<Position>.Empty,
+					readModel));
 			})
 			.MapCommands(string.Empty,
 				typeof(DefineAccount),
@@ -39,22 +33,22 @@ namespace Transacto.Plugins.ChartOfAccounts {
 
 		public void ConfigureServices(IServiceCollection services) => services
 			.AddCommandHandlerModule<ChartOfAccountsModule>()
-			.AddInMemoryProjection<ReadModel>(new ChartOfAccountsProjection());
+			.AddInMemoryProjection(new InMemoryProjectionBuilder<ReadModel>()
+				.When((readModel, e) => readModel with {
+					ChartOfAccounts = e switch {
+						AccountDefined d => readModel.ChartOfAccounts.SetItem(d.AccountNumber, (d.AccountName, true)),
+						AccountRenamed r => readModel.ChartOfAccounts.SetItem(r.AccountNumber,
+							(r.NewAccountName, readModel.ChartOfAccounts[r.AccountNumber].active)),
+						AccountDeactivated d => readModel.ChartOfAccounts.SetItem(d.AccountNumber,
+							(readModel.ChartOfAccounts[d.AccountNumber].accountName, false)),
+						AccountReactivated r => readModel.ChartOfAccounts.SetItem(r.AccountNumber,
+							(readModel.ChartOfAccounts[r.AccountNumber].accountName, true)),
+						_ => readModel.ChartOfAccounts
+					}
+				})
+				.Build());
 
 		public IEnumerable<Type> MessageTypes => Enumerable.Empty<Type>();
-
-		private class ChartOfAccountsProjection : InMemoryProjection<ReadModel> {
-			public ChartOfAccountsProjection() {
-				When<AccountDefined>((readModel, e) =>
-					readModel.AccountDefined(e.AccountNumber, e.AccountName));
-				When<AccountDeactivated>((readModel, e) =>
-					readModel.AccountActivationChanged(e.AccountNumber, false));
-				When<AccountReactivated>((readModel, e) =>
-					readModel.AccountActivationChanged(e.AccountNumber, true));
-				When<AccountRenamed>((readModel, e) =>
-					readModel.AccountRenamed(e.AccountNumber, e.NewAccountName));
-			}
-		}
 
 		private class ChartOfAccountsRepresentation : Hal<ReadModel>, IHalLinks<ReadModel>, IHalState<ReadModel> {
 			public IEnumerable<Link> LinksFor(ReadModel resource) {
@@ -63,44 +57,13 @@ namespace Transacto.Plugins.ChartOfAccounts {
 				}
 			}
 
-			public object StateFor(ReadModel resource) =>
-				new SortedDictionary<string, string>(resource.ChartOfAccounts.ToDictionary(x => x.Key.ToString(),
-					x => x.Value.accountName));
+			public object StateFor(ReadModel resource) => new SortedDictionary<string, string>(
+				resource.ChartOfAccounts.ToDictionary(x => x.Key.ToString(), x => x.Value.accountName));
 		}
 
-		private class ReadModel : IMemoryReadModel {
-			private ImmutableSortedDictionary<int, (string accountName, bool active)> _chartOfAccounts;
-
-			public ImmutableSortedDictionary<int, (string accountName, bool active)> ChartOfAccounts =>
-				_chartOfAccounts;
-
-			public Optional<Position> Checkpoint { get; set; }
-
-			public ReadModel() {
-				_chartOfAccounts = ImmutableSortedDictionary<int, (string accountName, bool active)>.Empty;
-			}
-
-			public void AccountDefined(int accountNumber, string accountName) =>
-				Interlocked.Exchange(ref _chartOfAccounts,
-					_chartOfAccounts.SetItem(accountNumber, (accountName, true)));
-
-			public void AccountRenamed(int accountNumber, string accountName) {
-				if (!_chartOfAccounts.TryGetValue(accountNumber, out var x)) {
-					return;
-				}
-
-				Interlocked.Exchange(ref _chartOfAccounts,
-					_chartOfAccounts.SetItem(accountNumber, (accountName, x.active)));
-			}
-
-			public void AccountActivationChanged(int accountNumber, bool active) {
-				if (!_chartOfAccounts.TryGetValue(accountNumber, out var x)) {
-					return;
-				}
-
-				Interlocked.Exchange(ref _chartOfAccounts,
-					_chartOfAccounts.SetItem(accountNumber, (x.accountName, active)));
-			}
+		private record ReadModel : MemoryReadModel {
+			public ImmutableSortedDictionary<int, (string accountName, bool active)> ChartOfAccounts { get; init; } =
+				ImmutableSortedDictionary<int, (string, bool)>.Empty;
 		}
 	}
 }

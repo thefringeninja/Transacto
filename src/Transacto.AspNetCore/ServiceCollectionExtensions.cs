@@ -38,12 +38,12 @@ namespace Transacto {
 						.AddSingleton(rootProvider.GetRequiredService<EventStoreClient>())
 						.AddSingleton(rootProvider.GetRequiredService<IStreamStore>())
 						.AddSingleton(rootProvider.GetRequiredService<IMessageTypeMapper>())
-						.AddSingleton<InMemorySession>()
+						.AddSingleton<InMemoryProjectionDatabase>()
 						.AddHostedService(provider => new InMemoryProjectionHost(
 							provider.GetRequiredService<EventStoreClient>(),
 							provider.GetRequiredService<IMessageTypeMapper>(),
-							provider.GetRequiredService<InMemorySession>(),
-							provider.GetServices<ProjectionHandler<InMemorySession>[]>().ToArray()))
+							provider.GetRequiredService<InMemoryProjectionDatabase>(),
+							provider.GetServices<ProjectionHandler<InMemoryProjectionDatabase>[]>().ToArray()))
 						.AddSingleton<Func<NpgsqlConnection>>(_ => () => rootProvider
 							.GetRequiredService<Func<IPlugin, NpgsqlConnection>>()
 							.Invoke(plugin))
