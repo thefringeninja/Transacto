@@ -2,9 +2,28 @@
 
 	<ItemGroup>
 		<PackageReference Include="NodaTime" Version="3.0.5" />
-		<PackageReference Include="Transacto.Tasks" Version="0.1.0-rc.1.3" />
 	</ItemGroup>
+
+	<ItemGroup>
+	  <ProjectReference Include="..\Transacto.Schemo\Transacto.Schemo.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
+	</ItemGroup>
+
+	<PropertyGroup>
+		<EmitCompilerGeneratedFiles>true</EmitCompilerGeneratedFiles>
+	</PropertyGroup>
+	<ItemGroup>
+		<!-- Don't include the output from a previous source generator execution into future runs; the */** trick here ensures that there's
+		at least one subdirectory, which is our key that it's coming from a source generator as opposed to something that is coming from
+		some other tool. -->
+		<Compile Remove="$(CompilerGeneratedFilesOutputPath)/*/**/*.cs" />
+		<None Include="$(OutputPath)/$(AssemblyName).dll" Pack="true" PackagePath="analyzers/dotnet/cs" Visible="false" />
+	</ItemGroup>
+
 	<ItemGroup>
 		<EmbeddedResource Include="**\*.schema.json" />
+		<AdditionalFiles Include="**\*.schema.json" Namespace="Transacto.Messages" />
+		<CompilerVisibleProperty Include="RootNamespace" />
+		<CompilerVisibleItemMetadata Include="AdditionalFiles" MetadataName="Namespace" Visible="false" />
 	</ItemGroup>
+
 </Project>

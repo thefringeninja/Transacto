@@ -1,11 +1,11 @@
 using System;
+using System.Collections.Immutable;
 
 namespace Transacto.Messages {
-	partial record BeginClosingAccountingPeriod {
+	public partial record BeginClosingAccountingPeriod {
 		public BeginClosingAccountingPeriod() {
-			GeneralLedgerEntryIds = Array.Empty<Guid>();
+			GeneralLedgerEntryIds = ImmutableArray<Guid>.Empty;
 		}
-
 		public override string ToString() => "Closing accounting period.";
 	}
 }

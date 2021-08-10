@@ -1,5 +1,5 @@
 namespace Transacto.Messages {
-    partial record RenameAccount {
+    public partial record RenameAccount {
 	    public RenameAccount() {
 		    NewAccountName = null!;
 	    }

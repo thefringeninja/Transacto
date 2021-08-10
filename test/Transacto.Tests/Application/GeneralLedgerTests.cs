@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Immutable;
 using System.Threading.Tasks;
 using NodaTime;
 using Transacto.Domain;
@@ -42,7 +43,9 @@ namespace Transacto.Application {
 					OpenedOn = Time.Format.LocalDate(openedOn.OnDayOfMonth(1))
 				})
 				.When(new BeginClosingAccountingPeriod {
-					GeneralLedgerEntryIds = Array.ConvertAll(generalLedgerEntryIdentifiers, x => x.ToGuid()),
+					GeneralLedgerEntryIds =
+						ImmutableArray<Guid>.Empty.AddRange(Array.ConvertAll(generalLedgerEntryIdentifiers,
+							x => x.ToGuid())),
 					ClosingOn = openedOn.OnDayOfMonth(2).AtMidnight().ToDateTimeUnspecified(),
 					RetainedEarningsAccountNumber = retainedEarnings.AccountNumber.ToInt32(),
 					ClosingGeneralLedgerEntryId = closingGeneralLedgerEntryIdentifier.ToGuid()
