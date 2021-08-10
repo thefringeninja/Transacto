@@ -3,7 +3,7 @@ using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace Transacto {
+namespace Transacto.Framework.Http {
 	public sealed class NotFoundResponse : Response {
 		public NotFoundResponse() {
 			StatusCode = HttpStatusCode.NotFound;

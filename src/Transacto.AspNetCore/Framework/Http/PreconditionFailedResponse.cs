@@ -1,6 +1,6 @@
 using System.Net;
 
-namespace Transacto {
+namespace Transacto.Framework.Http {
 	public sealed class PreconditionFailedResponse : Response {
 		public static PreconditionFailedResponse Instance = new();
 

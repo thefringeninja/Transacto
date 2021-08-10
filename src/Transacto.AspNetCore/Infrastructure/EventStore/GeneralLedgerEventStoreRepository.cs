@@ -7,7 +7,7 @@ using Transacto.Domain;
 using Transacto.Framework;
 using Transacto.Messages;
 
-namespace Transacto.Infrastructure {
+namespace Transacto.Infrastructure.EventStore {
 	public class GeneralLedgerEventStoreRepository : IGeneralLedgerRepository {
 		private readonly EventStoreClient _eventStore;
 		private readonly IMessageTypeMapper _messageTypeMapper;
@@ -28,7 +28,7 @@ namespace Transacto.Infrastructure {
 				GeneralLedger.Identifier, StreamPosition.End, int.MaxValue, cancellationToken: cancellationToken);
 
 			generalLedger = GeneralLedger.Factory();
-		
+
 			var stack = new Stack<object>();
 			bool streamPositionAssigned = false;
 			StreamPosition streamPosition = default;
@@ -51,7 +51,7 @@ namespace Transacto.Infrastructure {
 
 			generalLedger.LoadFromHistory(stack);
 
-			UnitOfWork.Current.Attach(new (GeneralLedger.Identifier, generalLedger, streamPosition.ToInt64()));
+			UnitOfWork.Current.Attach(new(GeneralLedger.Identifier, generalLedger, streamPosition.ToInt64()));
 
 			return generalLedger;
 		}

@@ -1,6 +1,6 @@
 using System.Net;
 
-namespace Transacto {
+namespace Transacto.Framework.Http {
 	public sealed class NotAcceptableResponse : Response {
 		public static readonly Response Instance = new NotAcceptableResponse();
 

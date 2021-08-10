@@ -64,7 +64,7 @@ namespace Transacto.Framework.Projections {
 
 			Task ProjectAsync(StreamSubscription s, ResolvedEvent e, CancellationToken ct) =>
 				_messageTypeMapper.TryMap(e.Event.EventType, out var type)
-					?_projector.ProjectAsync(_target, Envelope.Create(JsonSerializer.Deserialize(
+					? _projector.ProjectAsync(_target, Envelope.Create(JsonSerializer.Deserialize(
 						e.Event.Data.Span, type, TransactoSerializerOptions.Events)!, e.OriginalEvent.Position), ct)
 					: Task.CompletedTask;
 		}

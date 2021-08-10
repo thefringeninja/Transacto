@@ -9,8 +9,8 @@ using Projac;
 using SqlStreamStore;
 using Transacto.Framework;
 using Transacto.Framework.Projections;
-using Transacto.Framework.Projections.Npgsql;
-using Transacto.Framework.Projections.SqlStreamStore;
+using Transacto.Infrastructure.Npgsql;
+using Transacto.Infrastructure.SqlStreamStore;
 using Transacto.Plugins;
 
 namespace Transacto {

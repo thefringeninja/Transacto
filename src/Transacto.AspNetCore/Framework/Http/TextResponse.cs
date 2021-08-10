@@ -4,7 +4,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Net.Http.Headers;
 
-namespace Transacto {
+namespace Transacto.Framework.Http {
 	public sealed class TextResponse : Response {
 		private static readonly MediaTypeHeaderValue ContentType = new("text/plain");
 		private readonly string _body;

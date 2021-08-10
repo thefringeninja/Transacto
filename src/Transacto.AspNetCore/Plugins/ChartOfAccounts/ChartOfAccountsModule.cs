@@ -3,6 +3,7 @@ using Transacto.Application;
 using Transacto.Framework;
 using Transacto.Framework.CommandHandling;
 using Transacto.Infrastructure;
+using Transacto.Infrastructure.EventStore;
 using Transacto.Messages;
 
 namespace Transacto.Plugins.ChartOfAccounts {

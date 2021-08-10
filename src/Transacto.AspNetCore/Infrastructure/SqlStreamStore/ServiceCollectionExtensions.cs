@@ -1,4 +1,4 @@
-using Transacto.Framework.Projections.SqlStreamStore;
+using Transacto.Infrastructure.SqlStreamStore;
 
 // ReSharper disable CheckNamespace
 namespace Microsoft.Extensions.DependencyInjection {

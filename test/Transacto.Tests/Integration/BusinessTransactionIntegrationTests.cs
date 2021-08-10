@@ -3,7 +3,7 @@ using System.Threading.Tasks;
 using NodaTime;
 using Transacto.Domain;
 using Transacto.Framework;
-using Transacto.Framework.Projections.SqlStreamStore;
+using Transacto.Infrastructure.SqlStreamStore;
 using Transacto.Messages;
 using Xunit;
 

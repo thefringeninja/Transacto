@@ -16,9 +16,8 @@ using Microsoft.AspNetCore.Http.Headers;
 using Microsoft.AspNetCore.Mvc.Formatters;
 using Microsoft.Net.Http.Headers;
 using RazorLight;
-using Transacto.Framework;
 
-namespace Transacto {
+namespace Transacto.Framework.Http {
 	public class HalResponse : Response, IHaveEventStorePosition {
 		private static readonly object EmptyBody = new();
 		private static readonly MediaType HalJson = new("application/hal+json");

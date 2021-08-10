@@ -8,8 +8,9 @@ using Microsoft.Extensions.Hosting;
 using Projac;
 using Serilog;
 using SqlStreamStore;
+using Transacto.Framework;
 
-namespace Transacto.Framework.Projections.SqlStreamStore {
+namespace Transacto.Infrastructure.SqlStreamStore {
 	public class StreamStoreProjectionHost : IHostedService {
 		private readonly EventStoreClient _eventStore;
 		private readonly IMessageTypeMapper _messageTypeMap;

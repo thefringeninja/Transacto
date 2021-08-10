@@ -45,7 +45,8 @@ namespace Transacto.Framework.ProcessManagers {
 
 		private async Task SetStreamMetadata(CancellationToken cancellationToken) {
 			await _eventStore.SetStreamMetadataAsync(_checkpointStreamName, StreamState.NoStream,
-				new StreamMetadata(maxCount: 5), options => options.ThrowOnAppendFailure = false, cancellationToken: cancellationToken);
+				new StreamMetadata(maxCount: 5), options => options.ThrowOnAppendFailure = false,
+				cancellationToken: cancellationToken);
 		}
 
 		private async Task Subscribe(CancellationToken cancellationToken) {
