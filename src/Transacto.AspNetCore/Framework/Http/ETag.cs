@@ -1,9 +1,8 @@
 using System;
 using EventStore.Client;
-using Transacto.Framework;
 using HashCode = System.HashCode;
 
-namespace Transacto {
+namespace Transacto.Framework.Http {
 	public struct ETag : IEquatable<ETag> {
 		public static readonly ETag None = default;
 		private readonly string _value;

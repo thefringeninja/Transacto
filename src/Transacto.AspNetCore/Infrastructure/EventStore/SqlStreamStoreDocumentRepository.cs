@@ -7,7 +7,7 @@ using SqlStreamStore.Streams;
 using Transacto.Domain;
 using Transacto.Framework;
 
-namespace Transacto.Infrastructure {
+namespace Transacto.Infrastructure.EventStore {
 	public class StreamStoreBusinessTransactionRepository<TBusinessTransaction>
 		where TBusinessTransaction : IBusinessTransaction {
 		private readonly IStreamStore _streamStore;
@@ -52,7 +52,8 @@ namespace Transacto.Infrastructure {
 			var streamName = _getStreamName(transaction);
 			var data = JsonSerializer.Serialize(transaction, _serializerOptions);
 
-			return new ValueTask(_streamStore.AppendToStream(streamName, transaction.Version ?? ExpectedVersion.NoStream,
+			return new ValueTask(_streamStore.AppendToStream(streamName,
+				transaction.Version ?? ExpectedVersion.NoStream,
 				new NewStreamMessage(Guid.NewGuid(), typeof(TBusinessTransaction).Name, data), cancellationToken));
 		}
 	}

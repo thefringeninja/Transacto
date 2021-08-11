@@ -8,6 +8,7 @@ using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
 using Transacto;
 using Transacto.Framework;
+using Transacto.Framework.Http;
 using Transacto.Plugins;
 
 // ReSharper disable CheckNamespace

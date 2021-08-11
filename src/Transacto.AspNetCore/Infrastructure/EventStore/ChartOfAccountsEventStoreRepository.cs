@@ -4,7 +4,7 @@ using EventStore.Client;
 using Transacto.Domain;
 using Transacto.Framework;
 
-namespace Transacto.Infrastructure {
+namespace Transacto.Infrastructure.EventStore {
 	public class ChartOfAccountsEventStoreRepository : IChartOfAccountsRepository {
 		private readonly EventStoreRepository<ChartOfAccounts> _inner;
 

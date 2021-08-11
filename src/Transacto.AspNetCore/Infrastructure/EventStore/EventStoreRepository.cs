@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 using EventStore.Client;
 using Transacto.Framework;
 
-namespace Transacto.Infrastructure {
+namespace Transacto.Infrastructure.EventStore {
 	public class EventStoreRepository<TAggregateRoot> where TAggregateRoot : AggregateRoot {
 		private static readonly JsonSerializerOptions DefaultOptions = new() {
 			PropertyNamingPolicy = JsonNamingPolicy.CamelCase
@@ -51,12 +51,12 @@ namespace Transacto.Infrastructure {
 					_messageTypeMapper.Map(e.OriginalEvent.EventType),
 					_serializerOptions)!));
 
-			UnitOfWork.Current.Attach(new (streamName, aggregate, version));
+			UnitOfWork.Current.Attach(new(streamName, aggregate, version));
 
 			return aggregate;
 		}
 
 		public void Add(TAggregateRoot aggregateRoot) =>
-			UnitOfWork.Current.Attach(new (aggregateRoot.Id, aggregateRoot));
+			UnitOfWork.Current.Attach(new(aggregateRoot.Id, aggregateRoot));
 	}
 }

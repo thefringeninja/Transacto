@@ -3,8 +3,9 @@ using System.Collections.Generic;
 using System.Text.Json;
 using SqlStreamStore;
 using SqlStreamStore.Streams;
+using Transacto.Framework;
 
-namespace Transacto.Framework.Projections.SqlStreamStore {
+namespace Transacto.Infrastructure.SqlStreamStore {
 	public abstract class StreamStoreFeedProjection<TFeedEntry> : StreamStoreProjection
 		where TFeedEntry : FeedEntry, new() {
 		private readonly IMessageTypeMapper _messageTypeMapper;

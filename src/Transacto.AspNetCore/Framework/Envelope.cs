@@ -2,7 +2,7 @@ using System;
 using System.Collections.Concurrent;
 using EventStore.Client;
 
-namespace Transacto {
+namespace Transacto.Framework {
 	public record Envelope {
 		private static readonly ConcurrentDictionary<Type, Func<object, Position, Envelope>> Cache =
 			new();
@@ -10,7 +10,7 @@ namespace Transacto {
 		public static Envelope Create(object message, Position position) =>
 			Cache.GetOrAdd(message.GetType(), _ => (m, p) => (Envelope)typeof(Envelope<>)
 					.MakeGenericType(m.GetType())
-					.GetConstructor(new[] {m.GetType(), typeof(Position)})!.Invoke(new[] {m, p}))
+					.GetConstructor(new[] { m.GetType(), typeof(Position) })!.Invoke(new[] { m, p }))
 				.Invoke(message, position);
 	}
 

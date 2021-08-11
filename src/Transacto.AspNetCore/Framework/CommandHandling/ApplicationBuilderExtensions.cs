@@ -11,6 +11,7 @@ using Microsoft.Net.Http.Headers;
 using Transacto;
 using Transacto.Domain;
 using Transacto.Framework.CommandHandling;
+using Transacto.Framework.Http;
 using Transacto.Messages;
 
 // ReSharper disable CheckNamespace

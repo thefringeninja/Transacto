@@ -7,7 +7,7 @@ using Npgsql;
 using Projac.Npgsql;
 using Projac.Sql;
 
-namespace Transacto.Framework.Projections.Npgsql {
+namespace Transacto.Infrastructure.Npgsql {
 	public abstract class NpgsqlProjection : SqlProjection {
 		protected NpgsqlScripts Scripts { get; }
 		protected static readonly NpgsqlSyntax Sql = new();
@@ -29,10 +29,10 @@ namespace Transacto.Framework.Projections.Npgsql {
 		public async Task<Position> ReadCheckpoint(NpgsqlConnection connection,
 			CancellationToken cancellationToken) {
 			await connection.OpenAsync(cancellationToken);
-			var statement = Sql.QueryStatement(NpgsqlScripts.ReadCheckpoint, new {projection = GetType().Name});
+			var statement = Sql.QueryStatement(NpgsqlScripts.ReadCheckpoint, new { projection = GetType().Name });
 
 			await using var command = new NpgsqlCommand(statement.Text, connection) {
-				Parameters = {statement.Parameters}
+				Parameters = { statement.Parameters }
 			};
 			await using var reader = await command.ExecuteReaderAsync(cancellationToken);
 			if (!await reader.ReadAsync(cancellationToken)) {
@@ -56,7 +56,7 @@ namespace Transacto.Framework.Projections.Npgsql {
 			}
 
 			await using var command = new NpgsqlCommand(statement.Text, transaction.Connection, transaction) {
-				Parameters = {statement.Parameters}
+				Parameters = { statement.Parameters }
 			};
 
 			await command.ExecuteNonQueryAsync(cancellationToken);

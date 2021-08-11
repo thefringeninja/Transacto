@@ -11,6 +11,7 @@ using Microsoft.Extensions.DependencyInjection;
 using NodaTime;
 using Transacto.Domain;
 using Transacto.Framework;
+using Transacto.Framework.Http;
 using Transacto.Framework.Projections;
 using Transacto.Messages;
 

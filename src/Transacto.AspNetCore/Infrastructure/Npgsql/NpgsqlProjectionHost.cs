@@ -9,8 +9,10 @@ using Npgsql;
 using Projac.Sql;
 using Projac.Sql.Executors;
 using Serilog;
+using Transacto.Framework;
+using Transacto.Framework.Projections;
 
-namespace Transacto.Framework.Projections.Npgsql {
+namespace Transacto.Infrastructure.Npgsql {
 	public class NpgsqlProjectionHost : IHostedService {
 		private readonly EventStoreClient _eventStore;
 		private readonly IMessageTypeMapper _messageTypeMap;
@@ -41,6 +43,7 @@ namespace Transacto.Framework.Projections.Npgsql {
 			if (_projections.Length == 0) {
 				return;
 			}
+
 			await CreateSchema(cancellationToken);
 
 			await Subscribe(cancellationToken);
@@ -124,6 +127,7 @@ namespace Transacto.Framework.Projections.Npgsql {
 				if (!_messageTypeMapper.TryMap(e.Event.EventType, out var type)) {
 					return Task.CompletedTask;
 				}
+
 				var message = JsonSerializer.Deserialize(e.Event.Data.Span, type, TransactoSerializerOptions.Events)!;
 				return Task.WhenAll(_projectors.Where(projection => projection.Checkpoint < e.OriginalPosition)
 					.Select(async projector => {

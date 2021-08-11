@@ -1,4 +1,4 @@
-using Transacto.Framework.Projections.Npgsql;
+using Transacto.Infrastructure.Npgsql;
 
 // ReSharper disable CheckNamespace
 namespace Microsoft.Extensions.DependencyInjection {

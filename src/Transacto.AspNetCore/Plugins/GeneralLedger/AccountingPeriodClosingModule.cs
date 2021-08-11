@@ -4,6 +4,7 @@ using Transacto.Domain;
 using Transacto.Framework;
 using Transacto.Framework.ProcessManagers;
 using Transacto.Infrastructure;
+using Transacto.Infrastructure.EventStore;
 using Transacto.Messages;
 
 namespace Transacto.Plugins.GeneralLedger {

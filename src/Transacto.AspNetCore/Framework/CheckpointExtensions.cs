@@ -1,8 +1,7 @@
 using System;
 using EventStore.Client;
-using Transacto.Framework;
 
-namespace Transacto {
+namespace Transacto.Framework {
 	public static class CheckpointExtensions {
 		public static Position ToEventStorePosition(this Checkpoint checkpoint) =>
 			checkpoint == Checkpoint.None

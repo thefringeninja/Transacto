@@ -11,6 +11,7 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
 using Transacto.Framework;
+using Transacto.Framework.Http;
 using Transacto.Framework.Projections;
 using Transacto.Messages;
 

@@ -1,9 +1,8 @@
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
-using Transacto.Framework;
 
-namespace Transacto {
+namespace Transacto.Framework.Http {
 	public sealed class CommandHandledResponse : Response {
 		private readonly Checkpoint _checkpoint;
 
