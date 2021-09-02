@@ -2,7 +2,7 @@ using System.Text.Json.Serialization;
 using Transacto.Domain;
 
 namespace Transacto.Messages {
-	partial record PostGeneralLedgerEntry {
+	public partial record PostGeneralLedgerEntry {
 		public PostGeneralLedgerEntry() {
 			Period = null!;
 		}

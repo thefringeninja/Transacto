@@ -1,18 +1,19 @@
 using System;
-using System.Collections.Concurrent;
 using EventStore.Client;
+using Projac;
 
 namespace Transacto.Framework {
-	public record Envelope {
-		private static readonly ConcurrentDictionary<Type, Func<object, Position, Envelope>> Cache =
-			new();
-
-		public static Envelope Create(object message, Position position) =>
-			Cache.GetOrAdd(message.GetType(), _ => (m, p) => (Envelope)typeof(Envelope<>)
-					.MakeGenericType(m.GetType())
-					.GetConstructor(new[] { m.GetType(), typeof(Position) })!.Invoke(new[] { m, p }))
-				.Invoke(message, position);
+	public static class EnvelopeResolve {
+		public static ProjectionHandlerResolver<TConnection> WhenAssignableToHandlerMessageType<TConnection>(
+			ProjectionHandler<TConnection>[] handlers) =>
+			handlers switch {
+				null => throw new ArgumentNullException(nameof(handlers)),
+				_ => message => message switch {
+					null => throw new ArgumentNullException(nameof(message)),
+					_ => handlers
+				}
+			};
 	}
 
-	public record Envelope<T>(T Message, Position Position) : Envelope;
+	public record Envelope(object Message, Position Position);
 }

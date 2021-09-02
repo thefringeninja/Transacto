@@ -35,7 +35,7 @@ namespace Microsoft.AspNetCore.Builder {
 			Func<HttpContext, ValueTask<Response>> getResponse) {
 			builder.MapGet(route, async context => {
 				var response = await getResponse(context);
-				if (response is IHaveEventStorePosition {Position: {HasValue: true}} hasPosition) {
+				if (response is IHaveEventStorePosition hasPosition) {
 					var positions = context.Request
 						.GetTypedHeaders().IfMatch
 						.Where(etag => etag.Tag.HasValue)
@@ -48,7 +48,7 @@ namespace Microsoft.AspNetCore.Builder {
 						return;
 					}
 
-					if (positions.Any(requestedPosition => hasPosition.Position.Value >= requestedPosition)) {
+					if (hasPosition.Position.HasValue && positions.Any(requestedPosition => hasPosition.Position.Value >= requestedPosition)) {
 						await response.Write(context.Response);
 						return;
 					}

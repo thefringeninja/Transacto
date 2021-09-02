@@ -18,8 +18,7 @@ using Microsoft.Net.Http.Headers;
 using RazorLight;
 
 namespace Transacto.Framework.Http {
-	public class HalResponse : Response, IHaveEventStorePosition {
-		private static readonly object EmptyBody = new();
+	public class HalResponse<T> : HalResponse where T: class, new() {
 		private static readonly MediaType HalJson = new("application/hal+json");
 		private static readonly MediaType Html = new("text/html");
 
@@ -27,14 +26,13 @@ namespace Transacto.Framework.Http {
 
 		public override ResponseHeaders Headers => _inner.Headers;
 		public override HttpStatusCode StatusCode { get => _inner.StatusCode; set => _inner.StatusCode = value; }
-		public Optional<Position> Position { get; }
 
-		public HalResponse(HttpRequest request, IHal hal, Optional<Position> position, Optional<object> resource) {
+		internal HalResponse(HttpRequest request, IHal hal, Optional<Position> position, T resource)
+			: base(position) {
 			_inner = request.Headers["accept"].Count == 0
 				? new HalJsonResponse(hal, resource)
 				: request.Headers["accept"].Select(MediaType).Select(Negotiate).FirstOrDefault() ??
 				  NotAcceptableResponse.Instance;
-			Position = position;
 
 			if (position.HasValue) {
 				_inner.Headers.ETag = new EntityTagHeaderValue(@$"""{position.Value.ToCheckpoint()}""");
@@ -57,13 +55,13 @@ namespace Transacto.Framework.Http {
 			private static readonly ConcurrentDictionary<Assembly, RazorLightEngine> Engines =
 				new();
 
-			private static readonly MediaTypeHeaderValue ContentType = new("text/html");
+			private static readonly MediaTypeHeaderValue ContentType = new($"{Html.Type}/{Html.SubType}");
 
-			private readonly object _resource;
+			private readonly T _resource;
 			private readonly IHal _hal;
 
-			public HalHtmlResponse(IHal hal, Optional<object> resource) {
-				_resource = resource.HasValue ? resource.Value : EmptyBody;
+			public HalHtmlResponse(IHal hal, T resource) {
+				_resource = resource;
 				_hal = hal;
 
 				Headers.ContentType = ContentType;
@@ -104,13 +102,13 @@ namespace Transacto.Framework.Http {
 					PropertyNamingPolicy = JsonNamingPolicy.CamelCase
 				};
 
-			private static readonly MediaTypeHeaderValue ContentType = new("application/hal+json");
+			private static readonly MediaTypeHeaderValue ContentType = new($"{HalJson.Type}/{HalJson.SubType}");
 
-			private readonly object _resource;
+			private readonly T _resource;
 			private readonly IHal _hal;
 
-			public HalJsonResponse(IHal hal, Optional<object> resource) {
-				_resource = resource.HasValue ? resource.Value : EmptyBody;
+			public HalJsonResponse(IHal hal, T resource) {
+				_resource = resource;
 				_hal = hal;
 				Headers.ContentType = ContentType;
 			}
@@ -120,5 +118,14 @@ namespace Transacto.Framework.Http {
 				await JsonSerializer.SerializeAsync(stream, representation, SerializerOptions, cancellationToken);
 			}
 		}
+	}
+
+	public abstract class HalResponse : Response, IHaveEventStorePosition {
+		public static HalResponse<T> Create<T>(HttpRequest request, IHal hal, Optional<Position> position,
+			Optional<T> resource = default) where T : class, new() =>
+			new(request, hal, position, resource.HasValue ? resource.Value : new T());
+
+		protected HalResponse(Optional<Position> position) => Position = position;
+		public Optional<Position> Position { get; }
 	}
 }

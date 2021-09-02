@@ -19,7 +19,7 @@ namespace Transacto.Infrastructure.SqlStreamStore {
 		}
 
 		protected void When<TEvent>(Func<TEvent, TFeedEntry, TFeedEntry> apply)
-			=> When<Envelope<TEvent>>(async (streamStore, e, ct) => {
+			=> When<Envelope>(async (streamStore, e, ct) => {
 				var page = await streamStore.ReadStreamBackwards(StreamName, StreamVersion.End, 1,
 					true, ct);
 
@@ -32,7 +32,7 @@ namespace Transacto.Infrastructure.SqlStreamStore {
 					type = "unknown";
 				}
 
-				target = apply.Invoke(e.Message, target);
+				//target = apply.Invoke(e.Message, target);
 				target.Events.Add(type!);
 
 				await streamStore.AppendToStream(StreamName, expectedVersion,

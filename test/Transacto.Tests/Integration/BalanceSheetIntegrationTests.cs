@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Immutable;
 using System.Linq;
 using System.Net;
 using System.Text.Json;
@@ -15,6 +16,7 @@ namespace Transacto.Integration {
 		public async Task when_an_entry_is_posted(
 			GeneralLedgerEntryIdentifier generalLedgerEntryIdentifier, LocalDateTime createdOn, Money[] amounts) {
 			var period = AccountingPeriod.Open(createdOn.Date);
+			var thru = createdOn.Date.PlusDays(1).AtMidnight();
 			var accounts = await OpenBooks(createdOn).ToArrayAsync();
 
 			var debits = Array.ConvertAll(amounts, amount =>
@@ -23,33 +25,54 @@ namespace Transacto.Integration {
 			var credits = Array.ConvertAll(amounts, amount =>
 				new Credit(accounts.OrderBy(_ => Guid.NewGuid()).First().accountNumber, amount));
 
+			var journalEntry = new JournalEntry {
+				ReferenceNumber = 1,
+				Credits = Array.ConvertAll(credits, credit => new JournalEntry.Item {
+					Amount = credit.Amount.ToDecimal(),
+					AccountNumber = credit.AccountNumber.Value
+				}),
+				Debits = Array.ConvertAll(debits, debit => new JournalEntry.Item {
+					Amount = debit.Amount.ToDecimal(),
+					AccountNumber = debit.AccountNumber.ToInt32()
+				})
+			};
+
 			var command = new PostGeneralLedgerEntry {
 				GeneralLedgerEntryId = generalLedgerEntryIdentifier.ToGuid(),
 				CreatedOn = createdOn.ToDateTimeUnspecified(),
-				BusinessTransaction = new JournalEntry {
-					ReferenceNumber = 1,
-					Credits = Array.ConvertAll(credits, credit => new JournalEntry.Item {
-						Amount = credit.Amount.ToDecimal(),
-						AccountNumber = credit.AccountNumber.Value
-					}),
-					Debits = Array.ConvertAll(debits, debit => new JournalEntry.Item {
-						Amount = debit.Amount.ToDecimal(),
-						AccountNumber = debit.AccountNumber.ToInt32()
-					})
-				},
+				BusinessTransaction = journalEntry,
 				Period = period.ToString()
+			};
+
+			var expected = new BalanceSheetReport {
+				Thru = thru.ToDateTimeUnspecified(),
+				LineItems = journalEntry.Debits.Concat(journalEntry.Credits.Select(c => new JournalEntry.Item() {
+					Amount = -c.Amount,
+					AccountNumber = c.AccountNumber
+				})).Aggregate(ImmutableDictionary<int, LineItem>.Empty, (items, item) => items.SetItem(
+					item.AccountNumber,
+					new LineItem {
+						AccountNumber = item.AccountNumber,
+						Name = accounts.Single(x => x.accountNumber.ToInt32() == item.AccountNumber).accountName
+							.ToString(),
+						Balance = items.TryGetValue(item.AccountNumber, out var existing)
+							? existing.Balance + item.Amount
+							: new () { DecimalValue = item.Amount }
+					})).Values.OrderBy(x => x.AccountNumber).ToImmutableArray(),
+				LineItemGroupings = ImmutableArray<LineItemGrouping>.Empty
 			};
 
 			var position = await HttpClient.SendCommand("/general-ledger/entries", command,
 				TransactoSerializerOptions.BusinessTransactions(typeof(JournalEntry)));
 
 			using var response =
-				await HttpClient.ConditionalGetAsync($"/balance-sheet/{Time.Format.LocalDate(createdOn.Date.PlusDays(1))}",
+				await HttpClient.ConditionalGetAsync($"/balance-sheet/{Time.Format.LocalDateTime(thru)}",
 					position);
 			Assert.Equal(HttpStatusCode.OK, response.StatusCode);
 			var json = await response.Content.ReadAsStringAsync();
-			var balanceSheet = JsonSerializer.Deserialize<BalanceSheetReport>(json, TransactoSerializerOptions.Events)!;
-			Assert.Equal(accounts.Length, balanceSheet.LineItems.Count);
+			var actual = JsonSerializer.Deserialize<BalanceSheetReport>(json, TransactoSerializerOptions.Events)!;
+
+			Assert.Equal(expected, actual);
 		}
 	}
 }

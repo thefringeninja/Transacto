@@ -13,16 +13,18 @@ export type Balance = number;
 export type Groupings = LineItemGrouping[];
 
 export interface BalanceSheetReport {
-  thru: Thru;
-  lineItemGroupings: Groupings;
+	thru: Thru;
+	lineItemGroupings: Groupings;
 }
+
 export interface LineItemGrouping {
-  name: Name;
-  lineItems: LineItem[];
-  lineItemGroupings: LineItemGrouping[];
+	name: Name;
+	lineItems: LineItem[];
+	lineItemGroupings: LineItemGrouping[];
 }
+
 export interface LineItem {
-  name: AccountName;
-  accountNumber?: AccountNumber;
-  balance: Balance;
+	name: AccountName;
+	accountNumber?: AccountNumber;
+	balance: Balance;
 }
