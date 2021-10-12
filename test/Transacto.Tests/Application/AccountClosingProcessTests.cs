@@ -49,7 +49,7 @@ namespace Transacto.Application {
 				.Given(GeneralLedgerEntry.FormatStreamIdentifier(generalLedgerEntryIdentifier),
 					new GeneralLedgerEntryCreated {
 						GeneralLedgerEntryId = generalLedgerEntryIdentifier.ToGuid(),
-						Number = generalLedgerEntryNumber.ToString(),
+						ReferenceNumber = generalLedgerEntryNumber.ToString(),
 						Period = period.ToString(),
 						CreatedOn = Time.Format.LocalDateTime(openedOn.AtMidnight())
 					})
@@ -79,7 +79,7 @@ namespace Transacto.Application {
 			var generalLedgerEntryFacts = generalLedgerEntryIdentifiers.SelectMany(
 					(identifier, index) => Array.ConvertAll(new object[] {
 						new GeneralLedgerEntryCreated {
-							Number = $"sale-{index}",
+							ReferenceNumber = $"sale-{index}",
 							Period = period.ToString(),
 							CreatedOn = Time.Format.LocalDate(openedOn),
 							GeneralLedgerEntryId = identifier.ToGuid()
@@ -140,7 +140,7 @@ namespace Transacto.Application {
 					new GeneralLedgerEntryCreated {
 						CreatedOn = Time.Format.LocalDateTime(closingOn),
 						GeneralLedgerEntryId = closingGeneralLedgerEntryIdentifier.ToGuid(),
-						Number = $"jec-{period}",
+						ReferenceNumber = $"jec-{period}",
 						Period = period.ToString()
 					},
 					new DebitApplied {

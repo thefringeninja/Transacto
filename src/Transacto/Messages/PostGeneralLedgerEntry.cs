@@ -7,9 +7,9 @@ namespace Transacto.Messages {
 			Period = null!;
 		}
 
-		[JsonPropertyName("document")] public IBusinessTransaction? BusinessTransaction;
+		[JsonPropertyName("document")] public IBusinessTransaction? BusinessTransaction { get; init; }
 
 		public override string ToString() =>
-			$"Posting general ledger entry {BusinessTransaction?.ReferenceNumber.ToString() ?? "unknown"} in period {Period} on {CreatedOn:O}.";
+			$"Posting general ledger entry {BusinessTransaction?.SequenceNumber.ToString() ?? "unknown"} in period {Period} on {CreatedOn:O}.";
 	}
 }

@@ -1,5 +1,6 @@
 using System;
 using System.Linq;
+using Transacto.Domain;
 using Transacto.Framework.Messages;
 using Transacto.Messages;
 using Xunit;
@@ -68,7 +69,8 @@ namespace Transacto.Framework {
 			var sut = MessageTypeMapper.Create();
 
 			var messageTypes = typeof(AccountDefined).Assembly.GetTypes()
-				.Where(type => string.Equals(type.Namespace, typeof(AccountDefined).Namespace));
+				.Where(type => string.Equals(type.Namespace, typeof(AccountDefined).Namespace))
+				.Concat(new[]{typeof(JournalEntry)});
 
 			Assert.Equal(messageTypes, sut.Types);
 			Assert.Equal(messageTypes.Select(x => x.Name), sut.StorageTypes);

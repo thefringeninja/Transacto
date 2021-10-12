@@ -19,7 +19,8 @@ namespace Transacto.Domain {
 			EquityAccount retainedEarningsAccount, LocalDateTime closedOn,
 			GeneralLedgerEntryIdentifier closingGeneralLedgerEntryIdentifier) {
 			var entry = new GeneralLedgerEntry(closingGeneralLedgerEntryIdentifier,
-				new GeneralLedgerEntryNumber("jec", int.Parse(_accountingPeriod.ToString())), _accountingPeriod,
+				new GeneralLedgerEntryNumber(new("jec"), new(int.Parse(_accountingPeriod.ToString()))),
+				_accountingPeriod,
 				closedOn);
 
 			foreach (var account in _current.Where(x => x.Balance != Money.Zero)

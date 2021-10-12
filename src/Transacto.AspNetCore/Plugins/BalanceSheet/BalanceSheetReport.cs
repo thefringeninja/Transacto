@@ -4,7 +4,7 @@ using System.Linq;
 using Transacto.Domain;
 
 namespace Transacto.Plugins.BalanceSheet {
-	sealed partial record BalanceSheetReport : IEquatable<BalanceSheetReport> {
+	sealed partial record BalanceSheetReport {
 		public BalanceSheetReport() {
 			LineItems = ImmutableArray<LineItem>.Empty;
 			LineItemGroupings = ImmutableArray<LineItemGrouping>.Empty;

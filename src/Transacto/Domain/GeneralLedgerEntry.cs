@@ -32,10 +32,26 @@ namespace Transacto.Domain {
 
 			Apply(new GeneralLedgerEntryCreated {
 				GeneralLedgerEntryId = identifier.ToGuid(),
-				Number = number.ToString(),
+				ReferenceNumber = number.ToString(),
 				CreatedOn = Time.Format.LocalDateTime(createdOn),
 				Period = accountingPeriod.ToString()
 			});
+		}
+
+		internal GeneralLedgerEntry(GeneralLedgerEntryIdentifier identifier, IBusinessTransaction businessTransaction,
+			GeneralLedgerEntryNumberPrefix prefix, AccountingPeriod accountingPeriod, LocalDateTime createdOn,
+			AccountIsDeactivated accountIsDeactivated) : this(identifier,
+			new GeneralLedgerEntryNumber(prefix, businessTransaction.SequenceNumber), accountingPeriod, createdOn) {
+			foreach (var item in businessTransaction.GetTransactionItems()) {
+				if (item is Credit credit) {
+					ApplyCredit(credit, accountIsDeactivated);
+				}
+				else if (item is Debit debit) {
+					ApplyDebit(debit, accountIsDeactivated);
+				}
+			}
+
+			Apply(businessTransaction);
 		}
 
 		private GeneralLedgerEntry() {
@@ -85,14 +101,6 @@ namespace Transacto.Domain {
 				Amount = debit.Amount.ToDecimal(),
 				AccountNumber = debit.AccountNumber.ToInt32()
 			});
-		}
-
-		public void ApplyTransaction(IBusinessTransaction transaction) {
-			MustNotBePosted();
-
-			foreach (var x in transaction.GetAdditionalChanges()) {
-				Apply(x);
-			}
 		}
 
 		public void Post() {

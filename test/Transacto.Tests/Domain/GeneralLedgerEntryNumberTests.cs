@@ -1,9 +1,50 @@
 using System;
 using System.Collections.Generic;
-using AutoFixture;
 using Xunit;
 
 namespace Transacto.Domain {
+	public class GeneralLedgerEntryPrefixTests {
+		public static IEnumerable<object[]> InvalidPrefixCases() {
+			yield return new object[] { " " };
+			yield return new object[] { string.Empty };
+			yield return new object[] { " a" };
+			yield return new object[] { "a " };
+			yield return new object[] { "a\t" };
+			yield return new object[] { new string('a', GeneralLedgerEntryNumberPrefix.MaxPrefixLength + 1) };
+		}
+
+		[Theory, MemberData(nameof(InvalidPrefixCases))]
+		public void InvalidPrefix(string value) {
+			var ex = Assert.Throws<ArgumentException>(() => new GeneralLedgerEntryNumberPrefix(value));
+			Assert.Equal(nameof(value), ex.ParamName);
+		}
+
+		[Theory, AutoTransactoData]
+		public void Equality(GeneralLedgerEntryNumberPrefix sut) {
+			var copy = sut;
+			Assert.Equal(sut, copy);
+		}
+
+		[Theory, AutoTransactoData]
+		public void EqualityOperator(GeneralLedgerEntryNumberPrefix sut) {
+			var copy = sut;
+			Assert.True(sut == copy);
+		}
+
+		[Theory, AutoTransactoData]
+		public void InequalityOperator(GeneralLedgerEntryNumberPrefix left, GeneralLedgerEntryNumberPrefix right) {
+			Assert.True(left != right);
+		}
+
+		[Theory, AutoTransactoData]
+		public void ToStringReturnsExpectedResult(Guid guid) {
+			var value = guid.ToString()[..5];
+			var sut = new GeneralLedgerEntryNumberPrefix(value);
+
+			Assert.Equal(value, sut.ToString());
+		}
+	}
+
 	public class GeneralLedgerEntryNumberTests {
 		[Theory, AutoTransactoData]
 		public void Equality(GeneralLedgerEntryNumber sut) {
@@ -22,38 +63,6 @@ namespace Transacto.Domain {
 			Assert.True(left != right);
 		}
 
-		public static IEnumerable<object[]> InvalidPrefixCases() {
-			var fixture = new ScenarioFixture();
-			yield return new object[] {" ", fixture.Create<int>()};
-			yield return new object[] {string.Empty, fixture.Create<int>()};
-			yield return new object[] {" a", fixture.Create<int>()};
-			yield return new object[] {"a ", fixture.Create<int>()};
-			yield return new object[] {"a	", fixture.Create<int>()};
-			yield return new object[]
-				{new string('a', GeneralLedgerEntryNumber.MaxPrefixLength + 1), fixture.Create<int>()};
-		}
-
-		[Theory, MemberData(nameof(InvalidPrefixCases))]
-		public void InvalidPrefix(string prefix, int sequenceNumber) {
-			var ex = Assert.Throws<ArgumentException>(() => new GeneralLedgerEntryNumber(prefix, sequenceNumber));
-			Assert.Equal("prefix", ex.ParamName);
-		}
-
-		[Theory, AutoTransactoData]
-		public void SequenceNumberLessThanZeroThrows(Random random, int sequenceNumber) {
-			var ex = Assert.Throws<ArgumentOutOfRangeException>(() => new GeneralLedgerEntryNumber(
-				new string('a', random.Next(1, GeneralLedgerEntryNumber.MaxPrefixLength)),
-				-Math.Abs(sequenceNumber)));
-			Assert.Equal("sequenceNumber", ex.ParamName);
-		}
-
-		[Theory, AutoTransactoData]
-		public void SequenceNumberZeroThrows(Random random) {
-			var ex = Assert.Throws<ArgumentOutOfRangeException>(() => new GeneralLedgerEntryNumber(
-				new string('a', random.Next(1, GeneralLedgerEntryNumber.MaxPrefixLength)), 0));
-			Assert.Equal("sequenceNumber", ex.ParamName);
-		}
-
 		[Theory, AutoTransactoData]
 		public void ParseValidValueReturnsExpectedResult(GeneralLedgerEntryNumber number) {
 			var sut = GeneralLedgerEntryNumber.Parse(number.ToString());
@@ -67,12 +76,12 @@ namespace Transacto.Domain {
 		}
 
 		public static IEnumerable<object[]> ParseInvalidValueTestCases() {
-			yield return new object[] {string.Empty};
-			yield return new object[] {"a"};
-			yield return new object[] {"a-"};
-			yield return new object[] {"a--1"};
-			yield return new object[] {"-1"};
-			yield return new object[] {" "};
+			yield return new object[] { string.Empty };
+			yield return new object[] { "a" };
+			yield return new object[] { "a-" };
+			yield return new object[] { "a--1" };
+			yield return new object[] { "-1" };
+			yield return new object[] { " " };
 		}
 
 		[Theory, MemberData(nameof(ParseInvalidValueTestCases))]

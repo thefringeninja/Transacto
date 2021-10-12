@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
@@ -25,6 +26,11 @@ namespace Transacto.Plugins.GeneralLedger {
 			.AddSingleton<AccountIsDeactivated>(provider => accountNumber => {
 				var readModel = provider.GetRequiredService<InMemoryProjectionDatabase>().Get<DeactivatedAccounts>();
 				return readModel.HasValue && readModel.Value.AccountNumbers.Contains(accountNumber.ToInt32());
+			})
+			.AddSingleton<GetPrefix>(_ => {
+				var cache = new ConcurrentDictionary<Type, string>();
+				return t => new GeneralLedgerEntryNumberPrefix(
+					cache.GetOrAdd(t.GetType(), type => char.ToLower(type.Name[0]) + type.Name[1..]));
 			})
 			.AddInMemoryProjection(new InMemoryProjectionBuilder<DeactivatedAccounts>()
 				.When((readModel, e) => readModel with {

@@ -26,15 +26,12 @@ namespace Transacto.Integration {
 				new Credit(accounts.OrderBy(_ => Guid.NewGuid()).First().accountNumber, amount));
 
 			var journalEntry = new JournalEntry {
-				ReferenceNumber = 1,
-				Credits = Array.ConvertAll(credits, credit => new JournalEntry.Item {
-					Amount = credit.Amount.ToDecimal(),
-					AccountNumber = credit.AccountNumber.Value
-				}),
-				Debits = Array.ConvertAll(debits, debit => new JournalEntry.Item {
-					Amount = debit.Amount.ToDecimal(),
-					AccountNumber = debit.AccountNumber.ToInt32()
-				})
+				JournalEntryNumber = 1,
+				Items = credits.Select(credit => new JournalEntry.Item(credit.AccountNumber.ToInt32(),
+						credit.Amount.ToDecimal(), JournalEntry.Type.Credit))
+					.Concat(debits.Select(debit => new JournalEntry.Item(debit.AccountNumber.ToInt32(),
+						debit.Amount.ToDecimal(), JournalEntry.Type.Debit)))
+					.ToImmutableArray()
 			};
 
 			var command = new PostGeneralLedgerEntry {
@@ -46,19 +43,23 @@ namespace Transacto.Integration {
 
 			var expected = new BalanceSheetReport {
 				Thru = thru.ToDateTimeUnspecified(),
-				LineItems = journalEntry.Debits.Concat(journalEntry.Credits.Select(c => new JournalEntry.Item() {
-					Amount = -c.Amount,
-					AccountNumber = c.AccountNumber
-				})).Aggregate(ImmutableDictionary<int, LineItem>.Empty, (items, item) => items.SetItem(
-					item.AccountNumber,
-					new LineItem {
-						AccountNumber = item.AccountNumber,
-						Name = accounts.Single(x => x.accountNumber.ToInt32() == item.AccountNumber).accountName
-							.ToString(),
-						Balance = items.TryGetValue(item.AccountNumber, out var existing)
-							? existing.Balance + item.Amount
-							: new () { DecimalValue = item.Amount }
-					})).Values.OrderBy(x => x.AccountNumber).ToImmutableArray(),
+				LineItems = journalEntry.Items.Aggregate(ImmutableDictionary<int, LineItem>.Empty, (items, item) =>
+					items.SetItem(
+						item.AccountNumber,
+						new LineItem {
+							AccountNumber = item.AccountNumber,
+							Name = accounts.Single(x => x.accountNumber.ToInt32() == item.AccountNumber).accountName
+								.ToString(),
+							Balance = items.TryGetValue(item.AccountNumber, out var existing)
+								? existing.Balance + (item.Type == JournalEntry.Type.Debit
+									? item.Amount
+									: -item.Amount)
+								: new() {
+									DecimalValue = item.Type == JournalEntry.Type.Debit
+										? item.Amount
+										: -item.Amount
+								}
+						})).Values.OrderBy(x => x.AccountNumber).ToImmutableArray(),
 				LineItemGroupings = ImmutableArray<LineItemGrouping>.Empty
 			};
 

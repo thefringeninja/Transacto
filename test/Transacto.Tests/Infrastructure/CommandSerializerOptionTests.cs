@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text.Json;
 using Transacto.Domain;
 using Xunit;
@@ -14,7 +15,7 @@ namespace Transacto.Infrastructure {
 			var json = $@"{{
 	""property"": ""{property}"",
 	""businessTransaction"": {{
-		""testBusinessTransaction"": {JsonSerializer.Serialize(new TestBusinessTransaction {TransactionId = transactionId, Version = 1})}
+		""testBusinessTransaction"": {JsonSerializer.Serialize(new TestBusinessTransaction { TransactionId = transactionId })}
 	}},
     ""anotherProperty"": ""{anotherProperty}""
 }}";
@@ -37,7 +38,7 @@ namespace Transacto.Infrastructure {
 			var json = $@"{{
 	""property"": ""{property}"",
 	""businessTransaction"": {{
-		""doesNotExist"": {JsonSerializer.Serialize(new TestBusinessTransaction {TransactionId = transactionId, Version = 1})}
+		""doesNotExist"": {JsonSerializer.Serialize(new TestBusinessTransaction { TransactionId = transactionId })}
 	}},
     ""anotherProperty"": ""{anotherProperty}""
 }}";
@@ -56,7 +57,6 @@ namespace Transacto.Infrastructure {
 			var sut = TransactoSerializerOptions.BusinessTransactions(typeof(TestBusinessTransaction));
 
 			var testBusinessTransaction = new TestBusinessTransaction {
-				Version = 1,
 				TransactionId = Guid.NewGuid()
 			};
 			var dto = new TestCommand {
@@ -78,21 +78,12 @@ namespace Transacto.Infrastructure {
 			public string Property { get; set; } = null!;
 			public IBusinessTransaction BusinessTransaction { get; set; } = null!;
 		}
-	}
 
-	internal class TestBusinessTransaction : IBusinessTransaction {
-		public Guid TransactionId { get; set; }
+		internal class TestBusinessTransaction : IBusinessTransaction {
+			public Guid TransactionId { get; set; }
 
-		public GeneralLedgerEntryNumber ReferenceNumber { get; }
-
-		public void Apply(GeneralLedgerEntry generalLedgerEntry, AccountIsDeactivated accountIsDeactivated) {
-			generalLedgerEntry.ApplyTransaction(this);
+			public GeneralLedgerEntrySequenceNumber SequenceNumber { get; }
+			public IEnumerable<object> GetTransactionItems() => Enumerable.Empty<object>();
 		}
-
-		public IEnumerable<object> GetAdditionalChanges() {
-			yield return this;
-		}
-
-		public int? Version { get; set; }
 	}
 }

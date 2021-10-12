@@ -13,7 +13,7 @@ namespace Transacto {
 
             this.CustomizeAccount();
 
-            this.CustomizeGeneralLedgerEntryNumber();
+            this.CustomizeGeneralLedgerEntryNumberPrefix();
 
             this.CustomizeMoney();
 
