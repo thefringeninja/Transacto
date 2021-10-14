@@ -4,6 +4,7 @@ using System.Collections.Immutable;
 using System.Linq;
 using System.Threading.Tasks;
 using EventStore.Client;
+using Hallo;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
@@ -82,67 +83,74 @@ namespace Transacto.Plugins.BalanceSheet {
 			};
 		}
 
+		private class BalanceSheetReportRepresentation : Hal<BalanceSheetReport>, IHalLinks<BalanceSheetReport>,
+			IHalState<BalanceSheetReport> {
+			public IEnumerable<Link> LinksFor(BalanceSheetReport resource) {
+				yield break;
+			}
+
+			public object StateFor(BalanceSheetReport resource) => resource;
+		}
+
 		public void ConfigureServices(IServiceCollection services) => services
-			.AddInMemoryProjection(new InMemoryProjectionBuilder<ReadModel>()
-				.When((readModel, e) => e switch {
-					AccountDefined d => readModel with {
-						AccountNames = readModel.AccountNames.SetItem(d.AccountNumber, d.AccountName)
-					},
-					AccountRenamed r => readModel with {
-						AccountNames = readModel.AccountNames.SetItem(r.AccountNumber, r.NewAccountName)
-					},
-					GeneralLedgerEntryCreated c => readModel with {
-						UnpostedEntries = readModel.UnpostedEntries.SetItem(c.GeneralLedgerEntryId,
-							new Entry(Time.Parse.LocalDateTime(c.CreatedOn)))
-					},
-					DebitApplied a => readModel with {
-						UnpostedEntries = readModel.UnpostedEntries.SetItem(a.GeneralLedgerEntryId,
-							readModel.UnpostedEntries[a.GeneralLedgerEntryId] with {
-								Debits = readModel.UnpostedEntries[a.GeneralLedgerEntryId].Debits
-									.SetItem(a.AccountNumber, readModel.UnpostedEntries[a.GeneralLedgerEntryId].Debits
-										.TryGetValue(a.AccountNumber, out var amount)
-										? amount + a.Amount
-										: a.Amount)
-							})
-					},
-					CreditApplied a => readModel with {
-						UnpostedEntries = readModel.UnpostedEntries.SetItem(a.GeneralLedgerEntryId,
-							readModel.UnpostedEntries[a.GeneralLedgerEntryId] with {
-								Credits = readModel.UnpostedEntries[a.GeneralLedgerEntryId].Credits
-									.SetItem(a.AccountNumber, readModel.UnpostedEntries[a.GeneralLedgerEntryId].Credits
-										.TryGetValue(a.AccountNumber, out var amount)
-										? amount + a.Amount
-										: a.Amount)
-							})
-					},
-					GeneralLedgerEntryPosted p => readModel with {
-						PostedEntries = readModel.PostedEntries.Add(p.GeneralLedgerEntryId,
-							readModel.UnpostedEntries.TryGetValue(p.GeneralLedgerEntryId, out var entry)
-								? entry
-								: throw new InvalidOperationException()),
-						UnpostedEntries = readModel.UnpostedEntries.Remove(p.GeneralLedgerEntryId),
-						PostedEntriesByDate =
-						readModel.PostedEntriesByDate.Add(readModel.UnpostedEntries[p.GeneralLedgerEntryId])
-					},
-					AccountingPeriodClosed c => (readModel with {
-						PostedEntries = c.GeneralLedgerEntryIds.Concat(new[] { c.ClosingGeneralLedgerEntryId })
-							.Aggregate(readModel.PostedEntries, (postedEntries, id) => postedEntries.Remove(id)),
-						ClosedBalance = readModel.PostedEntries.Keys.Aggregate(readModel.ClosedBalance,
-							(closedBalance, id) => readModel.PostedEntries[id].Debits
-								.Concat(readModel.PostedEntries[id].Credits
-									.Select(x => new KeyValuePair<int, decimal>(x.Key, -x.Value)))
-								.Aggregate(closedBalance,
-									(cb, pair) => cb.SetItem(pair.Key,
-										cb.TryGetValue(pair.Key, out var balance)
-											? balance + pair.Value
-											: pair.Value))),
-						PostedEntriesByDate = c.GeneralLedgerEntryIds.Concat(new[] { c.ClosingGeneralLedgerEntryId })
-							.Aggregate(readModel.PostedEntriesByDate,
-								(postedEntries, id) => postedEntries.Remove(readModel.PostedEntries[id]))
-					}).Compact(),
-					_ => readModel
-				})
-				.Build());
+			.AddInMemoryProjection<ReadModel>((readModel, e) => e switch {
+				AccountDefined d => readModel with {
+					AccountNames = readModel.AccountNames.SetItem(d.AccountNumber, d.AccountName)
+				},
+				AccountRenamed r => readModel with {
+					AccountNames = readModel.AccountNames.SetItem(r.AccountNumber, r.NewAccountName)
+				},
+				GeneralLedgerEntryCreated c => readModel with {
+					UnpostedEntries = readModel.UnpostedEntries.SetItem(c.GeneralLedgerEntryId,
+						new Entry(Time.Parse.LocalDateTime(c.CreatedOn)))
+				},
+				DebitApplied a => readModel with {
+					UnpostedEntries = readModel.UnpostedEntries.SetItem(a.GeneralLedgerEntryId,
+						readModel.UnpostedEntries[a.GeneralLedgerEntryId] with {
+							Debits = readModel.UnpostedEntries[a.GeneralLedgerEntryId].Debits
+								.SetItem(a.AccountNumber, readModel.UnpostedEntries[a.GeneralLedgerEntryId].Debits
+									.TryGetValue(a.AccountNumber, out var amount)
+									? amount + a.Amount
+									: a.Amount)
+						})
+				},
+				CreditApplied a => readModel with {
+					UnpostedEntries = readModel.UnpostedEntries.SetItem(a.GeneralLedgerEntryId,
+						readModel.UnpostedEntries[a.GeneralLedgerEntryId] with {
+							Credits = readModel.UnpostedEntries[a.GeneralLedgerEntryId].Credits
+								.SetItem(a.AccountNumber, readModel.UnpostedEntries[a.GeneralLedgerEntryId].Credits
+									.TryGetValue(a.AccountNumber, out var amount)
+									? amount + a.Amount
+									: a.Amount)
+						})
+				},
+				GeneralLedgerEntryPosted p => readModel with {
+					PostedEntries = readModel.PostedEntries.Add(p.GeneralLedgerEntryId,
+						readModel.UnpostedEntries.TryGetValue(p.GeneralLedgerEntryId, out var entry)
+							? entry
+							: throw new InvalidOperationException()),
+					UnpostedEntries = readModel.UnpostedEntries.Remove(p.GeneralLedgerEntryId),
+					PostedEntriesByDate =
+					readModel.PostedEntriesByDate.Add(readModel.UnpostedEntries[p.GeneralLedgerEntryId])
+				},
+				AccountingPeriodClosed c => (readModel with {
+					PostedEntries = c.GeneralLedgerEntryIds.Concat(new[] { c.ClosingGeneralLedgerEntryId })
+						.Aggregate(readModel.PostedEntries, (postedEntries, id) => postedEntries.Remove(id)),
+					ClosedBalance = readModel.PostedEntries.Keys.Aggregate(readModel.ClosedBalance,
+						(closedBalance, id) => readModel.PostedEntries[id].Debits
+							.Concat(readModel.PostedEntries[id].Credits
+								.Select(x => new KeyValuePair<int, decimal>(x.Key, -x.Value)))
+							.Aggregate(closedBalance,
+								(cb, pair) => cb.SetItem(pair.Key,
+									cb.TryGetValue(pair.Key, out var balance)
+										? balance + pair.Value
+										: pair.Value))),
+					PostedEntriesByDate = c.GeneralLedgerEntryIds.Concat(new[] { c.ClosingGeneralLedgerEntryId })
+						.Aggregate(readModel.PostedEntriesByDate,
+							(postedEntries, id) => postedEntries.Remove(readModel.PostedEntries[id]))
+				}).Compact(),
+				_ => readModel
+			});
 
 		public IEnumerable<Type> MessageTypes => Enumerable.Empty<Type>();
 	}
