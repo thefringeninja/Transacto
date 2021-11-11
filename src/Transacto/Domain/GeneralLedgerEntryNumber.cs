@@ -1,28 +1,14 @@
 using System;
-using System.Linq;
 
 namespace Transacto.Domain {
 	public readonly struct GeneralLedgerEntryNumber : IEquatable<GeneralLedgerEntryNumber> {
-		public const int MaxPrefixLength = 5;
-		public string Prefix { get; }
-		public int SequenceNumber { get; }
+		public GeneralLedgerEntryNumberPrefix Prefix { get; }
+		public GeneralLedgerEntrySequenceNumber SequenceNumber { get; }
 
-		public GeneralLedgerEntryNumber(string prefix, int sequenceNumber) {
-			Prefix = prefix switch {
-				null => throw new ArgumentNullException(nameof(prefix)),
-				{ } when prefix == string.Empty => throw new ArgumentException("Prefix may not be empty.",
-					nameof(prefix)),
-				{Length: > MaxPrefixLength} => throw new ArgumentException(
-					$"Prefix may not exceed {MaxPrefixLength} characters.", nameof(prefix)),
-				{ } when prefix.Any(char.IsWhiteSpace) => throw new ArgumentException(
-					"Prefix may not contain whitespace.", nameof(prefix)),
-				_ => prefix
-			};
-
-			SequenceNumber = sequenceNumber switch {
-				<= 0 => throw new ArgumentOutOfRangeException(nameof(sequenceNumber)),
-				_ => sequenceNumber
-			};
+		public GeneralLedgerEntryNumber(GeneralLedgerEntryNumberPrefix prefix,
+			GeneralLedgerEntrySequenceNumber sequenceNumber) {
+			Prefix = prefix;
+			SequenceNumber = sequenceNumber;
 		}
 
 		public static GeneralLedgerEntryNumber Parse(string value) =>
@@ -46,7 +32,7 @@ namespace Transacto.Domain {
 				return false;
 			}
 
-			generalLedgerEntryNumber = new GeneralLedgerEntryNumber(prefix, sequenceNumber);
+			generalLedgerEntryNumber = new GeneralLedgerEntryNumber(new(prefix), new(sequenceNumber));
 			return true;
 		}
 

@@ -38,16 +38,19 @@ namespace Transacto.Domain {
 			_ => _state
 		};
 
-		public GeneralLedgerEntry Create(GeneralLedgerEntryIdentifier identifier, GeneralLedgerEntryNumber number,
-			LocalDateTime createdOn) => _state.PeriodClosing
-			? Create(identifier, number, createdOn, _state.AccountingPeriod.Next())
-			: Create(identifier, number, createdOn, _state.AccountingPeriod.Contains(createdOn.Date)
-				? _state.AccountingPeriod
-				: _state.AccountingPeriod.Next());
+		public GeneralLedgerEntry Create(GeneralLedgerEntryIdentifier identifier,
+			IBusinessTransaction businessTransaction, GeneralLedgerEntryNumberPrefix prefix,
+			LocalDateTime createdOn, AccountIsDeactivated accountIsDeactivated) =>
+			Create(identifier, businessTransaction, prefix, createdOn,
+				(_state.PeriodClosing, _state.AccountingPeriod.Contains(createdOn.Date)) switch {
+					(true, _) or (false, false) => _state.AccountingPeriod.Next(),
+					_ => _state.AccountingPeriod
+				}, accountIsDeactivated);
 
 		private static GeneralLedgerEntry Create(GeneralLedgerEntryIdentifier identifier,
-			GeneralLedgerEntryNumber number, LocalDateTime createdOn, AccountingPeriod accountingPeriod) =>
-			new(identifier, number, accountingPeriod, createdOn);
+			IBusinessTransaction businessTransaction, GeneralLedgerEntryNumberPrefix prefix,
+			LocalDateTime createdOn, AccountingPeriod accountingPeriod, AccountIsDeactivated accountIsDeactivated) =>
+			new(identifier, businessTransaction, prefix, accountingPeriod, createdOn, accountIsDeactivated);
 
 		public void BeginClosingPeriod(EquityAccount retainedEarningsAccount,
 			GeneralLedgerEntryIdentifier closingGeneralLedgerEntryIdentifier,

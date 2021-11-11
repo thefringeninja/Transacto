@@ -1,37 +1,26 @@
 using System;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 
 namespace Transacto.Domain {
-	public class JournalEntry : IBusinessTransaction {
-		GeneralLedgerEntryNumber IBusinessTransaction.ReferenceNumber => new("je", ReferenceNumber);
+	public partial class JournalEntry : IBusinessTransaction {
+		public GeneralLedgerEntrySequenceNumber SequenceNumber => new(JournalEntryNumber);
+		public int JournalEntryNumber { get; init; }
+		public string Description { get; init; } = null!;
+		public ImmutableArray<Item> Items { get; init; } = ImmutableArray<Item>.Empty;
 
-		public int ReferenceNumber { get; set; }
-		public Item[] Credits { get; set; } = Array.Empty<Item>();
-		public Item[] Debits { get; set; } = Array.Empty<Item>();
-
-		public void Apply(GeneralLedgerEntry generalLedgerEntry, AccountIsDeactivated accountIsDeactivated) {
-			foreach (var credit in Credits) {
-				generalLedgerEntry.ApplyCredit(
-					new Credit(new AccountNumber(credit.AccountNumber), new Money(credit.Amount)),
-					accountIsDeactivated);
-			}
-
-			foreach (var debit in Debits) {
-				generalLedgerEntry.ApplyDebit(
-					new Debit(new AccountNumber(debit.AccountNumber), new Money(debit.Amount)),
-					accountIsDeactivated);
+		public IEnumerable<object> GetTransactionItems() {
+			foreach (var (accountNumber, amount, type) in Items) {
+				yield return type switch {
+					Type.Credit => new Credit(new AccountNumber(accountNumber), new Money(amount)),
+					Type.Debit => new Debit(new AccountNumber(accountNumber), new Money(amount)),
+					_ => throw new ArgumentOutOfRangeException(nameof(type))
+				};
 			}
 		}
 
-		public IEnumerable<object> GetAdditionalChanges() {
-			yield break;
-		}
+		public record Item(int AccountNumber, decimal Amount, Type Type);
 
-		public int? Version { get; set; }
-
-		public class Item {
-			public int AccountNumber { get; set; }
-			public decimal Amount { get; set; }
-		}
+		public enum Type { Credit, Debit }
 	}
 }

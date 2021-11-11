@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
+using Transacto.Domain;
 using Transacto.Messages;
 
 namespace Transacto.Framework {
@@ -38,7 +39,8 @@ namespace Transacto.Framework {
 			public IEnumerable<string> StorageTypes => _inner.StorageTypes;
 			public IEnumerable<Type> Types => _inner.Types;
 
-			private TransactoMessageTypeMapper() => _inner = ScopedFromType(typeof(AccountDefined));
+			private TransactoMessageTypeMapper() => _inner = new CompositeMessageTypeMapper(
+				ScopedFromType(typeof(AccountDefined)), new MessageTypeMapper(new[] { typeof(JournalEntry) }));
 		}
 
 		private class CompositeMessageTypeMapper : IMessageTypeMapper {

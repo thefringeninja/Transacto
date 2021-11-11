@@ -10,7 +10,8 @@ namespace Transacto.Application {
 		private readonly IGeneralLedgerRepository _generalLedger;
 		private readonly IChartOfAccountsRepository _chartOfAccounts;
 
-		public GeneralLedgerHandlers(IGeneralLedgerRepository generalLedger, IChartOfAccountsRepository chartOfAccounts) {
+		public GeneralLedgerHandlers(IGeneralLedgerRepository generalLedger,
+			IChartOfAccountsRepository chartOfAccounts) {
 			_generalLedger = generalLedger;
 			_chartOfAccounts = chartOfAccounts;
 		}

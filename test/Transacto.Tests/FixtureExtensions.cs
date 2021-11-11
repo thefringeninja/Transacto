@@ -7,13 +7,17 @@ using Transacto.Domain;
 
 namespace Transacto {
 	public static class FixtureExtensions {
-		public static void CustomizeAccountName(this IFixture fixture) =>
+		public static void CustomizeAccountName(this IFixture fixture) {
+			int number = 0;
 			fixture.Customize<AccountName>(composer =>
-				composer.FromFactory<Random>(r => new AccountName(new string('a', r.Next(1, AccountName.MaxLength)))));
+				composer.FromFactory(() => new AccountName(new string('a', number++ % AccountName.MaxLength + 1))));
+		}
 
-		public static void CustomizeAccountNumber(this IFixture fixture) =>
+		public static void CustomizeAccountNumber(this IFixture fixture) {
+			int number = 0;
 			fixture.Customize<AccountNumber>(composer =>
-				composer.FromFactory<Random>(r => new AccountNumber(r.Next(1000, 8999))));
+				composer.FromFactory(() => new AccountNumber(number++ % 7000 + 1000)));
+		}
 
 		public static void CustomizeAccount(this IFixture fixture) {
 			fixture.CustomizeAccount<AssetAccount>(1000);
@@ -42,11 +46,11 @@ namespace Transacto {
 			fixture.Customize<Debit>(composer =>
 				composer.FromFactory<AccountNumber, Money>((n, m) => new Debit(n, m)));
 
-		public static void CustomizeGeneralLedgerEntryNumber(this IFixture fixture) =>
-			fixture.Customize<GeneralLedgerEntryNumber>(composer =>
-				composer.FromFactory<Random, int>((r, i) =>
-					new GeneralLedgerEntryNumber(
-						new string('a', r.Next(1, GeneralLedgerEntryNumber.MaxPrefixLength)), i)));
+		public static void CustomizeGeneralLedgerEntryNumberPrefix(this IFixture fixture) {
+			int number = 0;
+			fixture.Customize<GeneralLedgerEntryNumberPrefix>(composer =>
+				composer.FromFactory(() => new GeneralLedgerEntryNumberPrefix(new string('a', number++ % 5 + 1))));
+		}
 
 		public static void CustomizeNodaTime(this IFixture fixture) {
 			fixture.Customize<DateTimeOffset>(_ => new IncreasingDateTimeOffsetGenerator(DateTimeOffset.Now));
@@ -65,6 +69,7 @@ namespace Transacto {
 				_seed = seed;
 				_baseValue = 0;
 			}
+
 			public object Create(object request, ISpecimenContext context) =>
 				typeof(DateTimeOffset) != request?.GetType()
 					? new NoSpecimen()

@@ -17,8 +17,7 @@ namespace Transacto.Integration {
 			await HttpClient.SendCommand("/transactions", new PostGeneralLedgerEntry {
 				BusinessTransaction = new BusinessTransaction {
 					TransactionId = transactionId,
-					ReferenceNumber = 1,
-					Version = 1
+					TransactionNumber = 1
 				},
 				Period = period.ToString(),
 				CreatedOn = now,
@@ -36,7 +35,7 @@ namespace Transacto.Integration {
 				messageTypeMapper) {
 				When<BusinessTransaction>((e, _) => new BusinessTransactionEntry {
 					TransactonId = e.TransactionId,
-					ReferenceNumber = e.ReferenceNumber
+					ReferenceNumber = e.TransactionNumber
 				});
 			}
 		}

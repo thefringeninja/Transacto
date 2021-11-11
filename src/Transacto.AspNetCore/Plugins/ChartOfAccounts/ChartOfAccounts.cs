@@ -33,20 +33,18 @@ namespace Transacto.Plugins.ChartOfAccounts {
 
 		public void ConfigureServices(IServiceCollection services) => services
 			.AddCommandHandlerModule<ChartOfAccountsModule>()
-			.AddInMemoryProjection(new InMemoryProjectionBuilder<ReadModel>()
-				.When((readModel, e) => readModel with {
-					ChartOfAccounts = e switch {
-						AccountDefined d => readModel.ChartOfAccounts.SetItem(d.AccountNumber, (d.AccountName, true)),
-						AccountRenamed r => readModel.ChartOfAccounts.SetItem(r.AccountNumber,
-							(r.NewAccountName, readModel.ChartOfAccounts[r.AccountNumber].active)),
-						AccountDeactivated d => readModel.ChartOfAccounts.SetItem(d.AccountNumber,
-							(readModel.ChartOfAccounts[d.AccountNumber].accountName, false)),
-						AccountReactivated r => readModel.ChartOfAccounts.SetItem(r.AccountNumber,
-							(readModel.ChartOfAccounts[r.AccountNumber].accountName, true)),
-						_ => readModel.ChartOfAccounts
-					}
-				})
-				.Build());
+			.AddInMemoryProjection<ReadModel>((readModel, e) => readModel with {
+				ChartOfAccounts = e switch {
+					AccountDefined d => readModel.ChartOfAccounts.SetItem(d.AccountNumber, new(d.AccountName)),
+					AccountRenamed r => readModel.ChartOfAccounts.SetItem(r.AccountNumber,
+						readModel.ChartOfAccounts[r.AccountNumber] with { AccountName = r.NewAccountName }),
+					AccountDeactivated d => readModel.ChartOfAccounts.SetItem(d.AccountNumber,
+						readModel.ChartOfAccounts[d.AccountNumber] with { Active = false }),
+					AccountReactivated r => readModel.ChartOfAccounts.SetItem(r.AccountNumber,
+						readModel.ChartOfAccounts[r.AccountNumber] with { Active = true }),
+					_ => readModel.ChartOfAccounts
+				}
+			});
 
 		public IEnumerable<Type> MessageTypes => Enumerable.Empty<Type>();
 
@@ -58,12 +56,14 @@ namespace Transacto.Plugins.ChartOfAccounts {
 			}
 
 			public object StateFor(ReadModel resource) => new SortedDictionary<string, string>(
-				resource.ChartOfAccounts.ToDictionary(x => x.Key.ToString(), x => x.Value.accountName));
+				resource.ChartOfAccounts.ToDictionary(x => x.Key.ToString(), x => x.Value.AccountName));
 		}
 
 		private record ReadModel : MemoryReadModel {
-			public ImmutableSortedDictionary<int, (string accountName, bool active)> ChartOfAccounts { get; init; } =
-				ImmutableSortedDictionary<int, (string, bool)>.Empty;
+			public ImmutableSortedDictionary<int, Account> ChartOfAccounts { get; init; } =
+				ImmutableSortedDictionary<int, Account>.Empty;
+
+			public record Account(string AccountName, bool Active = true);
 		}
 	}
 }

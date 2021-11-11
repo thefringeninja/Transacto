@@ -33,9 +33,8 @@ namespace Transacto.Application {
 				(EquityAccount)chartOfAccounts[new AccountNumber(@event.RetainedEarningsAccountNumber)],
 				_accountIsDeactivated);
 
-			foreach (var id in @event.GeneralLedgerEntryIds) {
-				var generalLedgerEntry =
-					await _generalLedgerEntries.Get(new GeneralLedgerEntryIdentifier(id), cancellationToken);
+			foreach (var identifier in generalLedgerEntryIdentifiers) {
+				var generalLedgerEntry = await _generalLedgerEntries.Get(identifier, cancellationToken);
 				accountingPeriodClosingProcess.TransferEntry(generalLedgerEntry);
 			}
 

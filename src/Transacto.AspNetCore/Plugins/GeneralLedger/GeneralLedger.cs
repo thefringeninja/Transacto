@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
@@ -12,6 +13,7 @@ using Transacto.Messages;
 namespace Transacto.Plugins.GeneralLedger {
 	internal class GeneralLedger : IPlugin {
 		public string Name { get; } = nameof(GeneralLedger);
+		public IEnumerable<Type> MessageTypes => Enumerable.Empty<Type>();
 
 		public void Configure(IEndpointRouteBuilder builder) => builder
 			.MapBusinessTransaction<JournalEntry>("/entries")
@@ -26,38 +28,37 @@ namespace Transacto.Plugins.GeneralLedger {
 				var readModel = provider.GetRequiredService<InMemoryProjectionDatabase>().Get<DeactivatedAccounts>();
 				return readModel.HasValue && readModel.Value.AccountNumbers.Contains(accountNumber.ToInt32());
 			})
-			.AddInMemoryProjection(new InMemoryProjectionBuilder<DeactivatedAccounts>()
-				.When((readModel, e) => readModel with {
-					AccountNumbers = e switch {
-						AccountDeactivated d => readModel.AccountNumbers.Remove(d.AccountNumber),
-						AccountReactivated r => readModel.AccountNumbers.Add(r.AccountNumber),
-						_ => readModel.AccountNumbers
-					}
-				})
-				.Build())
-			.AddInMemoryProjection(new InMemoryProjectionBuilder<UnclosedGeneralLedgerEntries>()
-				.When((readModel, e) => readModel with {
-					EntriesByPeriod = e switch {
-						GeneralLedgerEntryPosted p => readModel.EntriesByPeriod.SetItem(p.Period,
-							(readModel.EntriesByPeriod.TryGetValue(p.Period, out var entries)
-								? entries
-								: ImmutableHashSet<Guid>.Empty)
-							.Add(p.GeneralLedgerEntryId)),
-						AccountingPeriodClosed c => readModel.EntriesByPeriod.Remove(c.Period),
-						_ => readModel.EntriesByPeriod
-					},
-					NotClosed = e switch {
-						AccountingPeriodClosed c => readModel.NotClosed
-							.Except(c.GeneralLedgerEntryIds)
-							.Remove(c.ClosingGeneralLedgerEntryId)
-							.Compact(),
-						_ => readModel.NotClosed
-					}
-				})
-				.Build())
+			.AddSingleton<GetPrefix>(_ => {
+				var cache = new ConcurrentDictionary<Type, string>();
+				return t => new GeneralLedgerEntryNumberPrefix(
+					cache.GetOrAdd(t.GetType(), type => char.ToLower(type.Name[0]) + type.Name[1..]));
+			})
+			.AddInMemoryProjection<DeactivatedAccounts>((readModel, e) => readModel with {
+				AccountNumbers = e switch {
+					AccountDeactivated d => readModel.AccountNumbers.Remove(d.AccountNumber),
+					AccountReactivated r => readModel.AccountNumbers.Add(r.AccountNumber),
+					_ => readModel.AccountNumbers
+				}
+			})
+			.AddInMemoryProjection<UnclosedGeneralLedgerEntries>((readModel, e) => readModel with {
+				EntriesByPeriod = e switch {
+					GeneralLedgerEntryPosted p => readModel.EntriesByPeriod.SetItem(p.Period,
+						(readModel.EntriesByPeriod.TryGetValue(p.Period, out var entries)
+							? entries
+							: ImmutableHashSet<Guid>.Empty)
+						.Add(p.GeneralLedgerEntryId)),
+					AccountingPeriodClosed c => readModel.EntriesByPeriod.Remove(c.Period),
+					_ => readModel.EntriesByPeriod
+				},
+				NotClosed = e switch {
+					AccountingPeriodClosed c => readModel.NotClosed
+						.Except(c.GeneralLedgerEntryIds)
+						.Remove(c.ClosingGeneralLedgerEntryId)
+						.Compact(),
+					_ => readModel.NotClosed
+				}
+			})
 			.AddProcessManager<AccountingPeriodClosingModule>("accountingPeriodClosingCheckpoint");
-
-		public IEnumerable<Type> MessageTypes => Enumerable.Empty<Type>();
 
 		private record DeactivatedAccounts : MemoryReadModel {
 			public ImmutableHashSet<int> AccountNumbers { get; init; } = ImmutableHashSet<int>.Empty;

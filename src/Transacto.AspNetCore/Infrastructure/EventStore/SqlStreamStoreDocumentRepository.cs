@@ -36,24 +36,27 @@ namespace Transacto.Infrastructure.EventStore {
 
 			var data = await document.GetJsonData(cancellationToken);
 
-			return JsonSerializer.Deserialize<TBusinessTransaction>(data)!.WithVersion(document.StreamVersion);
+			var businessTransaction = JsonSerializer.Deserialize<TBusinessTransaction>(data);
+			return businessTransaction switch {
+				null => Optional<TBusinessTransaction>.Empty,
+				_ => businessTransaction
+			};
 		}
 
 		public async ValueTask<TBusinessTransaction> Get(string id, CancellationToken cancellationToken = default) {
 			var optionalTransaction = await GetOptional(id, cancellationToken);
-			if (!optionalTransaction.HasValue) {
-				throw new InvalidOperationException();
-			}
-
-			return optionalTransaction.Value;
+			return optionalTransaction.HasValue switch {
+				false => throw new InvalidOperationException(),
+				_ => optionalTransaction.Value
+			};
 		}
 
-		public ValueTask Save(TBusinessTransaction transaction, CancellationToken cancellationToken = default) {
+		public ValueTask Save(TBusinessTransaction transaction, int expectedVersion,
+			CancellationToken cancellationToken = default) {
 			var streamName = _getStreamName(transaction);
 			var data = JsonSerializer.Serialize(transaction, _serializerOptions);
 
-			return new ValueTask(_streamStore.AppendToStream(streamName,
-				transaction.Version ?? ExpectedVersion.NoStream,
+			return new ValueTask(_streamStore.AppendToStream(streamName, expectedVersion,
 				new NewStreamMessage(Guid.NewGuid(), typeof(TBusinessTransaction).Name, data), cancellationToken));
 		}
 	}
