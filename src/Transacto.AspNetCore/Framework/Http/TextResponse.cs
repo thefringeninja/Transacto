@@ -4,17 +4,17 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Net.Http.Headers;
 
-namespace Transacto.Framework.Http {
-	public sealed class TextResponse : Response {
-		private static readonly MediaTypeHeaderValue ContentType = new("text/plain");
-		private readonly string _body;
+namespace Transacto.Framework.Http; 
 
-		public TextResponse(string body) {
-			Headers.ContentType = ContentType;
-			_body = body;
-		}
+public sealed class TextResponse : Response {
+	private static readonly MediaTypeHeaderValue ContentType = new("text/plain");
+	private readonly string _body;
 
-		protected internal override ValueTask WriteBody(Stream stream, CancellationToken cancellationToken) => stream
-			.WriteAsync(Encoding.UTF8.GetBytes(_body), cancellationToken);
+	public TextResponse(string body) {
+		Headers.ContentType = ContentType;
+		_body = body;
 	}
+
+	protected internal override ValueTask WriteBody(Stream stream, CancellationToken cancellationToken) => stream
+		.WriteAsync(Encoding.UTF8.GetBytes(_body), cancellationToken);
 }

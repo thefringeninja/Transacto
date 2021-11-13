@@ -7,59 +7,59 @@ using Npgsql;
 using Projac.Npgsql;
 using Projac.Sql;
 
-namespace Transacto.Infrastructure.Npgsql {
-	public abstract class NpgsqlProjection : SqlProjection {
-		protected NpgsqlScripts Scripts { get; }
-		protected static readonly NpgsqlSyntax Sql = new();
+namespace Transacto.Infrastructure.Npgsql; 
 
-		protected NpgsqlProjection(NpgsqlScripts scripts) {
-			Scripts = scripts;
+public abstract class NpgsqlProjection : SqlProjection {
+	protected NpgsqlScripts Scripts { get; }
+	protected static readonly NpgsqlSyntax Sql = new();
+
+	protected NpgsqlProjection(NpgsqlScripts scripts) {
+		Scripts = scripts;
+	}
+
+	protected void When<TEvent>() =>
+		When<TEvent>(_ => Sql.NonQueryStatement(Scripts[typeof(TEvent)], Array.Empty<DbParameter>()));
+
+	protected void When<TEvent>(Func<TEvent, DbParameter[]> handler) =>
+		When<TEvent>(e => Sql.NonQueryStatement(Scripts[typeof(TEvent)], handler(e)));
+
+	protected void When<TEvent>(Func<TEvent, DbParameter[][]> handler) =>
+		When<TEvent>(e =>
+			Array.ConvertAll(handler(e), parameters => Sql.NonQueryStatement(Scripts[typeof(TEvent)], parameters)));
+
+	public async Task<Position> ReadCheckpoint(NpgsqlConnection connection,
+		CancellationToken cancellationToken) {
+		await connection.OpenAsync(cancellationToken);
+		var statement = Sql.QueryStatement(NpgsqlScripts.ReadCheckpoint, new { projection = GetType().Name });
+
+		await using var command = new NpgsqlCommand(statement.Text, connection) {
+			Parameters = { statement.Parameters }
+		};
+		await using var reader = await command.ExecuteReaderAsync(cancellationToken);
+		if (!await reader.ReadAsync(cancellationToken)) {
+			return Position.Start;
 		}
 
-		protected void When<TEvent>() =>
-			When<TEvent>(_ => Sql.NonQueryStatement(Scripts[typeof(TEvent)], Array.Empty<DbParameter>()));
+		unchecked {
+			return new Position((ulong)reader.GetInt64(0), (ulong)reader.GetInt64(1));
+		}
+	}
 
-		protected void When<TEvent>(Func<TEvent, DbParameter[]> handler) =>
-			When<TEvent>(e => Sql.NonQueryStatement(Scripts[typeof(TEvent)], handler(e)));
-
-		protected void When<TEvent>(Func<TEvent, DbParameter[][]> handler) =>
-			When<TEvent>(e =>
-				Array.ConvertAll(handler(e), parameters => Sql.NonQueryStatement(Scripts[typeof(TEvent)], parameters)));
-
-		public async Task<Position> ReadCheckpoint(NpgsqlConnection connection,
-			CancellationToken cancellationToken) {
-			await connection.OpenAsync(cancellationToken);
-			var statement = Sql.QueryStatement(NpgsqlScripts.ReadCheckpoint, new { projection = GetType().Name });
-
-			await using var command = new NpgsqlCommand(statement.Text, connection) {
-				Parameters = { statement.Parameters }
-			};
-			await using var reader = await command.ExecuteReaderAsync(cancellationToken);
-			if (!await reader.ReadAsync(cancellationToken)) {
-				return Position.Start;
-			}
-
-			unchecked {
-				return new Position((ulong)reader.GetInt64(0), (ulong)reader.GetInt64(1));
-			}
+	public async Task WriteCheckpoint(NpgsqlTransaction transaction, Position checkpoint,
+		CancellationToken cancellationToken) {
+		SqlQueryCommand statement;
+		unchecked {
+			statement = Sql.QueryStatement(NpgsqlScripts.WriteCheckpoint, new {
+				projection = GetType().Name,
+				commit = (long)checkpoint.CommitPosition,
+				prepare = (long)checkpoint.PreparePosition
+			});
 		}
 
-		public async Task WriteCheckpoint(NpgsqlTransaction transaction, Position checkpoint,
-			CancellationToken cancellationToken) {
-			SqlQueryCommand statement;
-			unchecked {
-				statement = Sql.QueryStatement(NpgsqlScripts.WriteCheckpoint, new {
-					projection = GetType().Name,
-					commit = (long)checkpoint.CommitPosition,
-					prepare = (long)checkpoint.PreparePosition
-				});
-			}
+		await using var command = new NpgsqlCommand(statement.Text, transaction.Connection, transaction) {
+			Parameters = { statement.Parameters }
+		};
 
-			await using var command = new NpgsqlCommand(statement.Text, transaction.Connection, transaction) {
-				Parameters = { statement.Parameters }
-			};
-
-			await command.ExecuteNonQueryAsync(cancellationToken);
-		}
+		await command.ExecuteNonQueryAsync(cancellationToken);
 	}
 }

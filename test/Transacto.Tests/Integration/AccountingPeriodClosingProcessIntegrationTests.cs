@@ -9,56 +9,56 @@ using Transacto.Domain;
 using Transacto.Messages;
 using Xunit;
 
-namespace Transacto.Integration {
-	public class AccountingPeriodClosingProcessIntegrationTests : IntegrationTests {
-		[Theory, AutoTransactoData(1)]
-		public async Task when_closing_the_period(LocalDateTime createdOn,
-			GeneralLedgerEntryIdentifier closingEntryIdentifier) {
-			var accountingPeriodClosedSource = new TaskCompletionSource<ResolvedEvent>();
-			var checkpointSource = new TaskCompletionSource<Position>();
+namespace Transacto.Integration; 
 
-			await EventStoreClient.SubscribeToAllAsync((_, e, _) => {
-				switch (e.Event.EventType) {
-					case nameof(AccountingPeriodClosed):
-						accountingPeriodClosedSource.TrySetResult(e);
-						break;
-					case "checkpoint":
-						checkpointSource.TrySetResult(
-							new Position(
-								BitConverter.ToUInt64(e.Event.Data.Span),
-								BitConverter.ToUInt64(e.Event.Data.Span[8..])));
-						break;
-				}
+public class AccountingPeriodClosingProcessIntegrationTests : IntegrationTests {
+	[Theory, AutoTransactoData(1)]
+	public async Task when_closing_the_period(LocalDateTime createdOn,
+		GeneralLedgerEntryIdentifier closingEntryIdentifier) {
+		var accountingPeriodClosedSource = new TaskCompletionSource<ResolvedEvent>();
+		var checkpointSource = new TaskCompletionSource<Position>();
 
-				return Task.CompletedTask;
-			}, subscriptionDropped: (_, _, ex) => {
-				if (ex != null) {
-					accountingPeriodClosedSource.TrySetException(ex);
-					checkpointSource.TrySetException(ex);
-				}
-			});
+		await EventStoreClient.SubscribeToAllAsync((_, e, _) => {
+			switch (e.Event.EventType) {
+				case nameof(AccountingPeriodClosed):
+					accountingPeriodClosedSource.TrySetResult(e);
+					break;
+				case "checkpoint":
+					checkpointSource.TrySetResult(
+						new Position(
+							BitConverter.ToUInt64(e.Event.Data.Span),
+							BitConverter.ToUInt64(e.Event.Data.Span[8..])));
+					break;
+			}
 
-			var period = AccountingPeriod.Open(createdOn.Date);
-			await OpenBooks(createdOn).LastAsync();
+			return Task.CompletedTask;
+		}, subscriptionDropped: (_, _, ex) => {
+			if (ex != null) {
+				accountingPeriodClosedSource.TrySetException(ex);
+				checkpointSource.TrySetException(ex);
+			}
+		});
 
-			var command = new BeginClosingAccountingPeriod {
-				ClosingOn = createdOn.ToDateTimeUnspecified(),
-				ClosingGeneralLedgerEntryId = closingEntryIdentifier.ToGuid(),
-				RetainedEarningsAccountNumber = 3900
-			};
+		var period = AccountingPeriod.Open(createdOn.Date);
+		await OpenBooks(createdOn).LastAsync();
 
-			await HttpClient.SendCommand("/general-ledger", command, TransactoSerializerOptions.Commands);
+		var command = new BeginClosingAccountingPeriod {
+			ClosingOn = createdOn.ToDateTimeUnspecified(),
+			ClosingGeneralLedgerEntryId = closingEntryIdentifier.ToGuid(),
+			RetainedEarningsAccountNumber = 3900
+		};
 
-			var accountingPeriodClosedEvent = await accountingPeriodClosedSource.Task;
-			var accountingPeriodClosed = JsonSerializer.Deserialize<AccountingPeriodClosed>(
-				Encoding.UTF8.GetString(accountingPeriodClosedEvent.OriginalEvent.Data.Span),
-				TransactoSerializerOptions.Events)!;
-			var checkpoint = await checkpointSource.Task;
+		await HttpClient.SendCommand("/general-ledger", command, TransactoSerializerOptions.Commands);
 
-			Assert.Equal(period, AccountingPeriod.Parse(accountingPeriodClosed.Period));
-			Assert.Equal(closingEntryIdentifier,
-				new GeneralLedgerEntryIdentifier(accountingPeriodClosed.ClosingGeneralLedgerEntryId));
-			Assert.Equal(accountingPeriodClosedEvent.OriginalPosition!.Value, checkpoint);
-		}
+		var accountingPeriodClosedEvent = await accountingPeriodClosedSource.Task;
+		var accountingPeriodClosed = JsonSerializer.Deserialize<AccountingPeriodClosed>(
+			Encoding.UTF8.GetString(accountingPeriodClosedEvent.OriginalEvent.Data.Span),
+			TransactoSerializerOptions.Events)!;
+		var checkpoint = await checkpointSource.Task;
+
+		Assert.Equal(period, AccountingPeriod.Parse(accountingPeriodClosed.Period));
+		Assert.Equal(closingEntryIdentifier,
+			new GeneralLedgerEntryIdentifier(accountingPeriodClosed.ClosingGeneralLedgerEntryId));
+		Assert.Equal(accountingPeriodClosedEvent.OriginalPosition!.Value, checkpoint);
 	}
 }

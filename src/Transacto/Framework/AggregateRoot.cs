@@ -2,50 +2,50 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 
-namespace Transacto.Framework {
-	public abstract class AggregateRoot {
-		private readonly IList<object> _changes;
+namespace Transacto.Framework; 
 
-		public bool HasChanges => _changes.Count > 0;
-		public abstract string Id { get; }
+public abstract class AggregateRoot {
+	private readonly IList<object> _changes;
 
-		protected AggregateRoot() {
-			_changes = new List<object>();
+	public bool HasChanges => _changes.Count > 0;
+	public abstract string Id { get; }
+
+	protected AggregateRoot() {
+		_changes = new List<object>();
+	}
+
+	public Optional<long> LoadFromHistory(IEnumerable<object> events) {
+		var i = -1;
+
+		foreach (var e in events) {
+			Apply(e, true);
+			i++;
 		}
 
-		public Optional<long> LoadFromHistory(IEnumerable<object> events) {
-			var i = -1;
+		return i == -1 ? Optional<long>.Empty : i;
+	}
 
-			foreach (var e in events) {
-				Apply(e, true);
-				i++;
-			}
+	public async ValueTask<Optional<long>> LoadFromHistory(IAsyncEnumerable<object> events) {
+		var i = -1;
 
-			return i == -1 ? Optional<long>.Empty : i;
+		await foreach (var e in events) {
+			Apply(e, true);
+			i++;
 		}
 
-		public async ValueTask<Optional<long>> LoadFromHistory(IAsyncEnumerable<object> events) {
-			var i = -1;
+		return i == -1 ? Optional<long>.Empty : i;
+	}
 
-			await foreach (var e in events) {
-				Apply(e, true);
-				i++;
-			}
+	public void MarkChangesAsCommitted() => _changes.Clear();
+	public IEnumerable<object> GetChanges() => _changes.AsEnumerable();
 
-			return i == -1 ? Optional<long>.Empty : i;
-		}
+	protected abstract void ApplyEvent(object e);
 
-		public void MarkChangesAsCommitted() => _changes.Clear();
-		public IEnumerable<object> GetChanges() => _changes.AsEnumerable();
+	protected void Apply(object e, bool historical = false) {
+		ApplyEvent(e);
 
-		protected abstract void ApplyEvent(object e);
-
-		protected void Apply(object e, bool historical = false) {
-			ApplyEvent(e);
-
-			if (!historical) {
-				_changes.Add(e);
-			}
+		if (!historical) {
+			_changes.Add(e);
 		}
 	}
 }

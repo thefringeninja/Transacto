@@ -1,3 +1,3 @@
-namespace Transacto.Framework.Projections {
-	public record CreateSchema;
-}
+namespace Transacto.Framework.Projections; 
+
+public record CreateSchema;

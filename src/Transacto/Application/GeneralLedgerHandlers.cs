@@ -5,33 +5,33 @@ using NodaTime;
 using Transacto.Domain;
 using Transacto.Messages;
 
-namespace Transacto.Application {
-	public class GeneralLedgerHandlers {
-		private readonly IGeneralLedgerRepository _generalLedger;
-		private readonly IChartOfAccountsRepository _chartOfAccounts;
+namespace Transacto.Application; 
 
-		public GeneralLedgerHandlers(IGeneralLedgerRepository generalLedger,
-			IChartOfAccountsRepository chartOfAccounts) {
-			_generalLedger = generalLedger;
-			_chartOfAccounts = chartOfAccounts;
-		}
+public class GeneralLedgerHandlers {
+	private readonly IGeneralLedgerRepository _generalLedger;
+	private readonly IChartOfAccountsRepository _chartOfAccounts;
 
-		public ValueTask Handle(OpenGeneralLedger command, CancellationToken cancellationToken = default) {
-			_generalLedger.Add(GeneralLedger.Open(LocalDate.FromDateTime(command.OpenedOn.LocalDateTime)));
+	public GeneralLedgerHandlers(IGeneralLedgerRepository generalLedger,
+		IChartOfAccountsRepository chartOfAccounts) {
+		_generalLedger = generalLedger;
+		_chartOfAccounts = chartOfAccounts;
+	}
 
-			return new ValueTask(Task.CompletedTask);
-		}
+	public ValueTask Handle(OpenGeneralLedger command, CancellationToken cancellationToken = default) {
+		_generalLedger.Add(GeneralLedger.Open(LocalDate.FromDateTime(command.OpenedOn.LocalDateTime)));
 
-		public async ValueTask Handle(BeginClosingAccountingPeriod command,
-			CancellationToken cancellationToken = default) {
-			var generalLedger = await _generalLedger.Get(cancellationToken);
-			var chartOfAccounts = await _chartOfAccounts.Get(cancellationToken);
+		return new ValueTask(Task.CompletedTask);
+	}
 
-			generalLedger.BeginClosingPeriod(
-				(EquityAccount)chartOfAccounts[new AccountNumber(command.RetainedEarningsAccountNumber)],
-				new GeneralLedgerEntryIdentifier(command.ClosingGeneralLedgerEntryId),
-				command.GeneralLedgerEntryIds.Select(id => new GeneralLedgerEntryIdentifier(id)).ToArray(),
-				LocalDateTime.FromDateTime(command.ClosingOn.DateTime));
-		}
+	public async ValueTask Handle(BeginClosingAccountingPeriod command,
+		CancellationToken cancellationToken = default) {
+		var generalLedger = await _generalLedger.Get(cancellationToken);
+		var chartOfAccounts = await _chartOfAccounts.Get(cancellationToken);
+
+		generalLedger.BeginClosingPeriod(
+			(EquityAccount)chartOfAccounts[new AccountNumber(command.RetainedEarningsAccountNumber)],
+			new GeneralLedgerEntryIdentifier(command.ClosingGeneralLedgerEntryId),
+			command.GeneralLedgerEntryIds.Select(id => new GeneralLedgerEntryIdentifier(id)).ToArray(),
+			LocalDateTime.FromDateTime(command.ClosingOn.DateTime));
 	}
 }

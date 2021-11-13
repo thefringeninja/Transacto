@@ -2,7 +2,7 @@
 
 <section>
 	<ul>
-		@foreach (var (key, value) in Model)
+		@foreach (var (key, value) in Model ?? Enumerable.Empty<KeyValuePair<string, string>>())
 		{
 			<li>@key - @value</li>
 		}

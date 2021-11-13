@@ -5,79 +5,79 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using Transacto.Domain;
 
-namespace Transacto {
-	public static class TransactoSerializerOptions {
-		public static readonly JsonSerializerOptions Events = new() {
+namespace Transacto; 
+
+public static class TransactoSerializerOptions {
+	public static readonly JsonSerializerOptions Events = new() {
+		PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+		PropertyNameCaseInsensitive = true,
+		IncludeFields = true
+	};
+
+	public static JsonSerializerOptions BusinessTransactions(params Type[] businessTransactionTypes) =>
+		new() {
+			IncludeFields = true,
 			PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
 			PropertyNameCaseInsensitive = true,
-			IncludeFields = true
+			Converters = {new BusinessTransactionConverter(businessTransactionTypes)}
 		};
 
-		public static JsonSerializerOptions BusinessTransactions(params Type[] businessTransactionTypes) =>
-			new() {
-				IncludeFields = true,
-				PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-				PropertyNameCaseInsensitive = true,
-				Converters = {new BusinessTransactionConverter(businessTransactionTypes)}
-			};
+	public static readonly JsonSerializerOptions Commands = new() {
+		PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+		PropertyNameCaseInsensitive = true,
+		IncludeFields = true
+	};
 
-		public static readonly JsonSerializerOptions Commands = new() {
-			PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-			PropertyNameCaseInsensitive = true,
-			IncludeFields = true
-		};
+	private class BusinessTransactionConverter : JsonConverter<IBusinessTransaction?> {
+		private readonly IDictionary<string, Type> _transactionTypes;
 
-		private class BusinessTransactionConverter : JsonConverter<IBusinessTransaction?> {
-			private readonly IDictionary<string, Type> _transactionTypes;
+		public BusinessTransactionConverter(params Type[] transactionTypes) {
+			_transactionTypes = transactionTypes.ToDictionary(GetBusinessTransactionPropertyName);
+		}
 
-			public BusinessTransactionConverter(params Type[] transactionTypes) {
-				_transactionTypes = transactionTypes.ToDictionary(GetBusinessTransactionPropertyName);
+		private static string GetBusinessTransactionPropertyName(Type type) =>
+			char.ToLower(type.Name[0]) + type.Name[1..];
+
+		public override IBusinessTransaction? Read(ref Utf8JsonReader reader, Type typeToConvert,
+			JsonSerializerOptions options) {
+			if (reader.TokenType != JsonTokenType.StartObject || !reader.Read()) {
+				throw new JsonException();
 			}
 
-			private static string GetBusinessTransactionPropertyName(Type type) =>
-				char.ToLower(type.Name[0]) + type.Name[1..];
+			var typeName = reader.GetString()!;
 
-			public override IBusinessTransaction? Read(ref Utf8JsonReader reader, Type typeToConvert,
-				JsonSerializerOptions options) {
-				if (reader.TokenType != JsonTokenType.StartObject || !reader.Read()) {
-					throw new JsonException();
-				}
+			if (!_transactionTypes.TryGetValue(typeName, out var type) ||
+			    !typeof(IBusinessTransaction).IsAssignableFrom(type)) {
+				reader.Skip();
 
-				var typeName = reader.GetString()!;
-
-				if (!_transactionTypes.TryGetValue(typeName, out var type) ||
-				    !typeof(IBusinessTransaction).IsAssignableFrom(type)) {
-					reader.Skip();
-
-					reader.Read();
-
-					return null;
-				}
-
-				var businessTransaction = (IBusinessTransaction)JsonSerializer.Deserialize(ref reader, type, options)!;
 				reader.Read();
 
-				return businessTransaction;
+				return null;
 			}
 
-			public override void Write(Utf8JsonWriter writer, IBusinessTransaction? value,
-				JsonSerializerOptions options) {
-				if (value == null) {
-					writer.WriteNullValue();
-					return;
-				}
+			var businessTransaction = (IBusinessTransaction)JsonSerializer.Deserialize(ref reader, type, options)!;
+			reader.Read();
 
-				writer.WriteStartObject();
+			return businessTransaction;
+		}
 
-				writer.WritePropertyName(GetBusinessTransactionPropertyName(value.GetType()));
-
-				using var document = JsonDocument.Parse(
-					JsonSerializer.SerializeToUtf8Bytes(value, value.GetType(), Events));
-
-				document.RootElement.WriteTo(writer);
-
-				writer.WriteEndObject();
+		public override void Write(Utf8JsonWriter writer, IBusinessTransaction? value,
+			JsonSerializerOptions options) {
+			if (value == null) {
+				writer.WriteNullValue();
+				return;
 			}
+
+			writer.WriteStartObject();
+
+			writer.WritePropertyName(GetBusinessTransactionPropertyName(value.GetType()));
+
+			using var document = JsonDocument.Parse(
+				JsonSerializer.SerializeToUtf8Bytes(value, value.GetType(), Events));
+
+			document.RootElement.WriteTo(writer);
+
+			writer.WriteEndObject();
 		}
 	}
 }

@@ -1,5 +1,5 @@
-namespace Transacto.Framework.Messages {
-	public record SomeEvent {
+namespace Transacto.Framework.Messages; 
 
-	}
+public record SomeEvent {
+
 }

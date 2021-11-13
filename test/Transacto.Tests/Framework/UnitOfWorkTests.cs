@@ -1,54 +1,54 @@
 using System;
 using Xunit;
 
-namespace Transacto.Framework {
-	public class UnitOfWorkTests {
-		[Fact]
-		public void AccessingCurrentWhenNotStartedThrows() {
-			Assert.Throws<UnitOfWorkNotStartedException>(() => UnitOfWork.Current);
-		}
+namespace Transacto.Framework; 
 
-		[Fact]
-		public void CanStart() {
-			using var _ = UnitOfWork.Start();
-			Assert.False(UnitOfWork.Current.HasChanges);
-		}
+public class UnitOfWorkTests {
+	[Fact]
+	public void AccessingCurrentWhenNotStartedThrows() {
+		Assert.Throws<UnitOfWorkNotStartedException>(() => UnitOfWork.Current);
+	}
 
-		[Fact]
-		public void AttachingAnAggregate() {
-			var aggregate = new TestAggregate();
+	[Fact]
+	public void CanStart() {
+		using var _ = UnitOfWork.Start();
+		Assert.False(UnitOfWork.Current.HasChanges);
+	}
 
-			using var _ = UnitOfWork.Start();
-			UnitOfWork.Current.Attach(new("stream", aggregate));
-			Assert.True(UnitOfWork.Current.TryGet("stream", out var result));
-			Assert.Same(aggregate, result);
-		}
+	[Fact]
+	public void AttachingAnAggregate() {
+		var aggregate = new TestAggregate();
 
-		[Fact]
-		public void AttachingAnAggregateWhenStreamNameExistsThrows() {
-			using var _ = UnitOfWork.Start();
-			UnitOfWork.Current.Attach(new("stream", new TestAggregate()));
-			Assert.Throws<ArgumentException>(() => UnitOfWork.Current.Attach(new("stream", new TestAggregate())));
-		}
+		using var _ = UnitOfWork.Start();
+		UnitOfWork.Current.Attach(new("stream", aggregate));
+		Assert.True(UnitOfWork.Current.TryGet("stream", out var result));
+		Assert.Same(aggregate, result);
+	}
 
-		[Fact]
-		public void GettingChanges() {
-			var aggregate = new TestAggregate();
+	[Fact]
+	public void AttachingAnAggregateWhenStreamNameExistsThrows() {
+		using var _ = UnitOfWork.Start();
+		UnitOfWork.Current.Attach(new("stream", new TestAggregate()));
+		Assert.Throws<ArgumentException>(() => UnitOfWork.Current.Attach(new("stream", new TestAggregate())));
+	}
 
-			using var _ = UnitOfWork.Start();
-			UnitOfWork.Current.Attach(new ("stream", aggregate, Optional<long>.Empty));
-			aggregate.DoSomething();
-			Assert.True(UnitOfWork.Current.HasChanges);
-			Assert.Single(UnitOfWork.Current.GetChanges());
-		}
+	[Fact]
+	public void GettingChanges() {
+		var aggregate = new TestAggregate();
 
-		private class TestAggregate : AggregateRoot {
-			public override string Id { get; } = nameof(TestAggregate);
+		using var _ = UnitOfWork.Start();
+		UnitOfWork.Current.Attach(new ("stream", aggregate, Optional<long>.Empty));
+		aggregate.DoSomething();
+		Assert.True(UnitOfWork.Current.HasChanges);
+		Assert.Single(UnitOfWork.Current.GetChanges());
+	}
 
-			public void DoSomething() => Apply(new object());
+	private class TestAggregate : AggregateRoot {
+		public override string Id { get; } = nameof(TestAggregate);
 
-			protected override void ApplyEvent(object e) {
-			}
+		public void DoSomething() => Apply(new object());
+
+		protected override void ApplyEvent(object e) {
 		}
 	}
 }

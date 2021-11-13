@@ -17,115 +17,115 @@ using Microsoft.AspNetCore.Mvc.Formatters;
 using Microsoft.Net.Http.Headers;
 using RazorLight;
 
-namespace Transacto.Framework.Http {
-	public class HalResponse<T> : HalResponse where T: class, new() {
-		private static readonly MediaType HalJson = new("application/hal+json");
-		private static readonly MediaType Html = new("text/html");
+namespace Transacto.Framework.Http; 
 
-		private readonly Response _inner;
+public class HalResponse<T> : HalResponse where T: class, new() {
+	private static readonly MediaType HalJson = new("application/hal+json");
+	private static readonly MediaType Html = new("text/html");
 
-		public override ResponseHeaders Headers => _inner.Headers;
-		public override HttpStatusCode StatusCode { get => _inner.StatusCode; set => _inner.StatusCode = value; }
+	private readonly Response _inner;
 
-		internal HalResponse(HttpRequest request, IHal hal, Optional<Position> position, T resource)
-			: base(position) {
-			_inner = request.Headers["accept"].Count == 0
-				? new HalJsonResponse(hal, resource)
-				: request.Headers["accept"].Select(MediaType).Select(Negotiate).FirstOrDefault() ??
-				  NotAcceptableResponse.Instance;
+	public override ResponseHeaders Headers => _inner.Headers;
+	public override HttpStatusCode StatusCode { get => _inner.StatusCode; set => _inner.StatusCode = value; }
 
-			if (position.HasValue) {
-				_inner.Headers.ETag = new EntityTagHeaderValue(@$"""{position.Value.ToCheckpoint()}""");
-			}
+	internal HalResponse(HttpRequest request, IHal hal, Optional<Position> position, T resource)
+		: base(position) {
+		_inner = request.Headers["accept"].Count == 0
+			? new HalJsonResponse(hal, resource)
+			: request.Headers["accept"].Select(MediaType).Select(Negotiate).FirstOrDefault() ??
+			  NotAcceptableResponse.Instance;
 
-			Response Negotiate(MediaType m) =>
-				(HalJson.IsSubsetOf(m), Html.IsSubsetOf(m) || m.SubTypeSuffix == "html") switch {
-					(true, false) => new HalJsonResponse(hal, resource),
-					(false, true) => new HalHtmlResponse(hal, resource),
-					_ => NotAcceptableResponse.Instance
-				};
-
-			static MediaType MediaType(string? x) => new(x ?? string.Empty);
+		if (position.HasValue) {
+			_inner.Headers.ETag = new EntityTagHeaderValue(@$"""{position.Value.ToCheckpoint()}""");
 		}
 
-		protected internal override ValueTask WriteBody(Stream stream, CancellationToken cancellationToken) => _inner
-			.WriteBody(stream, cancellationToken);
+		Response Negotiate(MediaType m) =>
+			(HalJson.IsSubsetOf(m), Html.IsSubsetOf(m) || m.SubTypeSuffix == "html") switch {
+				(true, false) => new HalJsonResponse(hal, resource),
+				(false, true) => new HalHtmlResponse(hal, resource),
+				_ => NotAcceptableResponse.Instance
+			};
 
-		private sealed class HalHtmlResponse : Response {
-			private static readonly ConcurrentDictionary<Assembly, RazorLightEngine> Engines =
-				new();
+		static MediaType MediaType(string? x) => new(x ?? string.Empty);
+	}
 
-			private static readonly MediaTypeHeaderValue ContentType = new($"{Html.Type}/{Html.SubType}");
+	protected internal override ValueTask WriteBody(Stream stream, CancellationToken cancellationToken) => _inner
+		.WriteBody(stream, cancellationToken);
 
-			private readonly T _resource;
-			private readonly IHal _hal;
+	private sealed class HalHtmlResponse : Response {
+		private static readonly ConcurrentDictionary<Assembly, RazorLightEngine> Engines =
+			new();
 
-			public HalHtmlResponse(IHal hal, T resource) {
-				_resource = resource;
-				_hal = hal;
+		private static readonly MediaTypeHeaderValue ContentType = new($"{Html.Type}/{Html.SubType}");
 
-				Headers.ContentType = ContentType;
-			}
+		private readonly T _resource;
+		private readonly IHal _hal;
 
-			protected internal override async ValueTask WriteBody(Stream stream, CancellationToken cancellationToken) {
-				var representation = await _hal.RepresentationOfAsync(_resource);
-				await stream.WriteAsync(Encoding.UTF8.GetBytes("<!doctype html><html><body>"), cancellationToken);
+		public HalHtmlResponse(IHal hal, T resource) {
+			_resource = resource;
+			_hal = hal;
 
-				await stream.WriteAsync(Encoding.UTF8.GetBytes(await Render(representation.Links, typeof(Views.Views))),
-					cancellationToken);
-				await stream.WriteAsync(
-					Encoding.UTF8.GetBytes(await Render(representation.State, _resource.GetType())),
-					cancellationToken);
-
-				await stream.WriteAsync(Encoding.UTF8.GetBytes("</body></html>"), cancellationToken);
-			}
-
-			private static Task<string> Render(object model, Type? type = null) {
-				type ??= model.GetType();
-				return Engines
-					.GetOrAdd(type.Assembly, assembly => new RazorLightEngineBuilder()
-						.UseEmbeddedResourcesProject(assembly)
-						.UseMemoryCachingProvider()
-						.Build())
-					.CompileRenderAsync(type.FullName, model);
-			}
+			Headers.ContentType = ContentType;
 		}
 
-		private sealed class HalJsonResponse : Response {
-			private static readonly JsonSerializerOptions SerializerOptions
-				= new() {
-					Converters = {
-						new LinksConverter(),
-						new HalRepresentationConverter()
-					},
+		protected internal override async ValueTask WriteBody(Stream stream, CancellationToken cancellationToken) {
+			var representation = await _hal.RepresentationOfAsync(_resource);
+			await stream.WriteAsync(Encoding.UTF8.GetBytes("<!doctype html><html><body>"), cancellationToken);
 
-					PropertyNamingPolicy = JsonNamingPolicy.CamelCase
-				};
+			await stream.WriteAsync(Encoding.UTF8.GetBytes(await Render(representation.Links, typeof(Views.Views))),
+				cancellationToken);
+			await stream.WriteAsync(
+				Encoding.UTF8.GetBytes(await Render(representation.State, _resource.GetType())),
+				cancellationToken);
 
-			private static readonly MediaTypeHeaderValue ContentType = new($"{HalJson.Type}/{HalJson.SubType}");
+			await stream.WriteAsync(Encoding.UTF8.GetBytes("</body></html>"), cancellationToken);
+		}
 
-			private readonly T _resource;
-			private readonly IHal _hal;
-
-			public HalJsonResponse(IHal hal, T resource) {
-				_resource = resource;
-				_hal = hal;
-				Headers.ContentType = ContentType;
-			}
-
-			protected internal override async ValueTask WriteBody(Stream stream, CancellationToken cancellationToken) {
-				var representation = await _hal.RepresentationOfAsync(_resource);
-				await JsonSerializer.SerializeAsync(stream, representation, SerializerOptions, cancellationToken);
-			}
+		private static Task<string> Render(object model, Type? type = null) {
+			type ??= model.GetType();
+			return Engines
+				.GetOrAdd(type.Assembly, assembly => new RazorLightEngineBuilder()
+					.UseEmbeddedResourcesProject(assembly)
+					.UseMemoryCachingProvider()
+					.Build())
+				.CompileRenderAsync(type.FullName, model);
 		}
 	}
 
-	public abstract class HalResponse : Response, IHaveEventStorePosition {
-		public static HalResponse<T> Create<T>(HttpRequest request, IHal hal, Optional<Position> position,
-			Optional<T> resource = default) where T : class, new() =>
-			new(request, hal, position, resource.HasValue ? resource.Value : new T());
+	private sealed class HalJsonResponse : Response {
+		private static readonly JsonSerializerOptions SerializerOptions
+			= new() {
+				Converters = {
+					new LinksConverter(),
+					new HalRepresentationConverter()
+				},
 
-		protected HalResponse(Optional<Position> position) => Position = position;
-		public Optional<Position> Position { get; }
+				PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+			};
+
+		private static readonly MediaTypeHeaderValue ContentType = new($"{HalJson.Type}/{HalJson.SubType}");
+
+		private readonly T _resource;
+		private readonly IHal _hal;
+
+		public HalJsonResponse(IHal hal, T resource) {
+			_resource = resource;
+			_hal = hal;
+			Headers.ContentType = ContentType;
+		}
+
+		protected internal override async ValueTask WriteBody(Stream stream, CancellationToken cancellationToken) {
+			var representation = await _hal.RepresentationOfAsync(_resource);
+			await JsonSerializer.SerializeAsync(stream, representation, SerializerOptions, cancellationToken);
+		}
 	}
+}
+
+public abstract class HalResponse : Response, IHaveEventStorePosition {
+	public static HalResponse<T> Create<T>(HttpRequest request, IHal hal, Optional<Position> position,
+		Optional<T> resource = default) where T : class, new() =>
+		new(request, hal, position, resource.HasValue ? resource.Value : new T());
+
+	protected HalResponse(Optional<Position> position) => Position = position;
+	public Optional<Position> Position { get; }
 }

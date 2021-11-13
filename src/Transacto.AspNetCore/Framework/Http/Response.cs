@@ -6,30 +6,30 @@ using EventStore.Client;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Headers;
 
-namespace Transacto.Framework.Http {
-	public interface IHaveEventStorePosition {
-		Optional<Position> Position { get; }
+namespace Transacto.Framework.Http; 
+
+public interface IHaveEventStorePosition {
+	Optional<Position> Position { get; }
+}
+
+public class Response {
+	public virtual ResponseHeaders Headers { get; }
+	public virtual HttpStatusCode StatusCode { get; set; } = HttpStatusCode.OK;
+
+	public Response() {
+		Headers = new ResponseHeaders(new HeaderDictionary());
 	}
 
-	public class Response {
-		public virtual ResponseHeaders Headers { get; }
-		public virtual HttpStatusCode StatusCode { get; set; } = HttpStatusCode.OK;
+	public ValueTask Write(HttpResponse response) {
+		response.StatusCode = (int)StatusCode;
 
-		public Response() {
-			Headers = new ResponseHeaders(new HeaderDictionary());
+		foreach (var (key, value) in Headers.Headers) {
+			response.Headers.AppendCommaSeparatedValues(key, value);
 		}
 
-		public ValueTask Write(HttpResponse response) {
-			response.StatusCode = (int)StatusCode;
-
-			foreach (var (key, value) in Headers.Headers) {
-				response.Headers.AppendCommaSeparatedValues(key, value);
-			}
-
-			return WriteBody(response.Body, response.HttpContext.RequestAborted);
-		}
-
-		protected internal virtual ValueTask WriteBody(Stream stream, CancellationToken cancellationToken) =>
-			new(Task.CompletedTask);
+		return WriteBody(response.Body, response.HttpContext.RequestAborted);
 	}
+
+	protected internal virtual ValueTask WriteBody(Stream stream, CancellationToken cancellationToken) =>
+		new(Task.CompletedTask);
 }

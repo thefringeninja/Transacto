@@ -6,143 +6,143 @@ using NodaTime;
 using Transacto.Framework;
 using Transacto.Messages;
 
-namespace Transacto.Domain {
-	public class GeneralLedgerEntry : AggregateRoot {
-		public static readonly Func<GeneralLedgerEntry> Factory = () => new GeneralLedgerEntry();
+namespace Transacto.Domain; 
 
-		private State _state;
+public class GeneralLedgerEntry : AggregateRoot {
+	public static readonly Func<GeneralLedgerEntry> Factory = () => new GeneralLedgerEntry();
 
-		private Money Balance => _state.Balance;
+	private State _state;
 
-		public bool IsInBalance => Balance == Money.Zero;
-		public IReadOnlyList<Debit> Debits => _state.Debits;
-		public IReadOnlyList<Credit> Credits => _state.Credits;
-		public override string Id => FormatStreamIdentifier(_state.Identifier);
+	private Money Balance => _state.Balance;
 
-		public GeneralLedgerEntryIdentifier Identifier => _state.Identifier;
+	public bool IsInBalance => Balance == Money.Zero;
+	public IReadOnlyList<Debit> Debits => _state.Debits;
+	public IReadOnlyList<Credit> Credits => _state.Credits;
+	public override string Id => FormatStreamIdentifier(_state.Identifier);
 
-		public static string FormatStreamIdentifier(GeneralLedgerEntryIdentifier identifier) =>
-			$"generalLedgerEntry-{identifier}";
+	public GeneralLedgerEntryIdentifier Identifier => _state.Identifier;
 
-		internal GeneralLedgerEntry(GeneralLedgerEntryIdentifier identifier,
-			GeneralLedgerEntryNumber number, AccountingPeriod accountingPeriod, LocalDateTime createdOn) : this() {
-			if (!accountingPeriod.Contains(createdOn.Date)) {
-				throw new GeneralLedgerEntryNotInPeriodException(number, createdOn, accountingPeriod);
+	public static string FormatStreamIdentifier(GeneralLedgerEntryIdentifier identifier) =>
+		$"generalLedgerEntry-{identifier}";
+
+	internal GeneralLedgerEntry(GeneralLedgerEntryIdentifier identifier,
+		GeneralLedgerEntryNumber number, AccountingPeriod accountingPeriod, LocalDateTime createdOn) : this() {
+		if (!accountingPeriod.Contains(createdOn.Date)) {
+			throw new GeneralLedgerEntryNotInPeriodException(number, createdOn, accountingPeriod);
+		}
+
+		Apply(new GeneralLedgerEntryCreated {
+			GeneralLedgerEntryId = identifier.ToGuid(),
+			ReferenceNumber = number.ToString(),
+			CreatedOn = Time.Format.LocalDateTime(createdOn),
+			Period = accountingPeriod.ToString()
+		});
+	}
+
+	internal GeneralLedgerEntry(GeneralLedgerEntryIdentifier identifier, IBusinessTransaction businessTransaction,
+		GeneralLedgerEntryNumberPrefix prefix, AccountingPeriod accountingPeriod, LocalDateTime createdOn,
+		AccountIsDeactivated accountIsDeactivated) : this(identifier,
+		new GeneralLedgerEntryNumber(prefix, businessTransaction.SequenceNumber), accountingPeriod, createdOn) {
+		foreach (var item in businessTransaction.GetTransactionItems()) {
+			if (item is Credit credit) {
+				ApplyCredit(credit, accountIsDeactivated);
 			}
-
-			Apply(new GeneralLedgerEntryCreated {
-				GeneralLedgerEntryId = identifier.ToGuid(),
-				ReferenceNumber = number.ToString(),
-				CreatedOn = Time.Format.LocalDateTime(createdOn),
-				Period = accountingPeriod.ToString()
-			});
-		}
-
-		internal GeneralLedgerEntry(GeneralLedgerEntryIdentifier identifier, IBusinessTransaction businessTransaction,
-			GeneralLedgerEntryNumberPrefix prefix, AccountingPeriod accountingPeriod, LocalDateTime createdOn,
-			AccountIsDeactivated accountIsDeactivated) : this(identifier,
-			new GeneralLedgerEntryNumber(prefix, businessTransaction.SequenceNumber), accountingPeriod, createdOn) {
-			foreach (var item in businessTransaction.GetTransactionItems()) {
-				if (item is Credit credit) {
-					ApplyCredit(credit, accountIsDeactivated);
-				}
-				else if (item is Debit debit) {
-					ApplyDebit(debit, accountIsDeactivated);
-				}
-			}
-
-			Apply(businessTransaction);
-		}
-
-		private GeneralLedgerEntry() {
-			_state = new State();
-		}
-
-		protected override void ApplyEvent(object _) => _state = _ switch {
-			GeneralLedgerEntryCreated e => _state with {
-				Identifier = new GeneralLedgerEntryIdentifier(e.GeneralLedgerEntryId),
-				AccountingPeriod = AccountingPeriod.Parse(e.Period)
-			},
-			CreditApplied e => _state with {
-				Credits = _state.Credits.Add(new Credit(new AccountNumber(e.AccountNumber), new Money(e.Amount)))
-			},
-			DebitApplied e => _state with {
-				Debits = _state.Debits.Add(new Debit(new AccountNumber(e.AccountNumber), new Money(e.Amount)))
-			},
-			GeneralLedgerEntryPosted => _state with {
-				Posted = true
-			},
-			_ => _state
-		};
-
-		public void ApplyCredit(Credit credit, AccountIsDeactivated accountIsDeactivated) {
-			MustNotBePosted();
-
-			if (accountIsDeactivated(credit.AccountNumber)) {
-				throw new AccountDeactivatedException(credit.AccountNumber);
-			}
-
-			Apply(new CreditApplied {
-				GeneralLedgerEntryId = _state.Identifier.ToGuid(),
-				Amount = credit.Amount.ToDecimal(),
-				AccountNumber = credit.AccountNumber.ToInt32()
-			});
-		}
-
-		public void ApplyDebit(Debit debit, AccountIsDeactivated accountIsDeactivated) {
-			MustNotBePosted();
-
-			if (accountIsDeactivated(debit.AccountNumber)) {
-				throw new AccountDeactivatedException(debit.AccountNumber);
-			}
-
-			Apply(new DebitApplied {
-				GeneralLedgerEntryId = _state.Identifier.ToGuid(),
-				Amount = debit.Amount.ToDecimal(),
-				AccountNumber = debit.AccountNumber.ToInt32()
-			});
-		}
-
-		public void Post() {
-			if (_state.Posted) {
-				return;
-			}
-
-			MustBeInBalance();
-
-			Apply(new GeneralLedgerEntryPosted {
-				GeneralLedgerEntryId = _state.Identifier.ToGuid(),
-				Period = _state.AccountingPeriod.ToString()
-			});
-		}
-
-		private void MustNotBePosted() {
-			if (_state.Posted) {
-				throw new GeneralLedgerEntryWasPostedException(_state.Identifier);
+			else if (item is Debit debit) {
+				ApplyDebit(debit, accountIsDeactivated);
 			}
 		}
 
-		public void MustBePosted() {
-			if (!_state.Posted) {
-				throw new GeneralLedgerEntryWasNotPostedException(_state.Identifier);
-			}
+		Apply(businessTransaction);
+	}
+
+	private GeneralLedgerEntry() {
+		_state = new State();
+	}
+
+	protected override void ApplyEvent(object _) => _state = _ switch {
+		GeneralLedgerEntryCreated e => _state with {
+			Identifier = new GeneralLedgerEntryIdentifier(e.GeneralLedgerEntryId),
+			AccountingPeriod = AccountingPeriod.Parse(e.Period)
+		},
+		CreditApplied e => _state with {
+			Credits = _state.Credits.Add(new Credit(new AccountNumber(e.AccountNumber), new Money(e.Amount)))
+		},
+		DebitApplied e => _state with {
+			Debits = _state.Debits.Add(new Debit(new AccountNumber(e.AccountNumber), new Money(e.Amount)))
+		},
+		GeneralLedgerEntryPosted => _state with {
+			Posted = true
+		},
+		_ => _state
+	};
+
+	public void ApplyCredit(Credit credit, AccountIsDeactivated accountIsDeactivated) {
+		MustNotBePosted();
+
+		if (accountIsDeactivated(credit.AccountNumber)) {
+			throw new AccountDeactivatedException(credit.AccountNumber);
 		}
 
-		public void MustBeInBalance() {
-			if (!IsInBalance) {
-				throw new GeneralLedgerEntryNotInBalanceException(_state.Identifier);
-			}
+		Apply(new CreditApplied {
+			GeneralLedgerEntryId = _state.Identifier.ToGuid(),
+			Amount = credit.Amount.ToDecimal(),
+			AccountNumber = credit.AccountNumber.ToInt32()
+		});
+	}
+
+	public void ApplyDebit(Debit debit, AccountIsDeactivated accountIsDeactivated) {
+		MustNotBePosted();
+
+		if (accountIsDeactivated(debit.AccountNumber)) {
+			throw new AccountDeactivatedException(debit.AccountNumber);
 		}
 
-		private record State {
-			public GeneralLedgerEntryIdentifier Identifier { get; init; }
-			public bool Posted { get; init; }
-			public ImmutableList<Debit> Debits { get; init; } = ImmutableList<Debit>.Empty;
-			public ImmutableList<Credit> Credits { get; init; } = ImmutableList<Credit>.Empty;
-			public AccountingPeriod AccountingPeriod { get; init; }
+		Apply(new DebitApplied {
+			GeneralLedgerEntryId = _state.Identifier.ToGuid(),
+			Amount = debit.Amount.ToDecimal(),
+			AccountNumber = debit.AccountNumber.ToInt32()
+		});
+	}
 
-			public Money Balance => Debits.Select(x => x.Amount).Sum() -
-			                        Credits.Select(x => x.Amount).Sum();
+	public void Post() {
+		if (_state.Posted) {
+			return;
 		}
+
+		MustBeInBalance();
+
+		Apply(new GeneralLedgerEntryPosted {
+			GeneralLedgerEntryId = _state.Identifier.ToGuid(),
+			Period = _state.AccountingPeriod.ToString()
+		});
+	}
+
+	private void MustNotBePosted() {
+		if (_state.Posted) {
+			throw new GeneralLedgerEntryWasPostedException(_state.Identifier);
+		}
+	}
+
+	public void MustBePosted() {
+		if (!_state.Posted) {
+			throw new GeneralLedgerEntryWasNotPostedException(_state.Identifier);
+		}
+	}
+
+	public void MustBeInBalance() {
+		if (!IsInBalance) {
+			throw new GeneralLedgerEntryNotInBalanceException(_state.Identifier);
+		}
+	}
+
+	private record State {
+		public GeneralLedgerEntryIdentifier Identifier { get; init; }
+		public bool Posted { get; init; }
+		public ImmutableList<Debit> Debits { get; init; } = ImmutableList<Debit>.Empty;
+		public ImmutableList<Credit> Credits { get; init; } = ImmutableList<Credit>.Empty;
+		public AccountingPeriod AccountingPeriod { get; init; }
+
+		public Money Balance => Debits.Select(x => x.Amount).Sum() -
+		                        Credits.Select(x => x.Amount).Sum();
 	}
 }

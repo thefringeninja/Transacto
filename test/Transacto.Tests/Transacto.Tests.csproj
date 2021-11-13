@@ -8,8 +8,8 @@
 		<PackageReference Include="AutoFixture.Xunit2" Version="4.17.0" />
 		<PackageReference Include="Ductus.FluentDocker" Version="2.10.21" />
 		<PackageReference Include="CompareNETObjects" Version="4.73.0" />
-		<PackageReference Include="Microsoft.AspNetCore.TestHost" Version="5.0.9" />
-		<PackageReference Include="Microsoft.NET.Test.Sdk" Version="16.11.0" />
+		<PackageReference Include="Microsoft.AspNetCore.TestHost" Version="6.0.0" />
+		<PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.0.0" />
 		<PackageReference Include="SqlStreamStore.Http" Version="1.2.1-*" />
 		<PackageReference Include="xunit" Version="2.4.1" />
 		<PackageReference Include="xunit.runner.visualstudio" Version="2.4.3" />

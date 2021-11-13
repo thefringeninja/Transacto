@@ -1,12 +1,12 @@
 using System;
 
-namespace Transacto.Domain {
-	public class GeneralLedgerEntryWasNotPostedException : Exception {
-		public GeneralLedgerEntryIdentifier GeneralLedgerEntryIdentifier { get; }
+namespace Transacto.Domain; 
 
-		public GeneralLedgerEntryWasNotPostedException(GeneralLedgerEntryIdentifier generalLedgerEntryIdentifier)
-			: base("The general ledger entry was not posted.") {
-			GeneralLedgerEntryIdentifier = generalLedgerEntryIdentifier;
-		}
+public class GeneralLedgerEntryWasNotPostedException : Exception {
+	public GeneralLedgerEntryIdentifier GeneralLedgerEntryIdentifier { get; }
+
+	public GeneralLedgerEntryWasNotPostedException(GeneralLedgerEntryIdentifier generalLedgerEntryIdentifier)
+		: base("The general ledger entry was not posted.") {
+		GeneralLedgerEntryIdentifier = generalLedgerEntryIdentifier;
 	}
 }

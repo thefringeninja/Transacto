@@ -5,46 +5,46 @@ using System.Threading;
 using System.Threading.Tasks;
 using EventStore.Client;
 
-namespace Transacto.Framework {
-	public static class UnitOfWorkExtensions {
-		public static IMessageHandlerBuilder<TCommand, Checkpoint> UnitOfWork<TCommand>(
-			this IMessageHandlerBuilder<TCommand, Checkpoint> builder, EventStoreClient eventStore,
-			IMessageTypeMapper messageTypeMapper)
-			where TCommand : class => builder.Pipe(next => async (message, ct) => {
-			using var _ = Framework.UnitOfWork.Start();
+namespace Transacto.Framework; 
 
-			await next(message, ct);
+public static class UnitOfWorkExtensions {
+	public static IMessageHandlerBuilder<TCommand, Checkpoint> UnitOfWork<TCommand>(
+		this IMessageHandlerBuilder<TCommand, Checkpoint> builder, EventStoreClient eventStore,
+		IMessageTypeMapper messageTypeMapper)
+		where TCommand : class => builder.Pipe(next => async (message, ct) => {
+		using var _ = Framework.UnitOfWork.Start();
 
-			return !Framework.UnitOfWork.Current.HasChanges
-				? Checkpoint.None
-				: await Commit(eventStore, messageTypeMapper, ct);
-		});
+		await next(message, ct);
 
-		private static async Task<Checkpoint> Commit(EventStoreClient eventStore,
-			IMessageTypeMapper messageTypeMapper, CancellationToken ct) {
-			var (streamName, aggregateRoot, expectedVersion) = Framework.UnitOfWork.Current.GetChanges().Single();
+		return !Framework.UnitOfWork.Current.HasChanges
+			? Checkpoint.None
+			: await Commit(eventStore, messageTypeMapper, ct);
+	});
 
-			var eventData = aggregateRoot.GetChanges().Select(e => new EventData(Uuid.NewUuid(),
-				messageTypeMapper.Map(e.GetType()),
-				JsonSerializer.SerializeToUtf8Bytes(e, e.GetType(), TransactoSerializerOptions.Events)));
+	private static async Task<Checkpoint> Commit(EventStoreClient eventStore,
+		IMessageTypeMapper messageTypeMapper, CancellationToken ct) {
+		var (streamName, aggregateRoot, expectedVersion) = Framework.UnitOfWork.Current.GetChanges().Single();
 
-			var result = await Append();
+		var eventData = aggregateRoot.GetChanges().Select(e => new EventData(Uuid.NewUuid(),
+			messageTypeMapper.Map(e.GetType()),
+			JsonSerializer.SerializeToUtf8Bytes(e, e.GetType(), TransactoSerializerOptions.Events)));
 
-			aggregateRoot.MarkChangesAsCommitted();
+		var result = await Append();
 
-			return result.LogPosition.ToCheckpoint();
+		aggregateRoot.MarkChangesAsCommitted();
 
-			Task<IWriteResult> Append() => expectedVersion.HasValue
-				? eventStore.AppendToStreamAsync(streamName,
-					new StreamRevision(Convert.ToUInt64(expectedVersion.Value)),
-					eventData,
-					options => options.TimeoutAfter = TimeSpan.FromMinutes(4),
-					cancellationToken: ct)
-				: eventStore.AppendToStreamAsync(streamName,
-					StreamState.NoStream,
-					eventData,
-					options => options.TimeoutAfter = TimeSpan.FromMinutes(4),
-					cancellationToken: ct);
-		}
+		return result.LogPosition.ToCheckpoint();
+
+		Task<IWriteResult> Append() => expectedVersion.HasValue
+			? eventStore.AppendToStreamAsync(streamName,
+				new StreamRevision(Convert.ToUInt64(expectedVersion.Value)),
+				eventData,
+				options => options.TimeoutAfter = TimeSpan.FromMinutes(4),
+				cancellationToken: ct)
+			: eventStore.AppendToStreamAsync(streamName,
+				StreamState.NoStream,
+				eventData,
+				options => options.TimeoutAfter = TimeSpan.FromMinutes(4),
+				cancellationToken: ct);
 	}
 }

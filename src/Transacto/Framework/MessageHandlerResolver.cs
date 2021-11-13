@@ -1,3 +1,3 @@
-namespace Transacto.Framework {
-	public delegate MessageHandler<TReturn> MessageHandlerResolver<TReturn>(object command);
-}
+namespace Transacto.Framework; 
+
+public delegate MessageHandler<TReturn> MessageHandlerResolver<TReturn>(object command);
