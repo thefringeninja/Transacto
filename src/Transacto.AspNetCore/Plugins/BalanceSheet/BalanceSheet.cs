@@ -2,10 +2,9 @@ using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
-using System.Threading.Tasks;
-using EventStore.Client;
 using Hallo;
 using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
 using NodaTime;
@@ -21,23 +20,19 @@ internal class BalanceSheet : IPlugin {
 	public string Name { get; } = nameof(BalanceSheet);
 
 	public void Configure(IEndpointRouteBuilder builder) => builder
-		.MapGet("{thru}", context => {
-			var readModel = context.RequestServices.GetRequiredService<InMemoryProjectionDatabase>()
-				.Get<ReadModel>();
+		.MapGet("{thru}", ([FromRoute] string thru, [FromServices] InMemoryProjectionDatabase database) => {
+			var readModel = database.Get<ReadModel>();
 
 			if (!readModel.HasValue) {
-				return new ValueTask<Response>(HalResponse.Create<BalanceSheetReport>(context.Request,
-					new BalanceSheetReportRepresentation(),
-					Optional<Position>.Empty));
+				return Results.Hal(ReadModel.None, Checkpoint.None, new BalanceSheetReportRepresentation());
 			}
 
-			var thru = Time.Parse.LocalDateTime(context.GetRouteValue("thru")!.ToString()!);
-
-			return new ValueTask<Response>(HalResponse.Create<BalanceSheetReport>(context.Request,
-				new BalanceSheetReportRepresentation(), readModel.Value.Checkpoint, new BalanceSheetReport {
-					Thru = thru.ToDateTimeUnspecified(),
-					LineItems = readModel.Value.GetLineItems(thru)
-				}));
+			var thruValue = Time.Parse.LocalDateTime(thru);
+			
+			return Results.Hal(new BalanceSheetReport() {
+				Thru = thruValue.ToDateTimeUnspecified(),
+				LineItems = readModel.Value.GetLineItems(thruValue)
+			}, readModel.Value.Checkpoint.ToCheckpoint(), new BalanceSheetReportRepresentation());
 		});
 
 	private record Entry(LocalDateTime CreatedOn) {
@@ -46,6 +41,7 @@ internal class BalanceSheet : IPlugin {
 	}
 
 	private record ReadModel : MemoryReadModel {
+		public static readonly ReadModel None = new();
 		public ImmutableDictionary<Guid, Entry> UnpostedEntries { get; init; } =
 			ImmutableDictionary<Guid, Entry>.Empty;
 

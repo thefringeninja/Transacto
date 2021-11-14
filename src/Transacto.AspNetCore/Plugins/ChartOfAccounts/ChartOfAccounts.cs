@@ -5,6 +5,7 @@ using System.Linq;
 using EventStore.Client;
 using Hallo;
 using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
 using Transacto.Framework;
@@ -17,20 +18,21 @@ namespace Transacto.Plugins.ChartOfAccounts;
 internal class ChartOfAccounts : IPlugin {
 	public string Name { get; } = nameof(ChartOfAccounts);
 
-	public void Configure(IEndpointRouteBuilder builder) => builder
-		.MapGet(string.Empty, context => {
-			var readModel = context.RequestServices.GetRequiredService<InMemoryProjectionDatabase>()
-				.Get<ReadModel>();
+	public void Configure(IEndpointRouteBuilder builder) {
+		builder.MapGet(string.Empty, ([FromServices] InMemoryProjectionDatabase database) => {
+			var readModel = database.Get<ReadModel>();
+			
+			return Results.Hal(readModel.HasValue ? readModel.Value : ReadModel.None,
+				readModel.HasValue ? readModel.Value.Checkpoint.ToCheckpoint() : Checkpoint.None,
+				new ChartOfAccountsRepresentation());
+		});
 
-			return new(HalResponse.Create(context.Request, new ChartOfAccountsRepresentation(),
-				readModel.HasValue ? readModel.Value.Checkpoint : Optional<Position>.Empty,
-				readModel));
-		})
-		.MapCommands(string.Empty,
+		builder.MapCommands(string.Empty,
 			typeof(DefineAccount),
 			typeof(RenameAccount),
 			typeof(DeactivateAccount),
 			typeof(ReactivateAccount));
+	}
 
 	public void ConfigureServices(IServiceCollection services) => services
 		.AddCommandHandlerModule<ChartOfAccountsModule>()
@@ -61,6 +63,7 @@ internal class ChartOfAccounts : IPlugin {
 	}
 
 	private record ReadModel : MemoryReadModel {
+		public static readonly ReadModel None = new();
 		public ImmutableSortedDictionary<int, Account> ChartOfAccounts { get; init; } =
 			ImmutableSortedDictionary<int, Account>.Empty;
 

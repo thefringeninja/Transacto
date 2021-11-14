@@ -47,7 +47,7 @@ namespace SomeCompany {
         private class CommandLine : CommandLineConfigurationProvider {
             public CommandLine(
                 IEnumerable<string> args,
-                IDictionary<string, string> switchMappings = null)
+                IDictionary<string, string>? switchMappings = null)
                 : base(args, switchMappings) {
             }
 
@@ -96,7 +96,7 @@ namespace SomeCompany {
                         where key.StartsWith(_prefix)
                         select new {
                             key = Computerize(key.Remove(0, _prefix.Length)),
-                            value = (string)entry.Value
+                            value = (string)entry.Value!
                         })
                     .ToDictionary(x => x.key, x => x.value);
             }

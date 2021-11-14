@@ -1,29 +1,16 @@
 <Project Sdk="Microsoft.NET.Sdk">
 	<PropertyGroup>
-		<TargetFramework>net5</TargetFramework>
 		<OutputType>exe</OutputType>
-		<RestoreSources>
-			$(RestoreSources);
-			https://api.nuget.org/v3/index.json;
-			https://nuget.pkg.github.com/EventStore/index.json;
-			https://nuget.pkg.github.com/thefringeninja/index.json
-		</RestoreSources>
-		<TreatWarningsAsErrors>true</TreatWarningsAsErrors>
-		<LangVersion>8.0</LangVersion>
 		<PreserveCompilationContext>true</PreserveCompilationContext>
 	</PropertyGroup>
 	<ItemGroup>
-		<FrameworkReference Include="Microsoft.AspNetCore.App" />
-	</ItemGroup>
-	<ItemGroup>
 		<PackageReference Include="SqlStreamStore.Http" Version="1.2.1-*" />
-		<PackageReference Include="Transacto.Tasks" Version="0.1.0-*" />
 	</ItemGroup>
 
 	<ItemGroup>
-		<ProjectReference Include="..\Projac\src\Projac.Npgsql\Projac.Npgsql.csproj" />
-		<ProjectReference Include="..\Transacto.AspNetCore\Transacto.AspNetCore.csproj" />
-		<ProjectReference Include="..\Transacto\Transacto.csproj" />
+		<ProjectReference Include="..\..\..\..\src\Projac\src\Projac.Npgsql\Projac.Npgsql.csproj" />
+		<ProjectReference Include="..\..\..\..\src\Transacto.AspNetCore\Transacto.AspNetCore.csproj" />
+		<ProjectReference Include="..\..\..\..\src\Transacto\Transacto.csproj" />
 	</ItemGroup>
 
 	<ItemGroup>
@@ -31,5 +18,14 @@
 		<None Remove="node_modules\**" />
 		<EmbeddedResource Remove="node_modules\**" />
 		<Compile Remove="node_modules\**" />
+		<EmbeddedResource Remove="Inventory\**" />
+		<Compile Remove="Inventory\**" />
+		<None Remove="Inventory\**" />
+		<EmbeddedResource Remove="PurchaseOrders\**" />
+		<Compile Remove="PurchaseOrders\**" />
+		<None Remove="PurchaseOrders\**" />
+		<EmbeddedResource Remove="ReceiptOfGoods\**" />
+		<Compile Remove="ReceiptOfGoods\**" />
+		<None Remove="ReceiptOfGoods\**" />
 	</ItemGroup>
 </Project>

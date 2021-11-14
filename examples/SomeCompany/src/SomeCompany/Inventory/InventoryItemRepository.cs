@@ -2,6 +2,7 @@ using EventStore.Client;
 using Transacto;
 using Transacto.Framework;
 using Transacto.Infrastructure;
+using Transacto.Infrastructure.EventStore;
 
 namespace SomeCompany.Inventory {
 	public class InventoryItemRepository {

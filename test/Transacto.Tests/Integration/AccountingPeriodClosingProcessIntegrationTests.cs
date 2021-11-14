@@ -27,7 +27,7 @@ public class AccountingPeriodClosingProcessIntegrationTests : IntegrationTests {
 					checkpointSource.TrySetResult(
 						new Position(
 							BitConverter.ToUInt64(e.Event.Data.Span),
-							BitConverter.ToUInt64(e.Event.Data.Span[8..])));
+							BitConverter.ToUInt64(e.Event.Data.Span)));
 					break;
 			}
 

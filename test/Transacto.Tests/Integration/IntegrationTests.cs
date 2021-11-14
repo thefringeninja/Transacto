@@ -42,7 +42,7 @@ public abstract class IntegrationTests : IDisposable, IAsyncLifetime {
 		_eventStore = new Builder()
 			.UseContainer()
 			.WithName("transacto-es-test")
-			.UseImage("eventstore/eventstore:21.2.0-buster-slim")
+			.UseImage("eventstore/eventstore:21.10.0-buster-slim")
 			.ReuseIfExists()
 			.ExposePort(2113, 2113)
 			.WithEnvironment("EVENTSTORE_ENABLE_ATOM_PUB_OVER_HTTP=true",
