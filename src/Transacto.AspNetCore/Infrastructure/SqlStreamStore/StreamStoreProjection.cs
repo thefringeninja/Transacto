@@ -8,35 +8,35 @@ using SqlStreamStore;
 using SqlStreamStore.Streams;
 using Position = EventStore.Client.Position;
 
-namespace Transacto.Infrastructure.SqlStreamStore {
-	public abstract class StreamStoreProjection : Projection<IStreamStore> {
-		protected string StreamName { get; }
+namespace Transacto.Infrastructure.SqlStreamStore; 
 
-		protected StreamStoreProjection(string streamName) {
-			if (string.IsNullOrWhiteSpace(streamName)) {
-				throw new ArgumentException();
-			}
+public abstract class StreamStoreProjection : Projection<IStreamStore> {
+	protected string StreamName { get; }
 
-			StreamName = streamName;
+	protected StreamStoreProjection(string streamName) {
+		if (string.IsNullOrWhiteSpace(streamName)) {
+			throw new ArgumentException();
 		}
 
-		public async ValueTask<Position> ReadCheckpoint(IStreamStore streamStore,
-			CancellationToken cancellationToken) {
-			var page = await streamStore.ReadStreamBackwards(StreamName, StreamVersion.End, 1,
-				false, cancellationToken);
+		StreamName = streamName;
+	}
 
-			if (page.Status == PageReadStatus.StreamNotFound) {
-				return Position.Start;
-			}
+	public async ValueTask<Position> ReadCheckpoint(IStreamStore streamStore,
+		CancellationToken cancellationToken) {
+		var page = await streamStore.ReadStreamBackwards(StreamName, StreamVersion.End, 1,
+			false, cancellationToken);
 
-			var metadata = JsonSerializer.Deserialize<Dictionary<string, string>>(page.Messages[0].JsonMetadata)!;
-
-			return metadata.TryGetValue("commit", out var commitValue) &&
-			       ulong.TryParse(commitValue, out var commit) &&
-			       metadata.TryGetValue("prepare", out var prepareValue) &&
-			       ulong.TryParse(prepareValue, out var prepare)
-				? new Position(commit, prepare)
-				: Position.Start;
+		if (page.Status == PageReadStatus.StreamNotFound) {
+			return Position.Start;
 		}
+
+		var metadata = JsonSerializer.Deserialize<Dictionary<string, string>>(page.Messages[0].JsonMetadata)!;
+
+		return metadata.TryGetValue("commit", out var commitValue) &&
+		       ulong.TryParse(commitValue, out var commit) &&
+		       metadata.TryGetValue("prepare", out var prepareValue) &&
+		       ulong.TryParse(prepareValue, out var prepare)
+			? new Position(commit, prepare)
+			: Position.Start;
 	}
 }

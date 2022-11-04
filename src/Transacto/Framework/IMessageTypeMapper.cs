@@ -1,17 +1,17 @@
 using System;
 using System.Collections.Generic;
 
-namespace Transacto.Framework {
-	public interface IMessageTypeMapper {
-		string Map(Type type) => !TryMap(type, out var t) ? throw new TypeNotFoundException(type) : t!;
+namespace Transacto.Framework; 
 
-		Type Map(string storageType) =>
-			!TryMap(storageType, out var t) ? throw new StorageTypeNotFoundException(storageType) : t!;
+public interface IMessageTypeMapper {
+	string Map(Type type) => !TryMap(type, out var t) ? throw new TypeNotFoundException(type) : t!;
 
-		bool TryMap(string storageType, out Type type);
-		bool TryMap(Type type, out string storageType);
+	Type Map(string storageType) =>
+		!TryMap(storageType, out var t) ? throw new StorageTypeNotFoundException(storageType) : t!;
 
-		IEnumerable<string> StorageTypes { get; }
-		IEnumerable<Type> Types { get; }
-	}
+	bool TryMap(string storageType, out Type type);
+	bool TryMap(Type type, out string storageType);
+
+	IEnumerable<string> StorageTypes { get; }
+	IEnumerable<Type> Types { get; }
 }

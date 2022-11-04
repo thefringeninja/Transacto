@@ -1,70 +1,70 @@
 ﻿using System;
 using System.Linq;
 
-namespace Transacto.Testing {
-    internal class TestSpecificationBuilder : IScenarioGivenStateBuilder, IScenarioGivenNoneStateBuilder,
-        IScenarioWhenStateBuilder, IScenarioThenStateBuilder, IScenarioThenNoneStateBuilder,
-        IScenarioThrowStateBuilder {
-        private readonly TestSpecificationBuilderContext _context;
+namespace Transacto.Testing;
 
-        public TestSpecificationBuilder() {
-            _context = new TestSpecificationBuilderContext();
-        }
+internal class TestSpecificationBuilder : IScenarioGivenStateBuilder, IScenarioGivenNoneStateBuilder,
+	IScenarioWhenStateBuilder, IScenarioThenStateBuilder, IScenarioThenNoneStateBuilder,
+	IScenarioThrowStateBuilder {
+	private readonly TestSpecificationBuilderContext _context;
 
-        private TestSpecificationBuilder(TestSpecificationBuilderContext context) {
-            _context = context;
-        }
+	public TestSpecificationBuilder() {
+		_context = new TestSpecificationBuilderContext();
+	}
 
-        public IScenarioGivenStateBuilder Given(params Fact[] facts) {
-            if (facts == null) throw new ArgumentNullException("facts");
-            return new TestSpecificationBuilder(_context.AppendGivens(facts));
-        }
+	private TestSpecificationBuilder(TestSpecificationBuilderContext context) {
+		_context = context;
+	}
 
-        public IScenarioGivenStateBuilder Given(string identifier, params object[] events) {
-            if (identifier == null) throw new ArgumentNullException("identifier");
-            if (events == null) throw new ArgumentNullException("events");
-            return
-                new TestSpecificationBuilder(
-                    _context.AppendGivens(events.Select(@event => new Fact(identifier, @event))));
-        }
+	public IScenarioGivenStateBuilder Given(params Fact[] facts) {
+		if (facts == null) throw new ArgumentNullException(nameof(facts));
+		return new TestSpecificationBuilder(_context.AppendGivens(facts));
+	}
 
-        public IScenarioGivenNoneStateBuilder GivenNone() {
-            return new TestSpecificationBuilder(_context);
-        }
+	public IScenarioGivenStateBuilder Given(string identifier, params object[] events) {
+		if (identifier == null) throw new ArgumentNullException(nameof(identifier));
+		if (events == null) throw new ArgumentNullException(nameof(events));
+		return
+			new TestSpecificationBuilder(
+				_context.AppendGivens(events.Select(@event => new Fact(identifier, @event))));
+	}
 
-        public IScenarioWhenStateBuilder When(object message) {
-            if (message == null) throw new ArgumentNullException("message");
-            return new TestSpecificationBuilder(_context.SetWhen(message));
-        }
+	public IScenarioWhenStateBuilder When(object message) {
+		if (message == null) throw new ArgumentNullException(nameof(message));
+		return new TestSpecificationBuilder(_context.SetWhen(message));
+	}
 
-        public IScenarioThenStateBuilder Then(params Fact[] facts) {
-            if (facts == null) throw new ArgumentNullException("facts");
-            return new TestSpecificationBuilder(_context.AppendThens(facts));
-        }
+	ExceptionCentricTestSpecification IExceptionCentricTestSpecificationBuilder.Build() {
+		return _context.ToExceptionCentricSpecification();
+	}
 
-        public IScenarioThenStateBuilder Then(string identifier, params object[] events) {
-            if (identifier == null) throw new ArgumentNullException("identifier");
-            if (events == null) throw new ArgumentNullException("events");
-            return
-                new TestSpecificationBuilder(
-                    _context.AppendThens(events.Select(@event => new Fact(identifier, @event))));
-        }
+	public IScenarioThenStateBuilder Then(params Fact[] facts) {
+		if (facts == null) throw new ArgumentNullException(nameof(facts));
+		return new TestSpecificationBuilder(_context.AppendThens(facts));
+	}
 
-        public IScenarioThenNoneStateBuilder ThenNone() {
-            return new TestSpecificationBuilder(_context);
-        }
+	public IScenarioThenStateBuilder Then(string identifier, params object[] events) {
+		if (identifier == null) throw new ArgumentNullException(nameof(identifier));
+		if (events == null) throw new ArgumentNullException(nameof(events));
+		return
+			new TestSpecificationBuilder(
+				_context.AppendThens(events.Select(@event => new Fact(identifier, @event))));
+	}
 
-        public IScenarioThrowStateBuilder Throws(Exception exception) {
-            if (exception == null) throw new ArgumentNullException("exception");
-            return new TestSpecificationBuilder(_context.SetThrows(exception));
-        }
+	public IScenarioThenNoneStateBuilder ThenNone() {
+		return new TestSpecificationBuilder(_context);
+	}
 
-        EventCentricTestSpecification IEventCentricTestSpecificationBuilder.Build() {
-            return _context.ToEventCentricSpecification();
-        }
+	public IScenarioThrowStateBuilder Throws(Exception exception) {
+		if (exception == null) throw new ArgumentNullException(nameof(exception));
+		return new TestSpecificationBuilder(_context.SetThrows(exception));
+	}
 
-        ExceptionCentricTestSpecification IExceptionCentricTestSpecificationBuilder.Build() {
-            return _context.ToExceptionCentricSpecification();
-        }
-    }
+	EventCentricTestSpecification IEventCentricTestSpecificationBuilder.Build() {
+		return _context.ToEventCentricSpecification();
+	}
+
+	public IScenarioGivenNoneStateBuilder GivenNone() {
+		return new TestSpecificationBuilder(_context);
+	}
 }

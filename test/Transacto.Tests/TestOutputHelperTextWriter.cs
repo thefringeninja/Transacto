@@ -3,15 +3,15 @@ using System.Text;
 using Xunit.Abstractions;
 
 #nullable enable
-namespace Transacto {
-	internal class TestOutputHelperTextWriter : TextWriter {
-		private readonly ITestOutputHelper _output;
-		public override Encoding Encoding { get; } = Encoding.UTF8;
+namespace Transacto; 
 
-		public TestOutputHelperTextWriter(ITestOutputHelper output) {
-			_output = output;
-		}
+internal class TestOutputHelperTextWriter : TextWriter {
+	private readonly ITestOutputHelper _output;
+	public override Encoding Encoding { get; } = Encoding.UTF8;
 
-		public override void Write(string? value) => _output.WriteLine(value?.Trim());
+	public TestOutputHelperTextWriter(ITestOutputHelper output) {
+		_output = output;
 	}
+
+	public override void Write(string? value) => _output.WriteLine(value?.Trim());
 }

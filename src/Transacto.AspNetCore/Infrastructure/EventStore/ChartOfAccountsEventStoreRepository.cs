@@ -4,27 +4,24 @@ using EventStore.Client;
 using Transacto.Domain;
 using Transacto.Framework;
 
-namespace Transacto.Infrastructure.EventStore {
-	public class ChartOfAccountsEventStoreRepository : IChartOfAccountsRepository {
-		private readonly EventStoreRepository<ChartOfAccounts> _inner;
+namespace Transacto.Infrastructure.EventStore; 
 
-		public ChartOfAccountsEventStoreRepository(EventStoreClient eventStore, IMessageTypeMapper messageTypeMapper) {
-			_inner = new EventStoreRepository<ChartOfAccounts>(eventStore,
-				ChartOfAccounts.Factory, messageTypeMapper);
-		}
+public class ChartOfAccountsEventStoreRepository : IChartOfAccountsRepository {
+	private readonly EventStoreRepository<ChartOfAccounts> _inner;
 
-		public ValueTask<Optional<ChartOfAccounts>> GetOptional(CancellationToken cancellationToken = default)
-			=> _inner.GetById(ChartOfAccounts.Identifier, cancellationToken);
-
-		public async ValueTask<ChartOfAccounts> Get(CancellationToken cancellationToken = default) {
-			var optionalChartOfAccounts = await GetOptional(cancellationToken);
-			if (!optionalChartOfAccounts.HasValue) {
-				throw new ChartOfAccountsNotFoundException();
-			}
-
-			return optionalChartOfAccounts.Value;
-		}
-
-		public void Add(ChartOfAccounts chartOfAccounts) => _inner.Add(chartOfAccounts);
+	public ChartOfAccountsEventStoreRepository(EventStoreClient eventStore, IMessageTypeMapper messageTypeMapper) {
+		_inner = new EventStoreRepository<ChartOfAccounts>(eventStore,
+			ChartOfAccounts.Factory, messageTypeMapper);
 	}
+
+	public ValueTask<Optional<ChartOfAccounts>> GetOptional(CancellationToken cancellationToken = default)
+		=> _inner.GetById(ChartOfAccounts.Identifier, cancellationToken);
+
+	public async ValueTask<ChartOfAccounts> Get(CancellationToken cancellationToken = default) =>
+		await GetOptional(cancellationToken) switch {
+			{ HasValue: true } optional => optional.Value,
+			_ => throw new ChartOfAccountsNotFoundException()
+		};
+
+	public void Add(ChartOfAccounts chartOfAccounts) => _inner.Add(chartOfAccounts);
 }

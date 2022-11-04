@@ -1,7 +1,7 @@
 @model IEnumerable<Hallo.Link>
 
 <section>
-@foreach (var link in Model)
+@foreach (var link in Model ?? Array.Empty<Hallo.Link>())
 {
 	<a href="@link.Href" rel="@link.Rel" name="@link.Name" hreflang="@link.HrefLang" title="@link.Title">@link.Title</a>
 }

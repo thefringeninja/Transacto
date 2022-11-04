@@ -2,19 +2,19 @@ using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace Transacto.Framework.CommandHandling {
-	public class CommandDispatcher {
-		private readonly MessageHandlerResolver<Checkpoint> _resolver;
+namespace Transacto.Framework.CommandHandling; 
 
-		public CommandDispatcher(IEnumerable<CommandHandlerModule> commandHandlerModules)
-			: this(CommandResolve.WhenEqualToHandlerMessageType(commandHandlerModules)) {
-		}
+public class CommandDispatcher {
+	private readonly MessageHandlerResolver<Checkpoint> _resolver;
 
-		public CommandDispatcher(MessageHandlerResolver<Checkpoint> resolver) {
-			_resolver = resolver;
-		}
-
-		public ValueTask<Checkpoint> Handle(object command, CancellationToken cancellationToken = default) =>
-			_resolver.Invoke(command).Handler(command, cancellationToken);
+	public CommandDispatcher(IEnumerable<CommandHandlerModule> commandHandlerModules)
+		: this(CommandResolve.WhenEqualToHandlerMessageType(commandHandlerModules)) {
 	}
+
+	public CommandDispatcher(MessageHandlerResolver<Checkpoint> resolver) {
+		_resolver = resolver;
+	}
+
+	public ValueTask<Checkpoint> Handle(object command, CancellationToken cancellationToken = default) =>
+		_resolver.Invoke(command).Handler(command, cancellationToken);
 }

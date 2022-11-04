@@ -1,29 +1,29 @@
 using System.Collections.Generic;
 using System.Linq;
 
-namespace Transacto.Framework.CommandHandling {
-	public static class CommandResolve {
-		public static MessageHandlerResolver<Checkpoint> WhenEqualToHandlerMessageType(
-			IEnumerable<MessageHandler<Checkpoint>> handlers) {
-			var cache = (from handler in handlers
-				group handler by handler.Message
-				into g
-				select g).ToDictionary(x => x.Key, x => x.ToArray());
+namespace Transacto.Framework.CommandHandling; 
 
-			return command => {
-				var type = command.GetType();
+public static class CommandResolve {
+	public static MessageHandlerResolver<Checkpoint> WhenEqualToHandlerMessageType(
+		IEnumerable<MessageHandler<Checkpoint>> handlers) {
+		var cache = (from handler in handlers
+			group handler by handler.Message
+			into g
+			select g).ToDictionary(x => x.Key, x => x.ToArray());
 
-				cache.TryGetValue(type, out var handlers);
+		return command => {
+			var type = command.GetType();
 
-				return handlers switch {
-					{Length: 1} => handlers[0],
-					_ => throw new CommandResolveException(type, handlers?.Length ?? 0)
-				};
+			cache.TryGetValue(type, out var handlers);
+
+			return handlers switch {
+				{Length: 1} => handlers[0],
+				_ => throw new CommandResolveException(type, handlers?.Length ?? 0)
 			};
-		}
-
-		public static MessageHandlerResolver<Checkpoint> WhenEqualToHandlerMessageType(
-			IEnumerable<CommandHandlerModule> modules) =>
-			WhenEqualToHandlerMessageType(modules.SelectMany(m => m));
+		};
 	}
+
+	public static MessageHandlerResolver<Checkpoint> WhenEqualToHandlerMessageType(
+		IEnumerable<CommandHandlerModule> modules) =>
+		WhenEqualToHandlerMessageType(modules.SelectMany(m => m));
 }

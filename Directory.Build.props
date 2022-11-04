@@ -1,11 +1,11 @@
 <Project>
 	<PropertyGroup>
-		<TargetFramework>net5.0</TargetFramework>
+		<TargetFramework>net6.0</TargetFramework>
 		<RootNamespace>Transacto</RootNamespace>
 		<Nullable>enable</Nullable>
 		<NullableContextOptions>enable</NullableContextOptions>
 		<TreatWarningsAsErrors>true</TreatWarningsAsErrors>
-		<LangVersion>9.0</LangVersion>
+		<LangVersion>10.0</LangVersion>
 		<PreserveCompilationContext>true</PreserveCompilationContext>
 	</PropertyGroup>
 	<ItemGroup>

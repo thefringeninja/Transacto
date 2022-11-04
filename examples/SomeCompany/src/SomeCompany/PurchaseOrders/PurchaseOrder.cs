@@ -14,7 +14,7 @@ namespace SomeCompany.PurchaseOrders {
 
 			generalLedgerEntry.ApplyCredit(accountsPayable, accountIsDeactivated);
 			generalLedgerEntry.ApplyDebit(inventoryInTransit, accountIsDeactivated);
-			generalLedgerEntry.ApplyTransaction(this);
+			//generalLedgerEntry.ApplyTransaction(this);
 		}
 
 		private static (Credit, Debit) Accumulate((Credit, Debit) _, PurchaseOrderItem item) {
@@ -40,5 +40,10 @@ namespace SomeCompany.PurchaseOrders {
 
 		[JsonIgnore]
 		public long Position { get; set; }
+
+		public GeneralLedgerEntrySequenceNumber SequenceNumber => new GeneralLedgerEntrySequenceNumber()
+		public IEnumerable<object> GetTransactionItems() {
+			throw new System.NotImplementedException();
+		}
 	}
 }

@@ -3,7 +3,7 @@ using Projac.Npgsql;
 using SomeCompany.PurchaseOrders;
 using SomeCompany.ReceiptOfGoods;
 using Transacto.Framework.Projections;
-using Transacto.Framework.Projections.Npgsql;
+using Transacto.Infrastructure.Npgsql;
 
 namespace SomeCompany.Inventory {
 	public class InventoryLedgerProjection : NpgsqlProjection {

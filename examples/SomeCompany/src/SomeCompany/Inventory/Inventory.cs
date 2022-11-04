@@ -19,8 +19,7 @@ namespace SomeCompany.Inventory {
 			=> services
 				.AddSingleton<CommandHandlerModule>(provider => new InventoryItemModule(
 					provider.GetRequiredService<EventStoreClient>(),
-					provider.GetRequiredService<IMessageTypeMapper>(),
-					TransactoSerializerOptions.Events))
+					provider.GetRequiredService<IMessageTypeMapper>()))
 				.AddNpgSqlProjection<InventoryLedgerProjection>();
 
 		public IEnumerable<Type> MessageTypes { get { yield return typeof(InventoryItemDefined); } }

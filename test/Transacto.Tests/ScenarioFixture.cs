@@ -1,25 +1,25 @@
 using AutoFixture;
 
-namespace Transacto {
-    internal class ScenarioFixture : Fixture {
-        public ScenarioFixture() {
-	        this.CustomizeNodaTime();
+namespace Transacto; 
 
-	        this.CustomizeAccountingPeriod();
+internal class ScenarioFixture : Fixture {
+	public ScenarioFixture() {
+		this.CustomizeNodaTime();
 
-            this.CustomizeAccountName();
+		this.CustomizeAccountingPeriod();
 
-            this.CustomizeAccountNumber();
+		this.CustomizeAccountName();
 
-            this.CustomizeAccount();
+		this.CustomizeAccountNumber();
 
-            this.CustomizeGeneralLedgerEntryNumberPrefix();
+		this.CustomizeAccount();
 
-            this.CustomizeMoney();
+		this.CustomizeGeneralLedgerEntryNumberPrefix();
 
-            this.CustomizeCredit();
+		this.CustomizeMoney();
 
-            this.CustomizeDebit();
-        }
-    }
+		this.CustomizeCredit();
+
+		this.CustomizeDebit();
+	}
 }
