@@ -45,7 +45,7 @@ public class GeneralLedgerEventStoreRepository : IGeneralLedgerRepository {
 				TransactoSerializerOptions.Events)!;
 			stack.Push(@event);
 
-			if (@event is GeneralLedgerOpened || @event is AccountingPeriodClosed) {
+			if (@event is GeneralLedgerOpened or AccountingPeriodClosed) {
 				break;
 			}
 		}

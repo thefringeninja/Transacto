@@ -17,14 +17,11 @@ public class ChartOfAccountsEventStoreRepository : IChartOfAccountsRepository {
 	public ValueTask<Optional<ChartOfAccounts>> GetOptional(CancellationToken cancellationToken = default)
 		=> _inner.GetById(ChartOfAccounts.Identifier, cancellationToken);
 
-	public async ValueTask<ChartOfAccounts> Get(CancellationToken cancellationToken = default) {
-		var optionalChartOfAccounts = await GetOptional(cancellationToken);
-		if (!optionalChartOfAccounts.HasValue) {
-			throw new ChartOfAccountsNotFoundException();
-		}
-
-		return optionalChartOfAccounts.Value;
-	}
+	public async ValueTask<ChartOfAccounts> Get(CancellationToken cancellationToken = default) =>
+		await GetOptional(cancellationToken) switch {
+			{ HasValue: true } optional => optional.Value,
+			_ => throw new ChartOfAccountsNotFoundException()
+		};
 
 	public void Add(ChartOfAccounts chartOfAccounts) => _inner.Add(chartOfAccounts);
 }

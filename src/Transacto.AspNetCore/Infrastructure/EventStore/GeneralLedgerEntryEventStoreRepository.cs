@@ -4,7 +4,7 @@ using EventStore.Client;
 using Transacto.Domain;
 using Transacto.Framework;
 
-namespace Transacto.Infrastructure.EventStore; 
+namespace Transacto.Infrastructure.EventStore;
 
 public class GeneralLedgerEntryEventStoreRepository : IGeneralLedgerEntryRepository {
 	private readonly EventStoreRepository<GeneralLedgerEntry> _inner;
@@ -16,15 +16,11 @@ public class GeneralLedgerEntryEventStoreRepository : IGeneralLedgerEntryReposit
 	}
 
 	public async ValueTask<GeneralLedgerEntry> Get(GeneralLedgerEntryIdentifier identifier,
-		CancellationToken cancellationToken = default) {
-		var optionalGeneralLedgerEntry = await _inner.GetById(GeneralLedgerEntry.FormatStreamIdentifier(identifier),
-			cancellationToken);
-		if (!optionalGeneralLedgerEntry.HasValue) {
-			throw new GeneralLedgerEntryNotFoundException(identifier);
-		}
-
-		return optionalGeneralLedgerEntry.Value;
-	}
+		CancellationToken cancellationToken = default) =>
+		await _inner.GetById(GeneralLedgerEntry.FormatStreamIdentifier(identifier), cancellationToken) switch {
+			{ HasValue: true } optional => optional.Value,
+			_ => throw new GeneralLedgerEntryNotFoundException(identifier)
+		};
 
 	public void Add(GeneralLedgerEntry generalLedgerEntry) => _inner.Add(generalLedgerEntry);
 }
