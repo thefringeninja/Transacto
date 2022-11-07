@@ -1,8 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-
-namespace Transacto.Testing;
+﻿namespace Transacto.Testing;
 
 internal class TestSpecificationBuilderContext {
 	private readonly Fact[] _givens;

@@ -1,17 +1,13 @@
-using System;
-using System.Threading.Tasks;
 using NodaTime;
 using Transacto.Domain;
 using Transacto.Framework;
 using Transacto.Infrastructure.SqlStreamStore;
 using Transacto.Messages;
-using Xunit;
 
 namespace Transacto.Integration; 
 
 public class BusinessTransactionIntegrationTests : IntegrationTests {
-	[Fact]
-	public async Task Somewthing() {
+		public async Task Somewthing() {
 		var now = DateTime.UtcNow;
 		var period = AccountingPeriod.Open(LocalDate.FromDateTime(now));
 		var transactionId = Guid.NewGuid();

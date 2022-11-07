@@ -1,9 +1,5 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Net;
 using System.Text.Json;
-using System.Threading.Tasks;
 using Transacto.Domain;
 using Transacto.Framework;
 using Transacto.Messages;
@@ -12,8 +8,7 @@ using Xunit;
 namespace Transacto.Integration; 
 
 public class ChartOfAccountsIntegrationTests : IntegrationTests {
-	[Fact]
-	public async Task hal() {
+		public async Task hal() {
 		var checkpoint = await SetupChartOfAccounts();
 
 		var position = checkpoint.ToEventStorePosition();

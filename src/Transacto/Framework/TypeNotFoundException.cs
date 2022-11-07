@@ -1,5 +1,3 @@
-using System;
-
 namespace Transacto.Framework; 
 
 public class TypeNotFoundException : Exception {

@@ -1,6 +1,4 @@
-﻿using System;
-
-namespace Transacto.Testing;
+﻿namespace Transacto.Testing;
 
 /// <summary>
 ///     The when state within the test specification building process.

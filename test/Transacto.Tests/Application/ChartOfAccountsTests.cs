@@ -1,8 +1,6 @@
-using System.Threading.Tasks;
 using Transacto.Domain;
 using Transacto.Messages;
 using Transacto.Testing;
-using Xunit;
 
 namespace Transacto.Application; 
 
@@ -15,7 +13,7 @@ public class ChartOfAccountsTests {
 		_handler = new ChartOfAccountsHandlers(new ChartOfAccountsTestRepository(_facts));
 	}
 
-	[Theory, AutoTransactoData]
+	[AutoFixtureData]
 	public Task defining_an_account(AccountName accountName, AccountNumber accountNumber) =>
 		new Scenario()
 			.GivenNone()
@@ -29,7 +27,7 @@ public class ChartOfAccountsTests {
 			})
 			.Assert(_handler, _facts);
 
-	[Theory, AutoTransactoData]
+	[AutoFixtureData]
 	public Task defining_a_second_account(AccountName accountName, AccountNumber accountNumber,
 		AccountName secondAccountName, AccountNumber secondAccountNumber) =>
 		new Scenario()
@@ -47,7 +45,7 @@ public class ChartOfAccountsTests {
 			})
 			.Assert(_handler, _facts);
 
-	[Theory, AutoTransactoData]
+	[AutoFixtureData]
 	public Task defining_the_same_account_throws(AccountName accountName, AccountNumber accountNumber) =>
 		new Scenario()
 			.Given(ChartOfAccounts.Identifier, new AccountDefined {
@@ -61,7 +59,7 @@ public class ChartOfAccountsTests {
 			.Throws(new AccountExistsException(accountNumber))
 			.Assert(_handler, _facts);
 
-	[Theory, AutoTransactoData]
+	[AutoFixtureData]
 	public Task renaming_an_account(AccountName accountName, AccountNumber accountNumber,
 		AccountName secondAccountName) =>
 		new Scenario()
@@ -79,7 +77,7 @@ public class ChartOfAccountsTests {
 			})
 			.Assert(_handler, _facts);
 
-	[Theory, AutoTransactoData]
+	[AutoFixtureData]
 	public Task deactivating_an_account(AccountName accountName, AccountNumber accountNumber) =>
 		new Scenario()
 			.Given(ChartOfAccounts.Identifier, new AccountDefined {
@@ -94,7 +92,7 @@ public class ChartOfAccountsTests {
 			})
 			.Assert(_handler, _facts);
 
-	[Theory, AutoTransactoData]
+	[AutoFixtureData]
 	public Task reactivating_a_deactivated_account(AccountName accountName, AccountNumber accountNumber) =>
 		new Scenario()
 			.Given(ChartOfAccounts.Identifier, new AccountDefined {
@@ -111,7 +109,7 @@ public class ChartOfAccountsTests {
 			})
 			.Assert(_handler, _facts);
 
-	[Theory, AutoTransactoData]
+	[AutoFixtureData]
 	public Task reactivating_an_active_account(AccountName accountName, AccountNumber accountNumber) =>
 		new Scenario()
 			.Given(ChartOfAccounts.Identifier, new AccountDefined {
@@ -124,7 +122,7 @@ public class ChartOfAccountsTests {
 			.ThenNone()
 			.Assert(_handler, _facts);
 
-	[Theory, AutoTransactoData]
+	[AutoFixtureData]
 	public Task deactivating_a_deactivated_account(AccountName accountName, AccountNumber accountNumber) =>
 		new Scenario()
 			.Given(ChartOfAccounts.Identifier, new AccountDefined {
@@ -139,7 +137,7 @@ public class ChartOfAccountsTests {
 			.ThenNone()
 			.Assert(_handler, _facts);
 
-	[Theory, AutoTransactoData]
+	[AutoFixtureData]
 	public Task renaming_an_account_when_no_account_defined_throws(AccountName accountName,
 		AccountNumber accountNumber) =>
 		new Scenario()
@@ -151,7 +149,7 @@ public class ChartOfAccountsTests {
 			.Throws(new ChartOfAccountsNotFoundException())
 			.Assert(_handler, _facts);
 
-	[Theory, AutoTransactoData]
+	[AutoFixtureData]
 	public Task renaming_an_account_when_it_was_not_defined_throws(AccountName accountName,
 		AccountNumber accountNumber,
 		AccountName secondAccountName, AccountNumber secondAccountNumber) =>
@@ -167,7 +165,7 @@ public class ChartOfAccountsTests {
 			.Throws(new AccountNotFoundException(secondAccountNumber))
 			.Assert(_handler, _facts);
 
-	[Theory, AutoTransactoData]
+	[AutoFixtureData]
 	public Task deactivating_an_account_when_no_account_defined_throws(AccountNumber accountNumber) =>
 		new Scenario()
 			.GivenNone()
@@ -177,7 +175,7 @@ public class ChartOfAccountsTests {
 			.Throws(new ChartOfAccountsNotFoundException())
 			.Assert(_handler, _facts);
 
-	[Theory, AutoTransactoData]
+	[AutoFixtureData]
 	public Task deactivating_an_account_when_it_was_not_defined_throws(AccountName accountName,
 		AccountNumber accountNumber, AccountNumber secondAccountNumber) =>
 		new Scenario()
@@ -191,7 +189,7 @@ public class ChartOfAccountsTests {
 			.Throws(new AccountNotFoundException(secondAccountNumber))
 			.Assert(_handler, _facts);
 
-	[Theory, AutoTransactoData]
+	[AutoFixtureData]
 	public Task reactivating_an_account_when_no_account_defined_throws(AccountNumber accountNumber) =>
 		new Scenario()
 			.GivenNone()
@@ -201,7 +199,7 @@ public class ChartOfAccountsTests {
 			.Throws(new ChartOfAccountsNotFoundException())
 			.Assert(_handler, _facts);
 
-	[Theory, AutoTransactoData]
+	[AutoFixtureData]
 	public Task reactivating_an_account_when_it_was_not_defined_throws(AccountName accountName,
 		AccountNumber accountNumber, AccountNumber secondAccountNumber) =>
 		new Scenario()

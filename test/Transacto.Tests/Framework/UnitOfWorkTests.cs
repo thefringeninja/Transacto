@@ -1,22 +1,18 @@
-using System;
 using Xunit;
 
 namespace Transacto.Framework; 
 
 public class UnitOfWorkTests {
-	[Fact]
-	public void AccessingCurrentWhenNotStartedThrows() {
+		public void AccessingCurrentWhenNotStartedThrows() {
 		Assert.Throws<UnitOfWorkNotStartedException>(() => UnitOfWork.Current);
 	}
 
-	[Fact]
-	public void CanStart() {
+		public void CanStart() {
 		using var _ = UnitOfWork.Start();
 		Assert.False(UnitOfWork.Current.HasChanges);
 	}
 
-	[Fact]
-	public void AttachingAnAggregate() {
+		public void AttachingAnAggregate() {
 		var aggregate = new TestAggregate();
 
 		using var _ = UnitOfWork.Start();
@@ -25,15 +21,13 @@ public class UnitOfWorkTests {
 		Assert.Same(aggregate, result);
 	}
 
-	[Fact]
-	public void AttachingAnAggregateWhenStreamNameExistsThrows() {
+		public void AttachingAnAggregateWhenStreamNameExistsThrows() {
 		using var _ = UnitOfWork.Start();
 		UnitOfWork.Current.Attach(new("stream", new TestAggregate()));
 		Assert.Throws<ArgumentException>(() => UnitOfWork.Current.Attach(new("stream", new TestAggregate())));
 	}
 
-	[Fact]
-	public void GettingChanges() {
+		public void GettingChanges() {
 		var aggregate = new TestAggregate();
 
 		using var _ = UnitOfWork.Start();

@@ -1,10 +1,7 @@
-using System;
 using System.Collections;
-using System.Collections.Generic;
-using System.Linq;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Configuration.CommandLine;
-
+#nullable enable
 namespace SomeCompany {
     internal class SomeCompanyConfiguration {
         private readonly ConfigurationData _configuration;

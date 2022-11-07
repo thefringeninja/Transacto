@@ -1,6 +1,4 @@
-﻿using System;
-
-namespace Transacto.Testing;
+﻿namespace Transacto.Testing;
 
 /// <summary>
 ///     The given-when-then test specification builder bootstrapper.

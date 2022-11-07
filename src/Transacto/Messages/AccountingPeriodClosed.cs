@@ -1,5 +1,3 @@
-using System;
-
 namespace Transacto.Messages; 
 
 public record AccountingPeriodClosed {

@@ -1,5 +1,3 @@
-using System;
-
 namespace Transacto.Domain; 
 
 public readonly struct Money : IEquatable<Money>, IComparable<Money> {

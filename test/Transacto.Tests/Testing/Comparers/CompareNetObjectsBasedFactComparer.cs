@@ -1,6 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using KellermanSoftware.CompareNetObjects;
+﻿using KellermanSoftware.CompareNetObjects;
 
 namespace Transacto.Testing.Comparers;
 

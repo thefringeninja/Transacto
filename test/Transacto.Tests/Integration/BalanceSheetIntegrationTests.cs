@@ -1,19 +1,15 @@
-using System;
 using System.Collections.Immutable;
-using System.Linq;
 using System.Net;
 using System.Text.Json;
-using System.Threading.Tasks;
 using NodaTime;
 using Transacto.Domain;
 using Transacto.Messages;
 using Transacto.Plugins.BalanceSheet;
-using Xunit;
 
 namespace Transacto.Integration; 
 
 public class BalanceSheetIntegrationTests : IntegrationTests {
-	[Theory, AutoTransactoData(1)]
+	[AutoFixtureData(1)]
 	public async Task when_an_entry_is_posted(
 		GeneralLedgerEntryIdentifier generalLedgerEntryIdentifier, LocalDateTime createdOn, Money[] amounts) {
 		var period = AccountingPeriod.Open(createdOn.Date);

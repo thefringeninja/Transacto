@@ -1,6 +1,3 @@
-using System;
-using System.Linq;
-
 namespace Transacto.Domain; 
 
 public readonly struct GeneralLedgerEntryNumberPrefix : IEquatable<GeneralLedgerEntryNumberPrefix> {

@@ -1,5 +1,3 @@
-using System;
-
 namespace Transacto.Domain; 
 
 public class GeneralLedgerEntryWasPostedException : Exception {
