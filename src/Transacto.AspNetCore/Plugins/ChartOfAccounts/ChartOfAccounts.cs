@@ -1,8 +1,4 @@
-using System;
-using System.Collections.Generic;
 using System.Collections.Immutable;
-using System.Linq;
-using EventStore.Client;
 using Hallo;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Mvc;

@@ -1,5 +1,4 @@
-﻿using System;
-using Transacto.Framework;
+﻿using Transacto.Framework;
 
 namespace Transacto.Testing;
 

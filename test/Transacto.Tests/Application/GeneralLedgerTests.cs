@@ -1,11 +1,8 @@
-using System;
 using System.Collections.Immutable;
-using System.Threading.Tasks;
 using NodaTime;
 using Transacto.Domain;
 using Transacto.Messages;
 using Transacto.Testing;
-using Xunit;
 
 namespace Transacto.Application; 
 
@@ -19,7 +16,7 @@ public class GeneralLedgerTests {
 			new ChartOfAccountsTestRepository(_facts));
 	}
 
-	[Theory, AutoTransactoData]
+	[AutoFixtureData]
 	public Task opening_the_period(LocalDate openedOn) =>
 		new Scenario()
 			.GivenNone()
@@ -31,7 +28,7 @@ public class GeneralLedgerTests {
 			})
 			.Assert(_handler, _facts);
 
-	[Theory, AutoTransactoData]
+	[AutoFixtureData]
 	public Task closing_an_open_period(YearMonth openedOn, EquityAccount retainedEarnings,
 		GeneralLedgerEntryIdentifier[] generalLedgerEntryIdentifiers,
 		GeneralLedgerEntryIdentifier closingGeneralLedgerEntryIdentifier) =>
@@ -60,7 +57,7 @@ public class GeneralLedgerTests {
 			})
 			.Assert(_handler, _facts);
 
-	[Theory, AutoTransactoData]
+	[AutoFixtureData]
 	public Task closing_a_closed_period(YearMonth openedOn, EquityAccount retainedEarnings,
 		GeneralLedgerEntryIdentifier closingGeneralLedgerEntryIdentifier) =>
 		new Scenario()
@@ -85,7 +82,7 @@ public class GeneralLedgerTests {
 			.Throws(new PeriodClosingInProcessException(AccountingPeriod.Open(openedOn.OnDayOfMonth(1))))
 			.Assert(_handler, _facts);
 
-	[Theory, AutoTransactoData]
+	[AutoFixtureData]
 	public Task closing_the_period_before_the_period_has_started(LocalDate openedOn, EquityAccount retainedEarnings,
 		GeneralLedgerEntryIdentifier closingGeneralLedgerEntryIdentifier) =>
 		new Scenario()

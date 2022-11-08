@@ -1,5 +1,3 @@
-using System;
-
 namespace Transacto.Framework.CommandHandling; 
 
 public class CommandResolveException : Exception {

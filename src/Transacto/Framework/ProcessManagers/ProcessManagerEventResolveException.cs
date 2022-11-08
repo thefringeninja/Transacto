@@ -1,5 +1,3 @@
-using System;
-
 namespace Transacto.Framework.ProcessManagers; 
 
 public class ProcessManagerEventResolveException : Exception {

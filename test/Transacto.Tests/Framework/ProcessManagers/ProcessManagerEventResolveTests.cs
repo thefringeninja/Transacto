@@ -1,20 +1,16 @@
-using System;
-using System.Threading.Tasks;
 using Xunit;
 
 namespace Transacto.Framework.ProcessManagers; 
 
 public class ProcessManagerEventResolveTests {
-	[Fact]
-	public void ZeroRegistrationsDoesNotThrow() {
+		public void ZeroRegistrationsDoesNotThrow() {
 		var sut = ProcessManagerEventResolve.WhenEqualToHandlerMessageType(
 			Array.Empty<MessageHandler<Checkpoint>>());
 
 		sut.Invoke(new object());
 	}
 
-	[Fact]
-	public void MultipleRegistrationsThrow() {
+		public void MultipleRegistrationsThrow() {
 		var sut = ProcessManagerEventResolve.WhenEqualToHandlerMessageType(new[] {
 			new MessageHandler<Checkpoint>(typeof(object), (_, _) => new ValueTask<Checkpoint>(Checkpoint.None)),
 			new MessageHandler<Checkpoint>(typeof(object), (_, _) => new ValueTask<Checkpoint>(Checkpoint.None))
@@ -26,8 +22,7 @@ public class ProcessManagerEventResolveTests {
 		Assert.Equal(2, ex.HandlerCount);
 	}
 
-	[Fact]
-	public void SingleRegistrationReturnsExpectedResult() {
+		public void SingleRegistrationReturnsExpectedResult() {
 		var handler =
 			new MessageHandler<Checkpoint>(typeof(object), (_, _) => new ValueTask<Checkpoint>(Checkpoint.None));
 

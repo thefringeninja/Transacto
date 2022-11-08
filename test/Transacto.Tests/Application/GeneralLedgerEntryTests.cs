@@ -1,13 +1,8 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
 using NodaTime;
+using Serilog;
 using Transacto.Domain;
 using Transacto.Messages;
 using Transacto.Testing;
-using Xunit;
-using Xunit.Abstractions;
 
 namespace Transacto.Application; 
 
@@ -16,8 +11,8 @@ public class GeneralLedgerEntryTests {
 	private readonly TestSpecificationTextWriter _writer;
 	private readonly GetPrefix _getPrefix;
 
-	public GeneralLedgerEntryTests(ITestOutputHelper output) {
-		_writer = new TestSpecificationTextWriter(new TestOutputHelperTextWriter(output));
+	public GeneralLedgerEntryTests() {
+		_writer = new TestSpecificationTextWriter(new SerilogTextWriter(Log.Logger));
 		_facts = new FactRecorder();
 		_getPrefix = t => new GeneralLedgerEntryNumberPrefix(t.GetType().Name switch {
 			nameof(BadTransaction) => "bad",
@@ -26,7 +21,7 @@ public class GeneralLedgerEntryTests {
 		});
 	}
 
-	[Theory, AutoTransactoData]
+	[AutoFixtureData]
 	public Task posting_an_entry(GeneralLedgerEntryIdentifier generalLedgerEntryIdentifier,
 		GeneralLedgerEntrySequenceNumber sequenceNumber, LocalDate openedOn, AssetAccount assetAccount,
 		LiabilityAccount liabilityAccount, Money amount) =>
@@ -70,7 +65,7 @@ public class GeneralLedgerEntryTests {
 			.Assert(new GeneralLedgerEntryHandlers(new GeneralLedgerTestRepository(_facts),
 				new GeneralLedgerEntryTestRepository(_facts), _getPrefix, _ => false), _facts);
 
-	[Theory, AutoTransactoData]
+	[AutoFixtureData]
 	public Task entry_date_not_in_current_or_next_period_throws(
 		GeneralLedgerEntryIdentifier generalLedgerEntryIdentifier,
 		GeneralLedgerEntrySequenceNumber sequenceNumber, LocalDate openedOn) {
@@ -92,7 +87,7 @@ public class GeneralLedgerEntryTests {
 				new GeneralLedgerEntryTestRepository(_facts), _getPrefix, _ => false), _facts);
 	}
 
-	[Theory, AutoTransactoData]
+	[AutoFixtureData]
 	public Task applying_debit_to_non_existing_account_throws(
 		GeneralLedgerEntryIdentifier generalLedgerEntryIdentifier, GeneralLedgerEntryNumber referenceNumber,
 		LocalDate openedOn, AccountNumber accountNumber) => new Scenario()
@@ -111,7 +106,7 @@ public class GeneralLedgerEntryTests {
 		.Assert(new GeneralLedgerEntryHandlers(new GeneralLedgerTestRepository(_facts),
 			new GeneralLedgerEntryTestRepository(_facts), _getPrefix, _ => true), _facts);
 
-	[Theory, AutoTransactoData]
+	[AutoFixtureData]
 	public Task applying_credit_to_non_existing_account_throws(
 		GeneralLedgerEntryIdentifier generalLedgerEntryIdentifier, 
 		GeneralLedgerEntrySequenceNumber sequenceNumber, LocalDate openedOn, AccountNumber accountNumber) =>
@@ -131,7 +126,7 @@ public class GeneralLedgerEntryTests {
 			.Assert(new GeneralLedgerEntryHandlers(new GeneralLedgerTestRepository(_facts),
 				new GeneralLedgerEntryTestRepository(_facts), _getPrefix, _ => true), _facts);
 
-	[Theory, AutoTransactoData]
+	[AutoFixtureData]
 	public Task entry_not_in_balance_throws(GeneralLedgerEntryIdentifier generalLedgerEntryIdentifier,
 		GeneralLedgerEntrySequenceNumber sequenceNumber, LocalDate openedOn, AccountName accountName,
 		AccountNumber accountNumber) {

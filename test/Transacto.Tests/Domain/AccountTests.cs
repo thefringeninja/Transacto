@@ -1,8 +1,4 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
 using AutoFixture;
-using Xunit;
 
 namespace Transacto.Domain; 
 
@@ -37,7 +33,7 @@ public class AccountTests {
 				_ => throw new ArgumentOutOfRangeException()
 			}
 		});
-	[Theory, MemberData(nameof(CreatesExpectedAccountCases))]
+	[MemberData(nameof(CreatesExpectedAccountCases))]
 	public void CreatesExpectedAccount(AccountNumber accountNumber, Type expected) =>
 		Assert.IsType(expected, Account.For(accountNumber, _fixture.Create<AccountName>()));
 
@@ -48,21 +44,21 @@ public class AccountTests {
 	public class ExpenseTests : LeftSideTests<ExpenseAccount> {}
 
 	public abstract class LeftSideTests<TAccount> where TAccount : Account {
-		[Theory, AutoTransactoData]
+		[AutoFixtureData]
 		public void DebitsIncreaseBalance(TAccount sut, Money amount) =>
 			Assert.Equal(amount, sut.Debit(amount).Balance);
 
-		[Theory, AutoTransactoData]
+		[AutoFixtureData]
 		public void CreditsDecreaseBalance(TAccount sut, Money amount) =>
 			Assert.Equal(-amount, sut.Credit(amount).Balance);
 	}
 
 	public abstract class RightSideTests<TAccount> where TAccount : Account {
-		[Theory, AutoTransactoData]
+		[AutoFixtureData]
 		public void CreditsIncreaseBalance(TAccount sut, Money amount) =>
 			Assert.Equal(amount, sut.Credit(amount).Balance);
 
-		[Theory, AutoTransactoData]
+		[AutoFixtureData]
 		public void DebitsDecreaseBalance(TAccount sut, Money amount) =>
 			Assert.Equal(-amount, sut.Debit(amount).Balance);
 	}

@@ -1,4 +1,3 @@
-using System;
 using EventStore.Client;
 using Transacto.Framework;
 

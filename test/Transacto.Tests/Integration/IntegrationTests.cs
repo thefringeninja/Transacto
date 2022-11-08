@@ -1,11 +1,6 @@
-using System;
-using System.Collections.Generic;
 using System.Globalization;
-using System.Linq;
 using System.Net;
-using System.Net.Http;
 using System.Net.Http.Headers;
-using System.Threading.Tasks;
 using Ductus.FluentDocker.Builders;
 using Ductus.FluentDocker.Services;
 using EventStore.Client;
@@ -19,12 +14,11 @@ using Polly.Retry;
 using SqlStreamStore;
 using Transacto.Domain;
 using Transacto.Messages;
-using Xunit;
 
 namespace Transacto.Integration; 
 
-[Collection(nameof(IntegrationTests))]
-public abstract class IntegrationTests : IDisposable, IAsyncLifetime {
+//[Collection(nameof(IntegrationTests))]
+public abstract class IntegrationTests : IAsyncDisposable {
 	private readonly IContainerService _eventStore;
 	private readonly IContainerService _streamStore;
 
@@ -153,8 +147,8 @@ public abstract class IntegrationTests : IDisposable, IAsyncLifetime {
 		.Handle<Exception>()
 		.WaitAndRetryAsync(100, i => TimeSpan.FromMilliseconds(Math.Pow(i, 2)));
 
-	public Task DisposeAsync() {
+	public ValueTask DisposeAsync() {
 		Dispose();
-		return Task.CompletedTask;
+		return new(Task.CompletedTask);
 	}
 }

@@ -1,4 +1,3 @@
-using System;
 using Projac;
 using Transacto.Framework;
 using Transacto.Framework.Projections;

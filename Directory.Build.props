@@ -7,7 +7,14 @@
 		<TreatWarningsAsErrors>true</TreatWarningsAsErrors>
 		<LangVersion>10.0</LangVersion>
 		<PreserveCompilationContext>true</PreserveCompilationContext>
+		<RestoreSources>
+			$(RestoreSources);
+			https://api.nuget.org/v3/index.json;
+			https://www.myget.org/F/xunit/api/v3/index.json;
+		</RestoreSources>
+		<ImplicitUsings>enable</ImplicitUsings>
 	</PropertyGroup>
+	
 	<ItemGroup>
 		<FrameworkReference Include="Microsoft.AspNetCore.App" />
 	</ItemGroup>

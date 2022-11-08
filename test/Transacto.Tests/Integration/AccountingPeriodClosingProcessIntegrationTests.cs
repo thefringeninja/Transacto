@@ -1,18 +1,14 @@
-using System;
-using System.Linq;
 using System.Text;
 using System.Text.Json;
-using System.Threading.Tasks;
 using EventStore.Client;
 using NodaTime;
 using Transacto.Domain;
 using Transacto.Messages;
-using Xunit;
 
 namespace Transacto.Integration; 
 
 public class AccountingPeriodClosingProcessIntegrationTests : IntegrationTests {
-	[Theory, AutoTransactoData(1)]
+	[AutoFixtureData(1)]
 	public async Task when_closing_the_period(LocalDateTime createdOn,
 		GeneralLedgerEntryIdentifier closingEntryIdentifier) {
 		var accountingPeriodClosedSource = new TaskCompletionSource<ResolvedEvent>();

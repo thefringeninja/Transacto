@@ -1,6 +1,4 @@
-﻿using System.Collections.Generic;
-
-namespace Transacto.Testing;
+﻿namespace Transacto.Testing;
 
 /// <summary>
 ///     Contract to compare if the expected and actual event are equal.

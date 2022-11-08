@@ -1,7 +1,4 @@
-﻿using System;
-using System.Linq;
-
-namespace Transacto.Testing;
+﻿namespace Transacto.Testing;
 
 internal class TestSpecificationBuilder : IScenarioGivenStateBuilder, IScenarioGivenNoneStateBuilder,
 	IScenarioWhenStateBuilder, IScenarioThenStateBuilder, IScenarioThenNoneStateBuilder,

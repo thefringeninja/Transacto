@@ -1,5 +1,3 @@
-using System;
-using System.Collections.Generic;
 using System.Text.Json;
 using SqlStreamStore;
 using SqlStreamStore.Streams;

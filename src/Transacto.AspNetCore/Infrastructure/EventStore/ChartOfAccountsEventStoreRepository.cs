@@ -1,5 +1,3 @@
-using System.Threading;
-using System.Threading.Tasks;
 using EventStore.Client;
 using Transacto.Domain;
 using Transacto.Framework;

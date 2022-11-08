@@ -1,5 +1,3 @@
-using System;
-using System.Linq;
 using Inflector;
 using Microsoft.Extensions.DependencyInjection;
 using Transacto;

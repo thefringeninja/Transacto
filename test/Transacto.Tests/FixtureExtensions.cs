@@ -1,5 +1,3 @@
-using System;
-using System.Threading;
 using AutoFixture;
 using AutoFixture.Kernel;
 using NodaTime;

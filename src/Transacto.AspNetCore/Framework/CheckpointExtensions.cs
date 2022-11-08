@@ -1,6 +1,4 @@
-using System;
 using EventStore.Client;
-using Grpc.Core;
 
 namespace Transacto.Framework;
 

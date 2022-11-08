@@ -1,9 +1,7 @@
-using System;
 using System.Globalization;
 using Dapper;
 using EventStore.Client;
 using Microsoft.AspNetCore.Builder;
-using Microsoft.AspNetCore.Http;
 using Npgsql;
 using Serilog;
 using SomeCompany;

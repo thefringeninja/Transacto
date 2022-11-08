@@ -1,6 +1,4 @@
-﻿using System;
-
-namespace Transacto.Testing;
+﻿namespace Transacto.Testing;
 
 /// <summary>
 ///     Represents a difference found between the expected and actual exception.

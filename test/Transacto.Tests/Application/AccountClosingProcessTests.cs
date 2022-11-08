@@ -1,11 +1,7 @@
-using System;
-using System.Linq;
-using System.Threading.Tasks;
 using NodaTime;
 using Transacto.Domain;
 using Transacto.Messages;
 using Transacto.Testing;
-using Xunit;
 
 namespace Transacto.Application; 
 
@@ -22,7 +18,7 @@ public class AccountClosingProcessTests {
 			_ => false);
 	}
 
-	[Theory, AutoTransactoData]
+	[AutoFixtureData]
 	public Task unposted_entry_throws(LocalDate openedOn, GeneralLedgerEntryNumber generalLedgerEntryNumber,
 		EquityAccount retainedEarnings, GeneralLedgerEntryIdentifier generalLedgerEntryIdentifier,
 		GeneralLedgerEntryIdentifier closingGeneralLedgerEntryIdentifier) {
@@ -59,7 +55,7 @@ public class AccountClosingProcessTests {
 			.Assert(_handler, _facts);
 	}
 
-	[Theory, AutoTransactoData]
+	[AutoFixtureData]
 	public Task period_closing_started(LocalDate openedOn, EquityAccount retainedEarnings,
 		AssetAccount cashAccount, IncomeAccount incomeAccount, ExpenseAccount expenseAccount,
 		GeneralLedgerEntryIdentifier[] generalLedgerEntryIdentifiers,

@@ -1,6 +1,4 @@
-﻿using System;
-
-namespace Transacto.Testing;
+﻿namespace Transacto.Testing;
 
 /// <summary>
 ///     Represents syntactic sugar to compose facts for use in the testing API.

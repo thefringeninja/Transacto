@@ -1,30 +1,27 @@
-using System;
-using System.Collections.Generic;
 using AutoFixture;
 using NodaTime;
-using Xunit;
 
 namespace Transacto.Domain; 
 
 public class AccountingPeriodTests {
-	[Theory, AutoTransactoData]
+	[AutoFixtureData]
 	public void Equality(AccountingPeriod sut) {
 		var copy = AccountingPeriod.Parse(sut.ToString());
 		Assert.Equal(sut, copy);
 	}
 
-	[Theory, AutoTransactoData]
+	[AutoFixtureData]
 	public void EqualityOperator(AccountingPeriod sut) {
 		var copy = AccountingPeriod.Parse(sut.ToString());
 		Assert.True(sut == copy);
 	}
 
-	[Theory, AutoTransactoData]
+	[AutoFixtureData]
 	public void InequalityOperator(AccountingPeriod sut) {
 		Assert.True(sut != sut.Next());
 	}
 
-	[Theory, AutoTransactoData]
+	[AutoFixtureData]
 	public void NextReturnsExpectedResult(AccountingPeriod accountingPeriod) {
 		var sut = accountingPeriod.Next();
 		Assert.True(sut > accountingPeriod);
@@ -33,7 +30,7 @@ public class AccountingPeriodTests {
 		Assert.True(sut <= sut.Next());
 	}
 
-	[Theory, AutoTransactoData]
+	[AutoFixtureData]
 	public void DateNotInPeriodThrows(LocalDateTime value) {
 		var period = AccountingPeriod.Open(value.Date);
 		var ex = Assert.Throws<ClosingDateBeforePeriodException>(() =>
@@ -60,7 +57,7 @@ public class AccountingPeriodTests {
 
 	}
 
-	[Theory, MemberData(nameof(ContainsCases))]
+	[MemberData(nameof(ContainsCases))]
 	public void ContainsReturnsExpectedResult(AccountingPeriod accountingPeriod, LocalDate value, bool expected) {
 		Assert.Equal(expected, accountingPeriod.Contains(value));
 	}
@@ -70,7 +67,7 @@ public class AccountingPeriodTests {
 		yield return new object[] {13};
 	}
 
-	[Theory, MemberData(nameof(MonthOutOfRangeCases))]
+	[MemberData(nameof(MonthOutOfRangeCases))]
 	public void MonthOutOfRangeThrows(int month) {
 		var ex = Assert.Throws<ArgumentOutOfRangeException>(() => AccountingPeriod.Parse($"2020{month:D2}"));
 		Assert.Equal("month", ex.ParamName);
@@ -84,24 +81,24 @@ public class AccountingPeriodTests {
 		yield return new object[] {"0110000"};
 	}
 
-	[Theory, MemberData(nameof(InvalidValueCases))]
+	[MemberData(nameof(InvalidValueCases))]
 	public void ParseInvalidValueReturnsExpectedResult(string value) {
 		Assert.Throws<FormatException>(() => AccountingPeriod.Parse(value));
 	}
 
-	[Theory, AutoTransactoData]
+	[AutoFixtureData]
 	public void TryParseValidValueReturnsExpectedResult(AccountingPeriod accountingPeriod) {
 		Assert.True(AccountingPeriod.TryParse(accountingPeriod.ToString(), out var sut));
 		Assert.Equal(accountingPeriod, sut);
 	}
 
-	[Theory, MemberData(nameof(InvalidValueCases))]
+	[MemberData(nameof(InvalidValueCases))]
 	public void TryParseInvalidValueReturnsExpectedResult(string value) {
 		Assert.False(AccountingPeriod.TryParse(value, out var sut));
 		Assert.Equal(default, sut);
 	}
 
-	[Theory, AutoTransactoData]
+	[AutoFixtureData]
 	public void ToStringReturnsExpectedResult(LocalDate value) {
 		var actual = AccountingPeriod.Open(value).ToString();
 		Assert.Equal($"{value.Year:D4}{value.Month:D2}", actual);
