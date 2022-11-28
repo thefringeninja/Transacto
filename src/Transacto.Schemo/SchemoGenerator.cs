@@ -10,7 +10,7 @@ using Microsoft.CodeAnalysis.CSharp.Syntax;
 using NJsonSchema;
 using NJsonSchema.CodeGeneration.CSharp;
 
-namespace Transacto; 
+namespace Transacto;
 
 [Generator]
 public class SchemoGenerator : ISourceGenerator {
@@ -80,9 +80,10 @@ public class SchemoGenerator : ISourceGenerator {
 					SyntaxFactory.Token(SyntaxKind.OpenBraceToken), default,
 					SyntaxFactory.Token(SyntaxKind.CloseBraceToken), node.SemicolonToken)
 				.AddMembers(node.Members.Select(member => member switch {
-					PropertyDeclarationSyntax prop => SyntaxFactory.PropertyDeclaration(
-							prop.Type, prop.Identifier)
+					PropertyDeclarationSyntax prop => SyntaxFactory
+						.PropertyDeclaration(prop.Type, prop.Identifier)
 						.AddModifiers(prop.Modifiers.ToArray())
+						.AddModifiers(SyntaxFactory.Token(SyntaxKind.RequiredKeyword))
 						.AddAttributeLists(prop.AttributeLists.ToArray())
 						.AddAccessorListAccessors(
 							SyntaxFactory.AccessorDeclaration(SyntaxKind.GetAccessorDeclaration)
@@ -90,6 +91,9 @@ public class SchemoGenerator : ISourceGenerator {
 							SyntaxFactory.AccessorDeclaration(SyntaxKind.InitAccessorDeclaration)
 								.WithSemicolonToken(SyntaxFactory.Token(SyntaxKind.SemicolonToken))),
 					_ => member
+				}).Where(member => member switch {
+					PropertyDeclarationSyntax p => p.Identifier.Text != "AdditionalProperties",
+					_ => true
 				}).ToArray())
 				.NormalizeWhitespace();
 	}

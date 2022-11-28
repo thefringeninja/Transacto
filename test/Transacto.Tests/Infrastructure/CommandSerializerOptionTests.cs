@@ -1,11 +1,10 @@
 using System.Text.Json;
 using Transacto.Domain;
-using Xunit;
 
-namespace Transacto.Infrastructure; 
+namespace Transacto.Infrastructure;
 
 public class CommandSerializerOptionTests {
-		public void Deserialization() {
+	public void Deserialization() {
 		var property = Guid.NewGuid().ToString();
 		var anotherProperty = Guid.NewGuid().ToString();
 		var transactionId = Guid.NewGuid();
@@ -27,7 +26,7 @@ public class CommandSerializerOptionTests {
 		Assert.Equal(transactionId, transaction.TransactionId);
 	}
 
-		public void DeserializationWhenBusinessTransactionTypeDoesNotExist() {
+	public void DeserializationWhenBusinessTransactionTypeDoesNotExist() {
 		var property = Guid.NewGuid().ToString();
 		var anotherProperty = Guid.NewGuid().ToString();
 		var transactionId = Guid.NewGuid();
@@ -48,7 +47,7 @@ public class CommandSerializerOptionTests {
 		Assert.Null(command.BusinessTransaction);
 	}
 
-		public void Serialization() {
+	public void Serialization() {
 		var sut = TransactoSerializerOptions.BusinessTransactions(typeof(TestBusinessTransaction));
 
 		var testBusinessTransaction = new TestBusinessTransaction {

@@ -8,6 +8,5 @@ CREATE TABLE IF NOT EXISTS inventory_ledger (
     CONSTRAINT pk_inventory_ledger PRIMARY KEY (inventory_item_id)
 );
 
-
 CREATE UNIQUE INDEX IF NOT EXISTS ix_inventory_ledger_sku
 ON inventory_ledger (sku);

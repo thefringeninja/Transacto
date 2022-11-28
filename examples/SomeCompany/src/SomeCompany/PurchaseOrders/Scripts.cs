@@ -1,6 +1,6 @@
-using Transacto.Framework.Projections.Npgsql;
+using Transacto.Infrastructure.Npgsql;
 
-namespace SomeCompany.PurchaseOrders {
-    public class Scripts : NpgsqlScripts {
-    }
+namespace SomeCompany.PurchaseOrders;
+
+public class Scripts : NpgsqlScripts {
 }

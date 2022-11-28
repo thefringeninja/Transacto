@@ -10,7 +10,7 @@ internal static class XUnitExtensions {
 	private static IExceptionComparer CreateExceptionComparer() {
 		return new CompareNetObjectsBasedExceptionComparer(new CompareLogic(new ComparisonConfig {
 			MembersToIgnore =
-				{nameof(Exception.Source), nameof(Exception.StackTrace), nameof(Exception.TargetSite)}
+				{ nameof(Exception.Source), nameof(Exception.StackTrace), nameof(Exception.TargetSite) }
 		}));
 	}
 
@@ -19,7 +19,8 @@ internal static class XUnitExtensions {
 		return builder.Assert(new CompareNetObjectsBasedFactComparer(new CompareLogic {
 			Config = {
 				CustomComparers = new List<BaseTypeComparer>
-					{new JsonDocumentComparer(RootComparerFactory.GetRootComparer())}
+					{ new JsonDocumentComparer(RootComparerFactory.GetRootComparer()) },
+				IgnoreCollectionOrder = true
 			}
 		}), handler, factRecorder);
 	}

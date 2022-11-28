@@ -1,12 +1,10 @@
-using System;
+namespace SomeCompany.Inventory;
 
-namespace SomeCompany.Inventory {
-	public class InventoryLedgerItem {
-		public Guid InventoryItemId { get; set; }
-		public string Sku { get; set; }
-		public decimal OnOrder { get; set; }
-		public decimal OnHand { get; set; }
-		public decimal Committed { get; set; }
-		public decimal Available => OnHand - Committed;
-	}
+public record InventoryLedgerItem {
+	public Guid InventoryItemId { get; init; }
+	public required string Sku { get; init; }
+	public required decimal OnOrder { get; init; }
+	public required decimal OnHand { get; init; }
+	public required decimal Committed { get; init; }
+	public decimal Available => OnHand - Committed;
 }

@@ -2,7 +2,6 @@ using System.Net;
 using System.Text.Json;
 using Hallo;
 using Hallo.Serialization;
-using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc.Formatters;
 using Microsoft.Net.Http.Headers;
 
@@ -14,12 +13,12 @@ internal class HalResult<T> : IResult {
 	private static readonly MediaType HalJson = new(HalJsonContentType);
 	private static readonly MediaType Html = new(HalHtmlContentType);
 
-	private readonly T _resource;
+	private readonly T? _resource;
 	private readonly Checkpoint _checkpoint;
 	private readonly IHal _hal;
 	private readonly HttpStatusCode _statusCode;
 
-	public HalResult(T resource, Checkpoint checkpoint, IHal hal, HttpStatusCode statusCode = HttpStatusCode.OK) {
+	public HalResult(T? resource, Checkpoint checkpoint, IHal hal, HttpStatusCode statusCode = HttpStatusCode.OK) {
 		_resource = resource;
 		_checkpoint = checkpoint;
 		_hal = hal;
@@ -31,7 +30,7 @@ internal class HalResult<T> : IResult {
 
 		var requestHeaders = context.Request.GetTypedHeaders();
 
-		if (_checkpoint != Checkpoint.None) {
+		if (_checkpoint != default) {
 			for (var i = 0; i < requestHeaders.IfMatch.Count; i++) {
 				var etag = requestHeaders.IfMatch[i].Tag;
 				if (!etag.HasValue) {
@@ -41,16 +40,18 @@ internal class HalResult<T> : IResult {
 				var requestedCheckpoint = Checkpoint.FromString(etag.Value.AsSpan()[1..^1]);
 
 				if (requestedCheckpoint > _checkpoint) {
-					return Results.PreconditionFailed().ExecuteAsync(context);
+					return Results.Extensions.PreconditionFailed().ExecuteAsync(context);
 				}
 			}
+
+			context.Response.Headers.ETag = _checkpoint.ToString();
 		}
 
-
-		var inner = requestHeaders.Accept.Count == 0
-			? new HalJsonResult(_resource, _hal)
-			: requestHeaders.Accept.Select(MediaType).Select(Negotiate).FirstOrDefault() ??
-			  Results.NotAcceptable();
+		var inner = requestHeaders.Accept.Count switch {
+			0 => new HalJsonResult(_resource, _hal),
+			_ => requestHeaders.Accept.Select(MediaType).Select(Negotiate).FirstOrDefault() ??
+			     Results.Extensions.NotAcceptable()
+		};
 
 		return inner.ExecuteAsync(context);
 
@@ -77,10 +78,10 @@ internal class HalResult<T> : IResult {
 
 		private static readonly MediaTypeHeaderValue ContentType = new($"{HalJson.Type}/{HalJson.SubType}");
 
-		private readonly T _resource;
+		private readonly T? _resource;
 		private readonly IHal _hal;
 
-		public HalJsonResult(T resource, IHal hal) {
+		public HalJsonResult(T? resource, IHal hal) {
 			_resource = resource;
 			_hal = hal;
 		}
@@ -93,17 +94,18 @@ internal class HalResult<T> : IResult {
 	}
 
 	private class HalHtmlResult : IResult {
-		private readonly T _resource;
+		private readonly T? _resource;
 		private readonly IHal _hal;
 
 		public HttpStatusCode StatusCode { get; init; }
 
-		public HalHtmlResult(T resource, IHal hal) {
+		public HalHtmlResult(T? resource, IHal hal) {
 			_resource = resource;
 			_hal = hal;
 		}
 
 		public Task ExecuteAsync(HttpContext context) {
+			context.Response.StatusCode = (int)StatusCode;
 			context.Response.ContentType = HalHtmlContentType;
 
 			return Task.CompletedTask;

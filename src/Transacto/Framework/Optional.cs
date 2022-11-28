@@ -4,12 +4,8 @@ public readonly struct Optional<T> : IEquatable<Optional<T>> {
 	public static readonly Optional<T> Empty = default;
 	public bool HasValue { get; }
 
-	public T Value {
-		get {
-			if (!HasValue) throw new InvalidOperationException();
-			return _value;
-		}
-	}
+	public T Value => HasValue ? _value : throw new InvalidOperationException();
+
 	private readonly T _value;
 
 	public Optional(T value) {
@@ -25,9 +21,5 @@ public readonly struct Optional<T> : IEquatable<Optional<T>> {
 	public static bool operator !=(Optional<T> left, Optional<T> right) => !left.Equals(right);
 	public static implicit operator Optional<T>(T value) => new(value);
 
-	public override int GetHashCode() {
-		unchecked {
-			return (HasValue.GetHashCode() * 397) ^ (_value?.GetHashCode() ?? 0);
-		}
-	}
+	public override int GetHashCode() => unchecked(HasValue.GetHashCode() * 397 ^ (_value?.GetHashCode() ?? 0));
 }

@@ -1,7 +1,6 @@
 using System.Globalization;
 using Dapper;
 using EventStore.Client;
-using Microsoft.AspNetCore.Builder;
 using Npgsql;
 using Serilog;
 using SomeCompany;
@@ -20,10 +19,10 @@ Log.Logger = new LoggerConfiguration()
 		"[{Timestamp:HH:mm:ss} {Level:u3}] [{SourceContext}] {Message:lj}{NewLine}{Exception}")
 	.CreateLogger();
 
-var builder = TransactoHost.Create(
+var builder = WebApplication.CreateBuilder().AddTransacto(
 	new EventStoreClient(EventStoreClientSettings.Create("esdb://localhost:2113/?tls=false")),
 	new NpgsqlConnectionStringBuilder(configuration.ConnectionString),
-	new HttpClientSqlStreamStore(new() {BaseAddress = new UriBuilder {Port = 5002}.Uri}));
+	new HttpClientSqlStreamStore(new() { BaseAddress = new UriBuilder { Port = 5002 }.Uri }));
 
 var app = builder.Build();
 app.UseTransacto();

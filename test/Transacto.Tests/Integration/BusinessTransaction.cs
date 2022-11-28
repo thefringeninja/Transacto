@@ -1,7 +1,7 @@
 using System.Runtime.Serialization;
 using Transacto.Domain;
 
-namespace Transacto.Integration; 
+namespace Transacto.Integration;
 
 [DataContract]
 internal class BusinessTransaction : IBusinessTransaction {

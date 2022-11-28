@@ -1,9 +1,10 @@
+using System.Collections.Immutable;
 using NodaTime;
 using Transacto.Domain;
 using Transacto.Messages;
 using Transacto.Testing;
 
-namespace Transacto.Application; 
+namespace Transacto.Application;
 
 public class AccountClosingProcessTests {
 	private readonly AccountingPeriodClosingHandlers _handler;
@@ -30,7 +31,7 @@ public class AccountClosingProcessTests {
 			ClosingOn = Time.Format.LocalDateTime(closingOn),
 			RetainedEarningsAccountNumber = retainedEarnings.AccountNumber.ToInt32(),
 			ClosingGeneralLedgerEntryId = closingGeneralLedgerEntryIdentifier.ToGuid(),
-			GeneralLedgerEntryIds = new[] {generalLedgerEntryIdentifier.ToGuid()}
+			GeneralLedgerEntryIds = ImmutableArray<Guid>.Empty.Add(generalLedgerEntryIdentifier.ToGuid())
 		};
 		return new Scenario()
 			.Given(GeneralLedger.Identifier,
@@ -69,8 +70,8 @@ public class AccountClosingProcessTests {
 			ClosingOn = Time.Format.LocalDateTime(closingOn),
 			RetainedEarningsAccountNumber = retainedEarnings.AccountNumber.ToInt32(),
 			ClosingGeneralLedgerEntryId = closingGeneralLedgerEntryIdentifier.ToGuid(),
-			GeneralLedgerEntryIds =
-				Array.ConvertAll(generalLedgerEntryIdentifiers, identifier => identifier.ToGuid())
+			GeneralLedgerEntryIds = Array.ConvertAll(generalLedgerEntryIdentifiers, identifier => identifier.ToGuid())
+				.ToImmutableArray()
 		};
 		var net = income - expense;
 		var generalLedgerEntryFacts = generalLedgerEntryIdentifiers.SelectMany(
@@ -167,10 +168,11 @@ public class AccountClosingProcessTests {
 				},
 				new AccountingPeriodClosed {
 					Period = period.ToString(),
-					GeneralLedgerEntryIds = Array.ConvertAll(generalLedgerEntryIdentifiers,
-						identifier => identifier.ToGuid()),
+					GeneralLedgerEntryIds =
+						Array.ConvertAll(generalLedgerEntryIdentifiers, identifier => identifier.ToGuid())
+							.ToImmutableArray(),
 					ClosingGeneralLedgerEntryId = closingGeneralLedgerEntryIdentifier.ToGuid(),
-					Balance = new[] {
+					Balance = ImmutableArray.CreateRange(new[] {
 						new BalanceLineItem {
 							AccountNumber = cashAccount.AccountNumber.ToInt32(),
 							Amount = net.ToDecimal() * generalLedgerEntryIdentifiers.Length
@@ -187,7 +189,7 @@ public class AccountClosingProcessTests {
 							AccountNumber = expenseAccount.AccountNumber.ToInt32(),
 							Amount = Money.Zero.ToDecimal()
 						}
-					}
+					})
 				})
 			.Assert(_handler, _facts);
 	}

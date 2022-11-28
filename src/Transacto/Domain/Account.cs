@@ -1,9 +1,9 @@
-namespace Transacto.Domain; 
+namespace Transacto.Domain;
 
 public abstract record Account {
 	public AccountName AccountName { get; }
 	public AccountNumber AccountNumber { get; }
-	public Money Balance { get; protected init; }
+	public Money Balance { get; protected init; } = Money.Zero;
 
 	public static Account For(AccountNumber accountNumber, AccountName accountName = default) =>
 		accountNumber.ToInt32() switch {

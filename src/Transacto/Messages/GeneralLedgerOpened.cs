@@ -1,7 +1,7 @@
 namespace Transacto.Messages; 
 
 public record GeneralLedgerOpened {
-	public string OpenedOn { get; init; } = default!;
+	public required string OpenedOn { get; init; }
 
 	public override string ToString() => $"The general ledger was opened on {OpenedOn}.";
 }

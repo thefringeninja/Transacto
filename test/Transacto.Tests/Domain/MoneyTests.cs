@@ -1,4 +1,4 @@
-namespace Transacto.Domain; 
+namespace Transacto.Domain;
 
 public class MoneyTests {
 	[AutoFixtureData]
@@ -18,14 +18,14 @@ public class MoneyTests {
 		Assert.True(left != right);
 	}
 
-		public void Zero() {
+	public void Zero() {
 		Assert.Equal(new Money(0m), Money.Zero);
 	}
 
 	public static IEnumerable<object[]> ComparisonCases() {
-		yield return new object[] {new Money(0m), new Money(0m), 0};
-		yield return new object[] {new Money(-1m), new Money(0m), -1};
-		yield return new object[] {new Money(1m), new Money(0m), 1};
+		yield return new object[] { new Money(0m), new Money(0m), 0 };
+		yield return new object[] { new Money(-1m), new Money(0m), -1 };
+		yield return new object[] { new Money(1m), new Money(0m), 1 };
 	}
 
 	[MemberData(nameof(ComparisonCases))]
@@ -34,9 +34,9 @@ public class MoneyTests {
 	}
 
 	public static IEnumerable<object[]> GreaterThanCases() {
-		yield return new object[] {1m, 1m, false};
-		yield return new object[] {1m, 0m, true};
-		yield return new object[] {1m, 2m, false};
+		yield return new object[] { 1m, 1m, false };
+		yield return new object[] { 1m, 0m, true };
+		yield return new object[] { 1m, 2m, false };
 	}
 
 	[MemberData(nameof(GreaterThanCases))]
@@ -45,9 +45,9 @@ public class MoneyTests {
 	}
 
 	public static IEnumerable<object[]> GreaterThanOrEqualCases() {
-		yield return new object[] {1m, 1m, true};
-		yield return new object[] {1m, 0m, true};
-		yield return new object[] {1m, 2m, false};
+		yield return new object[] { 1m, 1m, true };
+		yield return new object[] { 1m, 0m, true };
+		yield return new object[] { 1m, 2m, false };
 	}
 
 	[MemberData(nameof(GreaterThanOrEqualCases))]
@@ -56,9 +56,9 @@ public class MoneyTests {
 	}
 
 	public static IEnumerable<object[]> LessThanCases() {
-		yield return new object[] {1m, 1m, false};
-		yield return new object[] {1m, 0m, false};
-		yield return new object[] {1m, 2m, true};
+		yield return new object[] { 1m, 1m, false };
+		yield return new object[] { 1m, 0m, false };
+		yield return new object[] { 1m, 2m, true };
 	}
 
 	[MemberData(nameof(LessThanCases))]
@@ -67,9 +67,9 @@ public class MoneyTests {
 	}
 
 	public static IEnumerable<object[]> LessThanOrEqualCases() {
-		yield return new object[] {1m, 1m, true};
-		yield return new object[] {1m, 0m, false};
-		yield return new object[] {1m, 2m, true};
+		yield return new object[] { 1m, 1m, true };
+		yield return new object[] { 1m, 0m, false };
+		yield return new object[] { 1m, 2m, true };
 	}
 
 	[MemberData(nameof(LessThanOrEqualCases))]
@@ -81,17 +81,17 @@ public class MoneyTests {
 	public void MoneyAdditionOperator(decimal left, decimal right) {
 		Assert.Equal(new Money(left + right), new Money(left) + new Money(right));
 	}
-		
+
 	[AutoFixtureData]
 	public void DecimalAdditionOperator(decimal left, decimal right) {
 		Assert.Equal(new Money(left + right), new Money(left) + right);
 	}
-		
+
 	[AutoFixtureData]
 	public void MoneySubtractionOperator(decimal left, decimal right) {
 		Assert.Equal(new Money(left - right), new Money(left) - new Money(right));
 	}
-		
+
 	[AutoFixtureData]
 	public void DecimalSubtractionOperator(decimal left, decimal right) {
 		Assert.Equal(new Money(left - right), new Money(left) - right);

@@ -1,15 +1,15 @@
-using System;
+using System.Collections.Immutable;
 
-namespace SomeCompany.ReceiptOfGoods {
-    public class GoodsReceived {
-        public Guid ReceiptId { get; set; }
-        public int ReceiptNumber { get; set; }
-        public ReceiptItem[] Items { get; set; } = Array.Empty<ReceiptItem>();
+namespace SomeCompany.ReceiptOfGoods;
 
-        public class ReceiptItem {
-            public Guid InventoryItemId { get; set; }
-            public decimal Quantity { get; set; }
-            public decimal UnitPrice { get; set; }
-        }
-    }
+public record GoodsReceived {
+	public Guid ReceiptId { get; init; }
+	public int ReceiptNumber { get; init; }
+	public ImmutableArray<ReceiptItem> Items { get; init; } = ImmutableArray<ReceiptItem>.Empty;
+
+	public class ReceiptItem {
+		public Guid InventoryItemId { get; init; }
+		public decimal Quantity { get; init; }
+		public decimal UnitPrice { get; init; }
+	}
 }

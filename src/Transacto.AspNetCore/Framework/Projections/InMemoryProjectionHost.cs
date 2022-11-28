@@ -1,10 +1,9 @@
 using System.Text.Json;
 using EventStore.Client;
-using Microsoft.Extensions.Hosting;
 using Projac;
 using Serilog;
 
-namespace Transacto.Framework.Projections; 
+namespace Transacto.Framework.Projections;
 
 public class InMemoryProjectionHost : IHostedService {
 	private readonly EventStoreClient _eventStore;
@@ -45,7 +44,7 @@ public class InMemoryProjectionHost : IHostedService {
 		}
 
 		Interlocked.Exchange(ref _subscription, await _eventStore.SubscribeToAllAsync(
-			Position.Start,
+			FromAll.Start,
 			ProjectAsync,
 			subscriptionDropped: (_, reason, ex) => {
 				if (reason == SubscriptionDroppedReason.Disposed) {

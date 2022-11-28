@@ -1,15 +1,13 @@
 using Transacto.Framework;
 using Transacto.Testing;
 
-namespace Transacto.Application; 
+namespace Transacto.Application;
 
-internal class FactRecorderRepository<T> where T : AggregateRoot {
+internal class FactRecorderRepository<T> where T : IAggregateRoot<T> {
 	private readonly IFactRecorder _facts;
-	private readonly Func<T> _factory;
 
-	public FactRecorderRepository(IFactRecorder facts, Func<T> factory) {
+	public FactRecorderRepository(IFactRecorder facts) {
 		_facts = facts;
-		_factory = factory;
 	}
 
 	public ValueTask<Optional<T>> GetOptional(string identifier,
@@ -21,8 +19,11 @@ internal class FactRecorderRepository<T> where T : AggregateRoot {
 			return new(Optional<T>.Empty);
 		}
 
-		var aggregateRoot = _factory();
-		aggregateRoot.LoadFromHistory(facts.Select(x => x.Event));
+		var aggregateRoot = T.Factory();
+		foreach (var fact in facts) {
+			aggregateRoot.ReadFromHistory(fact.Event);
+		}
+
 		_facts.Attach(aggregateRoot.Id, aggregateRoot);
 		return new(aggregateRoot);
 	}

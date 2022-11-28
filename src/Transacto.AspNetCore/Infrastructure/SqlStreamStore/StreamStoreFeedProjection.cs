@@ -3,16 +3,15 @@ using SqlStreamStore;
 using SqlStreamStore.Streams;
 using Transacto.Framework;
 
-namespace Transacto.Infrastructure.SqlStreamStore; 
+namespace Transacto.Infrastructure.SqlStreamStore;
 
 public abstract class StreamStoreFeedProjection<TFeedEntry> : StreamStoreProjection
-	where TFeedEntry : FeedEntry, new() {
+	where TFeedEntry : IFeedEntry {
 	private readonly IMessageTypeMapper _messageTypeMapper;
 	private readonly JsonSerializerOptions _serializerOptions;
 
 	protected StreamStoreFeedProjection(string streamName, IMessageTypeMapper messageTypeMapper,
-		JsonSerializerOptions? serializerOptions = null)
-		: base(streamName) {
+		JsonSerializerOptions? serializerOptions = null) : base(streamName) {
 		_messageTypeMapper = messageTypeMapper;
 		_serializerOptions = serializerOptions ?? TransactoSerializerOptions.Events;
 	}
@@ -23,7 +22,7 @@ public abstract class StreamStoreFeedProjection<TFeedEntry> : StreamStoreProject
 				true, ct);
 
 			var (target, expectedVersion) = page.Status == PageReadStatus.StreamNotFound
-				? (new TFeedEntry(), ExpectedVersion.NoStream)
+				? (Activator.CreateInstance<TFeedEntry>(), ExpectedVersion.NoStream)
 				: (JsonSerializer.Deserialize<TFeedEntry>(await page.Messages[0].GetJsonData(ct))!,
 					page.Messages[0].StreamVersion);
 
@@ -31,8 +30,7 @@ public abstract class StreamStoreFeedProjection<TFeedEntry> : StreamStoreProject
 				type = "unknown";
 			}
 
-			//target = apply.Invoke(e.Message, target);
-			target.Events.Add(type!);
+			target.Events.Add(type);
 
 			await streamStore.AppendToStream(StreamName, expectedVersion,
 				new NewStreamMessage(Guid.NewGuid(), _messageTypeMapper.Map(typeof(TEvent)),

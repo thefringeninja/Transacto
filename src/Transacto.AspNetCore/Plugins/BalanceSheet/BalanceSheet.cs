@@ -1,36 +1,49 @@
 using System.Collections.Immutable;
 using Hallo;
-using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.Routing;
-using Microsoft.Extensions.DependencyInjection;
 using NodaTime;
+using NodaTime.Text;
 using Transacto.Domain;
 using Transacto.Framework;
 using Transacto.Framework.Http;
 using Transacto.Framework.Projections;
+using Transacto.Infrastructure.EventStore;
 using Transacto.Messages;
 
-namespace Transacto.Plugins.BalanceSheet; 
+namespace Transacto.Plugins.BalanceSheet;
 
 internal class BalanceSheet : IPlugin {
 	public string Name { get; } = nameof(BalanceSheet);
 
 	public void Configure(IEndpointRouteBuilder builder) => builder
-		.MapGet("{thru}", ([FromRoute] string thru, [FromServices] InMemoryProjectionDatabase database) => {
-			var readModel = database.Get<ReadModel>();
+		.MapGet("{thru}", (LocalDateTimeData thru, [FromServices] InMemoryProjectionDatabase database) =>
+			database.Get<ReadModel>() switch {
+				{ HasValue: true } optional => Results.Extensions.Hal(new BalanceSheetReport {
+					Thru = (thru.Value ?? LocalDateTime.MaxIsoValue).ToDateTimeUnspecified(),
+					LineItems = optional.Value.GetLineItems(thru.Value ?? LocalDateTime.MaxIsoValue),
+					LineItemGroupings = ImmutableArray<LineItemGrouping>.Empty
+				}, optional.Value.Checkpoint.ToCheckpoint(), new BalanceSheetReportRepresentation()),
+				_ => Results.Extensions.Hal(ReadModel.None, Checkpoint.None, new BalanceSheetReportRepresentation())
+			});
 
-			if (!readModel.HasValue) {
-				return Results.Hal(ReadModel.None, Checkpoint.None, new BalanceSheetReportRepresentation());
-			}
+	private record struct LocalDateTimeData {
+		// ReSharper disable once UnusedMember.Local
+		public static bool TryParse(string? value, IFormatProvider? provider, out LocalDateTimeData parameter) {
+			parameter = value switch {
+				null => None,
+				_ => LocalDateTimePattern.ExtendedIso.Parse(value) switch {
+					{ Success: true } result => new() { Value = result.Value },
+					_ => None
+				}
+			};
 
-			var thruValue = Time.Parse.LocalDateTime(thru);
-			
-			return Results.Hal(new BalanceSheetReport() {
-				Thru = thruValue.ToDateTimeUnspecified(),
-				LineItems = readModel.Value.GetLineItems(thruValue)
-			}, readModel.Value.Checkpoint.ToCheckpoint(), new BalanceSheetReportRepresentation());
-		});
+			return parameter != None;
+		}
+
+		private static readonly LocalDateTimeData None = new() { Value = null };
+
+		public required LocalDateTime? Value { get; init; }
+	}
 
 	private record Entry(LocalDateTime CreatedOn) {
 		public ImmutableDictionary<int, decimal> Credits { get; init; } = ImmutableDictionary<int, decimal>.Empty;
@@ -39,6 +52,7 @@ internal class BalanceSheet : IPlugin {
 
 	private record ReadModel : MemoryReadModel {
 		public static readonly ReadModel None = new();
+
 		public ImmutableDictionary<Guid, Entry> UnpostedEntries { get; init; } =
 			ImmutableDictionary<Guid, Entry>.Empty;
 
@@ -63,7 +77,7 @@ internal class BalanceSheet : IPlugin {
 						: pair.Value)))
 			.Select(pair => new LineItem {
 				AccountNumber = pair.Key,
-				Balance = new() { DecimalValue = pair.Value },
+				Balance = Decimal.Create(pair.Value),
 				Name = AccountNames[pair.Key]
 			})
 			.ToImmutableArray();
@@ -128,18 +142,18 @@ internal class BalanceSheet : IPlugin {
 				readModel.PostedEntriesByDate.Add(readModel.UnpostedEntries[p.GeneralLedgerEntryId])
 			},
 			AccountingPeriodClosed c => (readModel with {
-				PostedEntries = c.GeneralLedgerEntryIds.Concat(new[] { c.ClosingGeneralLedgerEntryId })
+				PostedEntries = c.GeneralLedgerEntryIds.Add(c.ClosingGeneralLedgerEntryId)
 					.Aggregate(readModel.PostedEntries, (postedEntries, id) => postedEntries.Remove(id)),
 				ClosedBalance = readModel.PostedEntries.Keys.Aggregate(readModel.ClosedBalance,
-					(closedBalance, id) => readModel.PostedEntries[id].Debits
-						.Concat(readModel.PostedEntries[id].Credits
-							.Select(x => new KeyValuePair<int, decimal>(x.Key, -x.Value)))
+					(closedBalance, id) => readModel.PostedEntries[id].Debits.Concat(
+							readModel.PostedEntries[id].Credits
+								.Select(x => new KeyValuePair<int, decimal>(x.Key, -x.Value)))
 						.Aggregate(closedBalance,
 							(cb, pair) => cb.SetItem(pair.Key,
 								cb.TryGetValue(pair.Key, out var balance)
 									? balance + pair.Value
 									: pair.Value))),
-				PostedEntriesByDate = c.GeneralLedgerEntryIds.Concat(new[] { c.ClosingGeneralLedgerEntryId })
+				PostedEntriesByDate = c.GeneralLedgerEntryIds.Add(c.ClosingGeneralLedgerEntryId)
 					.Aggregate(readModel.PostedEntriesByDate,
 						(postedEntries, id) => postedEntries.Remove(readModel.PostedEntries[id]))
 			}).Compact(),

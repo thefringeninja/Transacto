@@ -1,3 +1,4 @@
+using System.Collections.Immutable;
 using NodaTime;
 
 namespace Transacto.Domain; 
@@ -17,7 +18,7 @@ public class AccountingPeriodClosingProcess {
 		ChartOfAccounts chartOfAccounts,
 		AccountingPeriod accountingPeriod,
 		LocalDateTime closingOn,
-		GeneralLedgerEntryIdentifier[] generalLedgerEntryIdentifiers,
+		ImmutableHashSet<GeneralLedgerEntryIdentifier> generalLedgerEntryIdentifiers,
 		GeneralLedgerEntryIdentifier closingGeneralLedgerEntryIdentifier,
 		EquityAccount retainedEarningsAccount,
 		AccountIsDeactivated accountIsDeactivated) {
@@ -26,7 +27,7 @@ public class AccountingPeriodClosingProcess {
 		_closingGeneralLedgerEntryIdentifier = closingGeneralLedgerEntryIdentifier;
 		_retainedEarningsAccount = retainedEarningsAccount;
 		_accountIsDeactivated = accountIsDeactivated;
-		_generalLedgerEntryIdentifiers = new HashSet<GeneralLedgerEntryIdentifier>(generalLedgerEntryIdentifiers);
+		_generalLedgerEntryIdentifiers = new();
 		TrialBalance = new TrialBalance(chartOfAccounts);
 		ProfitAndLoss = new ProfitAndLoss(accountingPeriod, chartOfAccounts);
 	}
@@ -44,7 +45,7 @@ public class AccountingPeriodClosingProcess {
 	public GeneralLedgerEntry Complete() {
 		if (_generalLedgerEntryIdentifiers.Count > 0) {
 			throw new PeriodContainsUntransferredEntriesException(_accountingPeriod,
-				_generalLedgerEntryIdentifiers.ToArray());
+				_generalLedgerEntryIdentifiers.ToImmutableArray());
 		}
 
 		TrialBalance.MustBeInBalance();

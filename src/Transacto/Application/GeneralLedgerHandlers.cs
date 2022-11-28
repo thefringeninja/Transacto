@@ -1,3 +1,4 @@
+using System.Collections.Immutable;
 using NodaTime;
 using Transacto.Domain;
 using Transacto.Messages;
@@ -28,7 +29,7 @@ public class GeneralLedgerHandlers {
 		generalLedger.BeginClosingPeriod(
 			(EquityAccount)chartOfAccounts[new AccountNumber(command.RetainedEarningsAccountNumber)],
 			new GeneralLedgerEntryIdentifier(command.ClosingGeneralLedgerEntryId),
-			command.GeneralLedgerEntryIds.Select(id => new GeneralLedgerEntryIdentifier(id)).ToArray(),
+			ImmutableArray.CreateRange(command.GeneralLedgerEntryIds, id => new GeneralLedgerEntryIdentifier(id)),
 			LocalDateTime.FromDateTime(command.ClosingOn.DateTime));
 	}
 }

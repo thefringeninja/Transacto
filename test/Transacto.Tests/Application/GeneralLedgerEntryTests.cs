@@ -4,7 +4,7 @@ using Transacto.Domain;
 using Transacto.Messages;
 using Transacto.Testing;
 
-namespace Transacto.Application; 
+namespace Transacto.Application;
 
 public class GeneralLedgerEntryTests {
 	private readonly IFactRecorder _facts;
@@ -108,7 +108,7 @@ public class GeneralLedgerEntryTests {
 
 	[AutoFixtureData]
 	public Task applying_credit_to_non_existing_account_throws(
-		GeneralLedgerEntryIdentifier generalLedgerEntryIdentifier, 
+		GeneralLedgerEntryIdentifier generalLedgerEntryIdentifier,
 		GeneralLedgerEntrySequenceNumber sequenceNumber, LocalDate openedOn, AccountNumber accountNumber) =>
 		new Scenario()
 			.Given(GeneralLedger.Identifier,

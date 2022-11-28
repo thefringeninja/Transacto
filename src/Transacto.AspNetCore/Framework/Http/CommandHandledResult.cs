@@ -1,5 +1,3 @@
-using Microsoft.AspNetCore.Http;
-
 namespace Transacto.Framework.Http;
 
 internal class CommandHandledResult : IResult {
@@ -9,6 +7,5 @@ internal class CommandHandledResult : IResult {
 		_checkpoint = checkpoint;
 	}
 
-	public Task ExecuteAsync(HttpContext context) =>
-		context.Response.WriteAsync(_checkpoint.ToString());
+	public Task ExecuteAsync(HttpContext context) => Results.Text(_checkpoint.ToString()).ExecuteAsync(context);
 }

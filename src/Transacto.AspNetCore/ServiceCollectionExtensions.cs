@@ -1,11 +1,10 @@
 using System.Collections.Concurrent;
 using EventStore.Client;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
 using Npgsql;
 using Projac;
 using SqlStreamStore;
 using Transacto.Framework;
+using Transacto.Framework.CommandHandling;
 using Transacto.Framework.Projections;
 using Transacto.Infrastructure.Npgsql;
 using Transacto.Infrastructure.SqlStreamStore;
@@ -34,6 +33,9 @@ public static class ServiceCollectionExtensions {
 				plugin.ConfigureServices(pluginServices);
 
 				var pluginProvider = pluginServices
+					.AddSingleton(provider =>
+						new CommandDispatcher(provider.GetServices<CommandHandlerModule>()))
+					.AddSingleton(rootProvider.GetRequiredService<ILoggerFactory>())
 					.AddSingleton(rootProvider.GetRequiredService<EventStoreClient>())
 					.AddSingleton(rootProvider.GetRequiredService<IStreamStore>())
 					.AddSingleton(rootProvider.GetRequiredService<IMessageTypeMapper>())

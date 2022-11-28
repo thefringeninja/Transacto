@@ -29,7 +29,7 @@ public class ExceptionCentricTestSpecificationRunner : IExceptionCentricTestSpec
 			});
 
 		ValueTask Handler(object o, CancellationToken ct) {
-			return (ValueTask)methodInfo.Invoke(_handler, new[] {o, ct})!;
+			return (ValueTask)methodInfo.Invoke(_handler, new[] { o, ct })!;
 		}
 
 		_factRecorder.Record(specification.Givens);

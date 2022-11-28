@@ -1,7 +1,5 @@
 namespace Transacto.Messages; 
 
 public partial record DefineAccount {
-	public DefineAccount() {
-		AccountName = null!;
-	}
+	public override string ToString() => $"Defining account {AccountName}-{AccountNumber}.";
 }

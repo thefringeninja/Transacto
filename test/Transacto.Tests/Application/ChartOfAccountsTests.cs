@@ -2,7 +2,7 @@ using Transacto.Domain;
 using Transacto.Messages;
 using Transacto.Testing;
 
-namespace Transacto.Application; 
+namespace Transacto.Application;
 
 public class ChartOfAccountsTests {
 	private readonly FactRecorder _facts;

@@ -1,8 +1,5 @@
 using System.Collections.Concurrent;
 using System.Collections.Immutable;
-using Microsoft.AspNetCore.Builder;
-using Microsoft.AspNetCore.Routing;
-using Microsoft.Extensions.DependencyInjection;
 using Transacto.Domain;
 using Transacto.Framework.Projections;
 using Transacto.Messages;
@@ -22,9 +19,12 @@ internal class GeneralLedger : IPlugin {
 	public void ConfigureServices(IServiceCollection services) => services
 		.AddCommandHandlerModule<GeneralLedgerEntryModule>()
 		.AddCommandHandlerModule<GeneralLedgerModule>()
-		.AddSingleton<AccountIsDeactivated>(provider => accountNumber => {
-			var readModel = provider.GetRequiredService<InMemoryProjectionDatabase>().Get<DeactivatedAccounts>();
-			return readModel.HasValue && readModel.Value.AccountNumbers.Contains(accountNumber.ToInt32());
+		.AddSingleton<AccountIsDeactivated>(provider => accountNumber => provider
+			.GetRequiredService<InMemoryProjectionDatabase>()
+			.Get<DeactivatedAccounts>() switch {
+			{ HasValue: true } optional => optional.Value.AccountNumbers.Contains(
+				accountNumber.ToInt32()),
+			_ => false
 		})
 		.AddSingleton<GetPrefix>(_ => {
 			var cache = new ConcurrentDictionary<Type, string>();

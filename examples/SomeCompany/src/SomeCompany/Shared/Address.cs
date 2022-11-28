@@ -1,5 +1,4 @@
-namespace SomeCompany.Shared {
-    partial class Address {
+namespace SomeCompany.Shared;
 
-    }
+partial class Address {
 }

@@ -2,57 +2,62 @@ using System.Text.Json;
 using EventStore.Client;
 using Transacto.Framework;
 
-namespace Transacto.Infrastructure.EventStore; 
+namespace Transacto.Infrastructure.EventStore;
 
-public class EventStoreRepository<TAggregateRoot> where TAggregateRoot : AggregateRoot {
+public class EventStoreRepository<TAggregateRoot> where TAggregateRoot : AggregateRoot, IAggregateRoot<TAggregateRoot> {
 	private static readonly JsonSerializerOptions DefaultOptions = new() {
 		PropertyNamingPolicy = JsonNamingPolicy.CamelCase
 	};
 
 	private readonly EventStoreClient _eventStore;
-	private readonly Func<TAggregateRoot> _factory;
 	private readonly IMessageTypeMapper _messageTypeMapper;
 	private readonly JsonSerializerOptions _serializerOptions;
 
 	public EventStoreRepository(
 		EventStoreClient eventStore,
-		Func<TAggregateRoot> factory,
 		IMessageTypeMapper messageTypeMapper,
 		JsonSerializerOptions? serializerOptions = null) {
 		_eventStore = eventStore;
-		_factory = factory;
 		_messageTypeMapper = messageTypeMapper;
 		_serializerOptions = serializerOptions ?? DefaultOptions;
 	}
 
 	public async ValueTask<Optional<TAggregateRoot>> GetById(string identifier,
 		CancellationToken cancellationToken = default) {
-		var streamName = identifier;
-
-		if (UnitOfWork.Current.TryGet(streamName, out var a) && a is TAggregateRoot aggregate) {
-			return new Optional<TAggregateRoot>(aggregate);
+		if (UnitOfWork.Current.TryGet(identifier, out var a) && a is TAggregateRoot aggregate) {
+			return new(aggregate);
 		}
 
-		await using var result = _eventStore.ReadStreamAsync(Direction.Forwards, streamName, StreamPosition.Start,
-			configureOperationOptions: options => options.TimeoutAfter = TimeSpan.FromMinutes(20),
-			cancellationToken: cancellationToken);
+		var version = Optional<StreamRevision>.Empty;
 
-		if (await result.ReadState == ReadState.StreamNotFound) {
-			return Optional<TAggregateRoot>.Empty;
+		aggregate = TAggregateRoot.Factory();
+
+		await foreach (var message in _eventStore.ReadStreamAsync(Direction.Forwards, identifier, StreamPosition.Start,
+			               cancellationToken: cancellationToken).Messages.WithCancellation(cancellationToken)) {
+			switch (message) {
+				case StreamMessage.NotFound:
+					return Optional<TAggregateRoot>.Empty;
+				case StreamMessage.Unknown:
+					throw new InvalidOperationException();
+				case StreamMessage.Event (var e):
+					aggregate.ReadFromHistory(JsonSerializer.Deserialize(e.OriginalEvent.Data.Span,
+						                          _messageTypeMapper.Map(e.OriginalEvent.EventType),
+						                          _serializerOptions) ?? throw new InvalidOperationException());
+					version = version == Optional<StreamRevision>.Empty ? 0 : version.Value.Next();
+					break;
+			}
 		}
 
-		aggregate = _factory();
+		var expected = version switch {
+			{ HasValue: true } => new Expected.Revision(version.Value),
+			_ => Expected.NoStream
+		};
 
-		var version = await aggregate.LoadFromHistory(result.Select(e =>
-			JsonSerializer.Deserialize(e.OriginalEvent.Data.Span,
-				_messageTypeMapper.Map(e.OriginalEvent.EventType),
-				_serializerOptions)!));
+		UnitOfWork.Current.Attach(new(identifier, aggregate, expected));
 
-		UnitOfWork.Current.Attach(new(streamName, aggregate, version));
-
-		return aggregate;
+		return new(aggregate);
 	}
 
 	public void Add(TAggregateRoot aggregateRoot) =>
-		UnitOfWork.Current.Attach(new(aggregateRoot.Id, aggregateRoot));
+		UnitOfWork.Current.Attach(new(aggregateRoot.Id, aggregateRoot, Expected.NoStream));
 }

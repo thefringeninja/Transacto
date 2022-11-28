@@ -1,6 +1,5 @@
 using System.Text.Json;
 using EventStore.Client;
-using Microsoft.Extensions.Hosting;
 using Projac;
 using Serilog;
 using SqlStreamStore;
@@ -57,7 +56,7 @@ public class StreamStoreProjectionHost : IHostedService {
 		var projector = new CheckpointAwareProjector(_streamStore, _messageTypeMap, projections);
 		var checkpoint = projections.Select(x => x.Checkpoint).Min();
 
-		Interlocked.Exchange(ref _subscription, await _eventStore.SubscribeToAllAsync(checkpoint,
+		Interlocked.Exchange(ref _subscription, await _eventStore.SubscribeToAllAsync(FromAll.After(checkpoint), 
 			projector.ProjectAsync,
 			subscriptionDropped: (_, reason, ex) => {
 				if (reason == SubscriptionDroppedReason.Disposed) {

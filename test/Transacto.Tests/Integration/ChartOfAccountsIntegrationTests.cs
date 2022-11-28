@@ -3,12 +3,11 @@ using System.Text.Json;
 using Transacto.Domain;
 using Transacto.Framework;
 using Transacto.Messages;
-using Xunit;
 
-namespace Transacto.Integration; 
+namespace Transacto.Integration;
 
 public class ChartOfAccountsIntegrationTests : IntegrationTests {
-		public async Task hal() {
+	public async Task hal() {
 		var checkpoint = await SetupChartOfAccounts();
 
 		var position = checkpoint.ToEventStorePosition();

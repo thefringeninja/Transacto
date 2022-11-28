@@ -1,27 +1,21 @@
-using System;
-using System.Collections.Generic;
 using EventStore.Client;
-using Microsoft.AspNetCore.Builder;
-using Microsoft.AspNetCore.Routing;
-using Microsoft.Extensions.DependencyInjection;
 using Transacto;
 using Transacto.Framework;
 using Transacto.Framework.CommandHandling;
 
-namespace SomeCompany.Inventory {
-	public class Inventory : IPlugin {
-		public string Name { get; } = nameof(Inventory);
+namespace SomeCompany.Inventory;
 
-		public void Configure(IEndpointRouteBuilder builder) => builder
-			.MapCommands(string.Empty, typeof(DefineInventoryItem));
+public class Inventory : IPlugin {
+	public string Name { get; } = nameof(Inventory);
 
-		public void ConfigureServices(IServiceCollection services)
-			=> services
-				.AddSingleton<CommandHandlerModule>(provider => new InventoryItemModule(
-					provider.GetRequiredService<EventStoreClient>(),
-					provider.GetRequiredService<IMessageTypeMapper>()))
-				.AddNpgSqlProjection<InventoryLedgerProjection>();
+	public void Configure(IEndpointRouteBuilder builder) => builder
+		.MapCommands(string.Empty, typeof(DefineInventoryItem));
 
-		public IEnumerable<Type> MessageTypes { get { yield return typeof(InventoryItemDefined); } }
-	}
+	public void ConfigureServices(IServiceCollection services) => services
+		.AddSingleton<CommandHandlerModule>(provider => new InventoryItemModule(
+			provider.GetRequiredService<EventStoreClient>(),
+			provider.GetRequiredService<IMessageTypeMapper>()))
+		.AddNpgSqlProjection<InventoryLedgerProjection>();
+
+	public IEnumerable<Type> MessageTypes { get { yield return typeof(InventoryItemDefined); } }
 }

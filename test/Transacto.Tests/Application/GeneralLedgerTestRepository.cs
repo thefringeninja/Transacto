@@ -1,13 +1,13 @@
 using Transacto.Domain;
 using Transacto.Testing;
 
-namespace Transacto.Application; 
+namespace Transacto.Application;
 
 internal class GeneralLedgerTestRepository : IGeneralLedgerRepository {
 	private readonly FactRecorderRepository<GeneralLedger> _inner;
 
 	public GeneralLedgerTestRepository(IFactRecorder factRecorder) {
-		_inner = new FactRecorderRepository<GeneralLedger>(factRecorder, GeneralLedger.Factory);
+		_inner = new FactRecorderRepository<GeneralLedger>(factRecorder);
 	}
 
 	public async ValueTask<GeneralLedger> Get(CancellationToken cancellationToken = default) {

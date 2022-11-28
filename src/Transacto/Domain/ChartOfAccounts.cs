@@ -4,9 +4,9 @@ using Transacto.Messages;
 
 namespace Transacto.Domain; 
 
-public class ChartOfAccounts : AggregateRoot {
+public class ChartOfAccounts : AggregateRoot, IAggregateRoot<ChartOfAccounts> {
 	public const string Identifier = "chartOfAccounts";
-	public static readonly Func<ChartOfAccounts> Factory = () => new ChartOfAccounts();
+	public static ChartOfAccounts Factory() => new ChartOfAccounts();
 
 	public override string Id { get; } = Identifier;
 

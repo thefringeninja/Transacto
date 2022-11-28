@@ -1,7 +1,7 @@
 using EventStore.Client;
 using Transacto.Framework;
 
-namespace Transacto; 
+namespace Transacto.Infrastructure.EventStore;
 
 internal static class PositionExtensions {
 	public static Checkpoint ToCheckpoint(this Optional<Position> position) =>

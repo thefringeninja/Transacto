@@ -1,5 +1,3 @@
-using Microsoft.AspNetCore.Http;
-
 namespace Transacto.Framework.Http;
 
 internal class NotAcceptableResult : IResult {
