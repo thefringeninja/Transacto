@@ -7,7 +7,7 @@ using Serilog;
 using Transacto.Framework;
 using Transacto.Framework.Projections;
 
-namespace Transacto.Infrastructure.Npgsql; 
+namespace Transacto.Infrastructure.Npgsql;
 
 public class NpgsqlProjectionHost : IHostedService {
 	private readonly EventStoreClient _eventStore;
@@ -59,7 +59,7 @@ public class NpgsqlProjectionHost : IHostedService {
 		var projector = new CheckpointAwareProjector(_connectionFactory, _messageTypeMap, projectors);
 		var checkpoint = projectors.Select(p => p.Checkpoint).Min();
 
-		Interlocked.Exchange(ref _subscription, await _eventStore.SubscribeToAllAsync(FromAll.After(checkpoint), 
+		Interlocked.Exchange(ref _subscription, await _eventStore.SubscribeToAllAsync(FromAll.After(checkpoint),
 			projector.ProjectAsync,
 			subscriptionDropped: (_, reason, ex) => {
 				if (reason == SubscriptionDroppedReason.Disposed) {

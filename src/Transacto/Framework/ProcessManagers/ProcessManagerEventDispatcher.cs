@@ -1,4 +1,4 @@
-namespace Transacto.Framework.ProcessManagers; 
+namespace Transacto.Framework.ProcessManagers;
 
 public class ProcessManagerEventDispatcher {
 	private readonly MessageHandlerResolver<Checkpoint> _resolver;

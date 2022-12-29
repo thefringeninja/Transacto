@@ -1,4 +1,4 @@
-namespace Transacto.Messages; 
+namespace Transacto.Messages;
 
 public record AccountReactivated {
 	public required int AccountNumber { get; init; }

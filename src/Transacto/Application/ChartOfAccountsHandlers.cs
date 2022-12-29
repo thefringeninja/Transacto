@@ -1,7 +1,7 @@
 using Transacto.Domain;
 using Transacto.Messages;
 
-namespace Transacto.Application; 
+namespace Transacto.Application;
 
 public class ChartOfAccountsHandlers {
 	private readonly IChartOfAccountsRepository _chartOfAccounts;

@@ -1,4 +1,4 @@
-namespace Transacto.Framework.Projections; 
+namespace Transacto.Framework.Projections;
 
 public class InMemoryProjectionDatabase {
 	private readonly Dictionary<Type, MemoryReadModel> _readModelsByType;

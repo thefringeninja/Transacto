@@ -1,4 +1,4 @@
-namespace Transacto.Framework.ProcessManagers; 
+namespace Transacto.Framework.ProcessManagers;
 
 public class ProcessManagerEventResolveException : Exception {
 	public Type EventType { get; }

@@ -3,7 +3,7 @@ using NodaTime;
 using Transacto.Framework;
 using Transacto.Messages;
 
-namespace Transacto.Domain; 
+namespace Transacto.Domain;
 
 public class GeneralLedger : AggregateRoot, IAggregateRoot<GeneralLedger> {
 	public const string Identifier = "generalLedger";
@@ -84,7 +84,7 @@ public class GeneralLedger : AggregateRoot, IAggregateRoot<GeneralLedger> {
 		trialBalance.Transfer(closingEntry);
 
 		trialBalance.MustBeInBalance();
-		
+
 		Apply(new AccountingPeriodClosed {
 			GeneralLedgerEntryIds = ImmutableArray.CreateRange(
 				generalLedgerEntryIdentifiers.ToImmutableArray(), identifier => identifier.ToGuid()),

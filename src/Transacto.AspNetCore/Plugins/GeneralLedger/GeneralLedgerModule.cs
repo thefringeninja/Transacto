@@ -5,7 +5,7 @@ using Transacto.Framework.CommandHandling;
 using Transacto.Infrastructure.EventStore;
 using Transacto.Messages;
 
-namespace Transacto.Plugins.GeneralLedger; 
+namespace Transacto.Plugins.GeneralLedger;
 
 internal class GeneralLedgerModule : CommandHandlerModule {
 	public GeneralLedgerModule(EventStoreClient eventStore, IMessageTypeMapper messageTypeMapper) {

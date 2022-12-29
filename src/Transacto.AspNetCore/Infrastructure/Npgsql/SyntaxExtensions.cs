@@ -3,7 +3,7 @@ using System.Linq.Expressions;
 using Inflector;
 
 // ReSharper disable CheckNamespace
-namespace Projac.Npgsql; 
+namespace Projac.Npgsql;
 // ReSharper restore CheckNamespace
 
 public static class SyntaxExtensions {

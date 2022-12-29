@@ -1,4 +1,4 @@
-namespace Transacto.Framework; 
+namespace Transacto.Framework;
 
 internal class MessageHandlerBuilder<TMessage, TReturn> : IMessageHandlerBuilder<TMessage, TReturn> {
 	private readonly Action<Func<TMessage, CancellationToken, ValueTask<TReturn>>> _build;

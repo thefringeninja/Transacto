@@ -1,7 +1,7 @@
 using System.Collections;
 using System.Collections.Immutable;
 
-namespace Transacto.Domain; 
+namespace Transacto.Domain;
 
 internal class AccountBalanceCollection : IEnumerable<Account> {
 	private ImmutableDictionary<AccountNumber, Account> _items;
@@ -20,5 +20,6 @@ internal class AccountBalanceCollection : IEnumerable<Account> {
 
 	public IEnumerator<Account> GetEnumerator() =>
 		_items.Values.OrderBy(account => account.AccountNumber.ToInt32()).GetEnumerator();
+
 	IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
 }

@@ -1,7 +1,7 @@
 using NodaTime;
 using NodaTime.Text;
 
-namespace Transacto.Domain; 
+namespace Transacto.Domain;
 
 public readonly struct AccountingPeriod : IEquatable<AccountingPeriod>, IComparable<AccountingPeriod> {
 	public static readonly AccountingPeriod Empty = default;

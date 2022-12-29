@@ -1,4 +1,4 @@
-namespace Transacto.Domain; 
+namespace Transacto.Domain;
 
 public readonly struct AccountName : IEquatable<AccountName> {
 	public const int MaxLength = 256;

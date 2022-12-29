@@ -2,7 +2,7 @@ using System.Reflection;
 using Transacto.Domain;
 using Transacto.Messages;
 
-namespace Transacto.Framework; 
+namespace Transacto.Framework;
 
 public class MessageTypeMapper : IMessageTypeMapper {
 	private readonly IDictionary<string, Type> _storageTypeToType;
@@ -15,7 +15,7 @@ public class MessageTypeMapper : IMessageTypeMapper {
 		new ReflectionMessageTypeMapper(type.Assembly, type.Namespace);
 
 	public static IMessageTypeMapper Create(params IMessageTypeMapper[] messageTypeMappers)
-		=> new CompositeMessageTypeMapper(messageTypeMappers.Concat(new[] {TransactoMessageTypeMapper.Instance})
+		=> new CompositeMessageTypeMapper(messageTypeMappers.Concat(new[] { TransactoMessageTypeMapper.Instance })
 			.ToArray());
 
 	public MessageTypeMapper(IEnumerable<Type> types) {

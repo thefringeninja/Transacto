@@ -1,4 +1,4 @@
-namespace Transacto.Framework.CommandHandling; 
+namespace Transacto.Framework.CommandHandling;
 
 public class CommandResolveException : Exception {
 	public Type CommandType { get; }

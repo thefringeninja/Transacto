@@ -1,6 +1,6 @@
 using NodaTime;
 
-namespace Transacto.Domain; 
+namespace Transacto.Domain;
 
 public class ProfitAndLoss {
 	private static bool IgnoreInactiveAccount(AccountNumber _) => false;

@@ -1,4 +1,4 @@
-namespace Transacto.Framework; 
+namespace Transacto.Framework;
 
 public readonly struct Optional<T> : IEquatable<Optional<T>> {
 	public static readonly Optional<T> Empty = default;

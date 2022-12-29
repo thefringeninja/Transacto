@@ -1,4 +1,4 @@
-namespace Transacto.Domain; 
+namespace Transacto.Domain;
 
 public class PeriodOpenException : Exception {
 	public AccountingPeriod AccountingPeriod { get; }

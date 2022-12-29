@@ -5,7 +5,7 @@ using Transacto.Framework.CommandHandling;
 using Transacto.Infrastructure.EventStore;
 using Transacto.Messages;
 
-namespace Transacto.Plugins.ChartOfAccounts; 
+namespace Transacto.Plugins.ChartOfAccounts;
 
 internal class ChartOfAccountsModule : CommandHandlerModule {
 	public ChartOfAccountsModule(EventStoreClient eventStore, IMessageTypeMapper messageTypeMapper) {

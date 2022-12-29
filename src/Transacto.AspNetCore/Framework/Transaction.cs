@@ -1,6 +1,6 @@
 using Transacto.Infrastructure.EventStore;
 
-namespace Transacto.Framework; 
+namespace Transacto.Framework;
 
 /// <summary>
 /// A <see cref="UnitOfWork"/> transaction.

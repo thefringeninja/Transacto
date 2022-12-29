@@ -1,4 +1,4 @@
-namespace Transacto.Framework; 
+namespace Transacto.Framework;
 
 public class MessageHandler<TReturn> {
 	public MessageHandler(Type message, Func<object, CancellationToken, ValueTask<TReturn>> handler) {

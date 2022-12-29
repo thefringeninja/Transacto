@@ -1,13 +1,14 @@
 using System.Collections.Immutable;
 using Transacto.Domain;
 
-namespace Transacto.Plugins.BalanceSheet; 
+namespace Transacto.Plugins.BalanceSheet;
 
 sealed partial record BalanceSheetReport {
 	public BalanceSheetReport() {
 		LineItems = ImmutableArray<LineItem>.Empty;
 		LineItemGroupings = ImmutableArray<LineItemGrouping>.Empty;
 	}
+
 	public decimal TotalAssets => LineItems
 		.Where(x => Account.For(new AccountNumber(x.AccountNumber)) is AssetAccount)
 		.Sum(x => x.Balance.DecimalValue);

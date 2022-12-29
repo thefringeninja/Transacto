@@ -1,4 +1,4 @@
-namespace Transacto.Framework.CommandHandling; 
+namespace Transacto.Framework.CommandHandling;
 
 public class CommandDispatcher {
 	private readonly MessageHandlerResolver<Checkpoint> _resolver;

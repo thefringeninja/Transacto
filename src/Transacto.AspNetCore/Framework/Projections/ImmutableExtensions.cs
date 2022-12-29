@@ -1,6 +1,6 @@
 // ReSharper disable CheckNamespace
 
-namespace System.Collections.Immutable; 
+namespace System.Collections.Immutable;
 // ReSharper restore CheckNamespace
 
 public static class ImmutableExtensions {

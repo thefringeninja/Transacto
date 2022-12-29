@@ -2,7 +2,7 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using Transacto.Domain;
 
-namespace Transacto; 
+namespace Transacto;
 
 public static class TransactoSerializerOptions {
 	public static readonly JsonSerializerOptions Events = new() {
@@ -16,7 +16,7 @@ public static class TransactoSerializerOptions {
 			IncludeFields = true,
 			PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
 			PropertyNameCaseInsensitive = true,
-			Converters = {new BusinessTransactionConverter(businessTransactionTypes)}
+			Converters = { new BusinessTransactionConverter(businessTransactionTypes) }
 		};
 
 	public static readonly JsonSerializerOptions Commands = new() {

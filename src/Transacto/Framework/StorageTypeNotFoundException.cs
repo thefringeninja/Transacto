@@ -1,4 +1,4 @@
-namespace Transacto.Framework; 
+namespace Transacto.Framework;
 
 public class StorageTypeNotFoundException : Exception {
 	public string StorageType { get; }

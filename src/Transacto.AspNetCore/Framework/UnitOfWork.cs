@@ -1,6 +1,6 @@
 using System.Collections.ObjectModel;
 
-namespace Transacto.Framework; 
+namespace Transacto.Framework;
 
 /// <summary>
 /// Tracks changes of attached aggregates.

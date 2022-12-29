@@ -1,4 +1,4 @@
-namespace Transacto; 
+namespace Transacto;
 
 public interface IPlugin {
 	public string Name { get; }

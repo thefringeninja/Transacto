@@ -1,6 +1,6 @@
 using System.Collections.Immutable;
 
-namespace Transacto.Messages; 
+namespace Transacto.Messages;
 
 public record AccountingPeriodClosing {
 	public required string Period { get; init; }

@@ -1,4 +1,4 @@
-namespace Transacto.Domain; 
+namespace Transacto.Domain;
 
 public readonly struct Debit : IEquatable<Debit> {
 	public Money Amount { get; }
@@ -16,7 +16,7 @@ public readonly struct Debit : IEquatable<Debit> {
 		AccountNumber = accountNumber;
 	}
 
-	public override int GetHashCode() => unchecked((Amount.GetHashCode() * 397) ^ AccountNumber.GetHashCode());  
+	public override int GetHashCode() => unchecked((Amount.GetHashCode() * 397) ^ AccountNumber.GetHashCode());
 	public bool Equals(Debit other) => Amount.Equals(other.Amount) && AccountNumber.Equals(other.AccountNumber);
 	public override bool Equals(object? obj) => obj is Debit other && Equals(other);
 	public static bool operator ==(Debit left, Debit right) => left.Equals(right);

@@ -1,4 +1,4 @@
-namespace Transacto.Framework.CommandHandling; 
+namespace Transacto.Framework.CommandHandling;
 
 public static class CommandResolve {
 	public static MessageHandlerResolver<Checkpoint> WhenEqualToHandlerMessageType(
@@ -14,7 +14,7 @@ public static class CommandResolve {
 			cache.TryGetValue(type, out var handlers);
 
 			return handlers switch {
-				{Length: 1} => handlers[0],
+				{ Length: 1 } => handlers[0],
 				_ => throw new CommandResolveException(type, handlers?.Length ?? 0)
 			};
 		};

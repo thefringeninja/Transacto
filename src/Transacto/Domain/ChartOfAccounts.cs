@@ -1,9 +1,8 @@
 using System.Collections.Immutable;
-using System.Security.Principal;
 using Transacto.Framework;
 using Transacto.Messages;
 
-namespace Transacto.Domain; 
+namespace Transacto.Domain;
 
 public class ChartOfAccounts : AggregateRoot, IAggregateRoot<ChartOfAccounts> {
 	public const string Identifier = "chartOfAccounts";
@@ -23,7 +22,7 @@ public class ChartOfAccounts : AggregateRoot, IAggregateRoot<ChartOfAccounts> {
 	}
 
 	public TAccount Get<TAccount>(AccountNumber accountNumber) where TAccount : Account =>
-		this[accountNumber] is TAccount account ? account : throw new AccountNotFoundException(accountNumber);
+		this[accountNumber] as TAccount ?? throw new AccountNotFoundException(accountNumber);
 
 	protected override void ApplyEvent(object _) => _state = _ switch {
 		AccountDefined e => _state with {

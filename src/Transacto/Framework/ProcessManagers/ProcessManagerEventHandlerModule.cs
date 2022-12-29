@@ -1,6 +1,6 @@
 using System.Collections;
 
-namespace Transacto.Framework.ProcessManagers; 
+namespace Transacto.Framework.ProcessManagers;
 
 public class ProcessManagerEventHandlerModule : IEnumerable<MessageHandler<Checkpoint>> {
 	private readonly List<MessageHandler<Checkpoint>> _handlers;

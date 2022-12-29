@@ -1,4 +1,4 @@
-namespace Transacto.Domain; 
+namespace Transacto.Domain;
 
 public readonly struct AccountNumber : IEquatable<AccountNumber> {
 	public int Value { get; }

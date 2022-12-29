@@ -1,4 +1,4 @@
-namespace Transacto.Plugins; 
+namespace Transacto.Plugins;
 
 public static class Standard {
 	public static readonly IPlugin[] Plugins = {

@@ -1,4 +1,4 @@
-namespace Transacto.Domain; 
+namespace Transacto.Domain;
 
 public readonly struct GeneralLedgerEntrySequenceNumber : IEquatable<GeneralLedgerEntrySequenceNumber> {
 	private readonly int _value;

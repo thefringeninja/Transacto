@@ -1,4 +1,4 @@
-namespace Transacto.Framework; 
+namespace Transacto.Framework;
 
 public interface IMessageHandlerBuilder<TMessage, TReturn> {
 	IMessageHandlerBuilder<TMessage, TReturn> Pipe(

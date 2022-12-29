@@ -1,4 +1,4 @@
-namespace Transacto.Domain; 
+namespace Transacto.Domain;
 
 public readonly struct GeneralLedgerEntryNumber : IEquatable<GeneralLedgerEntryNumber> {
 	public GeneralLedgerEntryNumberPrefix Prefix { get; }

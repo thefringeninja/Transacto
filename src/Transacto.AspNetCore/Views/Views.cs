@@ -1,4 +1,4 @@
-namespace Transacto.Views; 
+namespace Transacto.Views;
 
 internal static class Views {
 }

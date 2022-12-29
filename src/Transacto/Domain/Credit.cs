@@ -1,4 +1,4 @@
-namespace Transacto.Domain; 
+namespace Transacto.Domain;
 
 public readonly struct Credit : IEquatable<Credit> {
 	public AccountNumber AccountNumber { get; }
@@ -16,7 +16,7 @@ public readonly struct Credit : IEquatable<Credit> {
 		AccountNumber = accountNumber;
 	}
 
-	public override int GetHashCode() => unchecked((Amount.GetHashCode() * 397) ^ AccountNumber.GetHashCode()); 
+	public override int GetHashCode() => unchecked((Amount.GetHashCode() * 397) ^ AccountNumber.GetHashCode());
 	public bool Equals(Credit other) => Amount.Equals(other.Amount) && AccountNumber.Equals(other.AccountNumber);
 	public override bool Equals(object? obj) => obj is Credit other && Equals(other);
 	public static bool operator ==(Credit left, Credit right) => left.Equals(right);
