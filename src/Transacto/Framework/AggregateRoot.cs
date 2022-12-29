@@ -1,37 +1,14 @@
-namespace Transacto.Framework; 
+namespace Transacto.Framework;
 
-public abstract class AggregateRoot {
+public abstract class AggregateRoot : IAggregateRoot {
 	private readonly IList<object> _changes;
 
 	public bool HasChanges => _changes.Count > 0;
 	public abstract string Id { get; }
 
-	protected AggregateRoot() {
-		_changes = new List<object>();
-	}
+	protected AggregateRoot() => _changes = new List<object>();
 
-	public Optional<long> LoadFromHistory(IEnumerable<object> events) {
-		var i = -1;
-
-		foreach (var e in events) {
-			Apply(e, true);
-			i++;
-		}
-
-		return i == -1 ? Optional<long>.Empty : i;
-	}
-
-	public async ValueTask<Optional<long>> LoadFromHistory(IAsyncEnumerable<object> events) {
-		var i = -1;
-
-		await foreach (var e in events) {
-			Apply(e, true);
-			i++;
-		}
-
-		return i == -1 ? Optional<long>.Empty : i;
-	}
-
+	public void ReadFromHistory(object @event) => Apply(@event, true);
 	public void MarkChangesAsCommitted() => _changes.Clear();
 	public IEnumerable<object> GetChanges() => _changes.AsEnumerable();
 

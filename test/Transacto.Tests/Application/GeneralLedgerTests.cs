@@ -4,7 +4,7 @@ using Transacto.Domain;
 using Transacto.Messages;
 using Transacto.Testing;
 
-namespace Transacto.Application; 
+namespace Transacto.Application;
 
 public class GeneralLedgerTests {
 	private readonly GeneralLedgerHandlers _handler;
@@ -50,7 +50,8 @@ public class GeneralLedgerTests {
 			})
 			.Then(GeneralLedger.Identifier, new AccountingPeriodClosing {
 				Period = AccountingPeriod.Open(openedOn.OnDayOfMonth(1)).ToString(),
-				GeneralLedgerEntryIds = Array.ConvertAll(generalLedgerEntryIdentifiers, x => x.ToGuid()),
+				GeneralLedgerEntryIds =
+					Array.ConvertAll(generalLedgerEntryIdentifiers, x => x.ToGuid()).ToImmutableArray(),
 				ClosingOn = Time.Format.LocalDateTime(openedOn.OnDayOfMonth(2).AtMidnight()),
 				RetainedEarningsAccountNumber = retainedEarnings.AccountNumber.ToInt32(),
 				ClosingGeneralLedgerEntryId = closingGeneralLedgerEntryIdentifier.ToGuid()
@@ -72,12 +73,14 @@ public class GeneralLedgerTests {
 					Period = AccountingPeriod.Open(openedOn.OnDayOfMonth(1)).ToString(),
 					ClosingOn = Time.Format.LocalDateTime(openedOn.OnDayOfMonth(2).AtMidnight()),
 					RetainedEarningsAccountNumber = retainedEarnings.AccountNumber.ToInt32(),
-					ClosingGeneralLedgerEntryId = closingGeneralLedgerEntryIdentifier.ToGuid()
+					ClosingGeneralLedgerEntryId = closingGeneralLedgerEntryIdentifier.ToGuid(),
+					GeneralLedgerEntryIds = ImmutableArray<Guid>.Empty
 				})
 			.When(new BeginClosingAccountingPeriod {
 				ClosingOn = openedOn.OnDayOfMonth(2).AtMidnight().ToDateTimeUnspecified(),
 				RetainedEarningsAccountNumber = retainedEarnings.AccountNumber.ToInt32(),
-				ClosingGeneralLedgerEntryId = closingGeneralLedgerEntryIdentifier.ToGuid()
+				ClosingGeneralLedgerEntryId = closingGeneralLedgerEntryIdentifier.ToGuid(),
+				GeneralLedgerEntryIds = ImmutableArray<Guid>.Empty
 			})
 			.Throws(new PeriodClosingInProcessException(AccountingPeriod.Open(openedOn.OnDayOfMonth(1))))
 			.Assert(_handler, _facts);
@@ -96,7 +99,8 @@ public class GeneralLedgerTests {
 			.When(new BeginClosingAccountingPeriod {
 				ClosingOn = openedOn.PlusMonths(-1).ToDateTimeUnspecified(),
 				RetainedEarningsAccountNumber = retainedEarnings.AccountNumber.ToInt32(),
-				ClosingGeneralLedgerEntryId = closingGeneralLedgerEntryIdentifier.ToGuid()
+				ClosingGeneralLedgerEntryId = closingGeneralLedgerEntryIdentifier.ToGuid(),
+				GeneralLedgerEntryIds = ImmutableArray<Guid>.Empty
 			})
 			.Throws(new ClosingDateBeforePeriodException(AccountingPeriod.Open(openedOn), openedOn.PlusMonths(-1)))
 			.Assert(_handler, _facts);

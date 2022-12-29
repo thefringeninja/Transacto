@@ -9,8 +9,7 @@ public class GeneralLedgerEntryEventStoreRepository : IGeneralLedgerEntryReposit
 
 	public GeneralLedgerEntryEventStoreRepository(EventStoreClient eventStore,
 		IMessageTypeMapper messageTypeMapper) {
-		_inner = new EventStoreRepository<GeneralLedgerEntry>(eventStore,
-			GeneralLedgerEntry.Factory, messageTypeMapper);
+		_inner = new EventStoreRepository<GeneralLedgerEntry>(eventStore, messageTypeMapper);
 	}
 
 	public async ValueTask<GeneralLedgerEntry> Get(GeneralLedgerEntryIdentifier identifier,

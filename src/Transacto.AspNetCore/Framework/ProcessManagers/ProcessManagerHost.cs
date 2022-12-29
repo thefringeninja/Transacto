@@ -1,8 +1,7 @@
 using System.Text.Json;
 using EventStore.Client;
-using Microsoft.Extensions.Hosting;
 
-namespace Transacto.Framework.ProcessManagers; 
+namespace Transacto.Framework.ProcessManagers;
 
 public class ProcessManagerHost : IHostedService {
 	private readonly EventStoreClient _eventStore;
@@ -41,11 +40,10 @@ public class ProcessManagerHost : IHostedService {
 		return Task.CompletedTask;
 	}
 
-	private async Task SetStreamMetadata(CancellationToken cancellationToken) {
-		await _eventStore.SetStreamMetadataAsync(_checkpointStreamName, StreamState.NoStream,
+	private Task SetStreamMetadata(CancellationToken cancellationToken) =>
+		_eventStore.SetStreamMetadataAsync(_checkpointStreamName, StreamState.NoStream,
 			new StreamMetadata(maxCount: 5), options => options.ThrowOnAppendFailure = false,
 			cancellationToken: cancellationToken);
-	}
 
 	private async Task Subscribe(CancellationToken cancellationToken) {
 		if (Interlocked.CompareExchange(ref _subscribed, 1, 0) == 1) {
@@ -62,12 +60,12 @@ public class ProcessManagerHost : IHostedService {
 		_stoppedRegistration = _stopped.Token.Register(_subscription.Dispose);
 
 		async Task<StreamSubscription> Subscribe() {
-			await using var result = _eventStore.ReadStreamAsync(Direction.Backwards, _checkpointStreamName,
-				StreamPosition.End, cancellationToken: cancellationToken);
-
-			_checkpoint = await result.ReadState == ReadState.StreamNotFound
-				? Checkpoint.None
-				: await result.Select(e => new Checkpoint(e.Event.Data)).FirstOrDefaultAsync(cancellationToken);
+			_checkpoint = await _eventStore.ReadStreamAsync(Direction.Backwards, _checkpointStreamName,
+					StreamPosition.End, cancellationToken: cancellationToken)
+				.Messages
+				.OfType<StreamMessage.Event>()
+				.Select(e => new Checkpoint(e.ResolvedEvent.Event.Data))
+				.FirstOrDefaultAsync(cancellationToken);
 
 			return await _eventStore.SubscribeToAllAsync(
 				_checkpoint.ToEventStorePosition(), HandleAsync, subscriptionDropped: (_, reason, _) => {

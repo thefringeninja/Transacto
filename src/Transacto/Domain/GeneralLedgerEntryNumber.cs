@@ -39,7 +39,7 @@ public readonly struct GeneralLedgerEntryNumber : IEquatable<GeneralLedgerEntryN
 		Prefix == other.Prefix && SequenceNumber == other.SequenceNumber;
 
 	public override bool Equals(object? obj) => obj is GeneralLedgerEntryNumber other && Equals(other);
-	public override int GetHashCode() => HashCode.Combine(Prefix, SequenceNumber);
+	public override int GetHashCode() => unchecked((Prefix.GetHashCode() * 397) ^ SequenceNumber.GetHashCode());
 	public override string ToString() => $"{Prefix}-{SequenceNumber}";
 
 	public static bool operator ==(GeneralLedgerEntryNumber left, GeneralLedgerEntryNumber right) =>

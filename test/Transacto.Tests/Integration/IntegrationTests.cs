@@ -15,7 +15,7 @@ using SqlStreamStore;
 using Transacto.Domain;
 using Transacto.Messages;
 
-namespace Transacto.Integration; 
+namespace Transacto.Integration;
 
 //[Collection(nameof(IntegrationTests))]
 public abstract class IntegrationTests : IAsyncDisposable {
@@ -36,7 +36,7 @@ public abstract class IntegrationTests : IAsyncDisposable {
 		_eventStore = new Builder()
 			.UseContainer()
 			.WithName("transacto-es-test")
-			.UseImage("eventstore/eventstore:21.10.0-buster-slim")
+			.UseImage("eventstore/eventstore:22.10.0-buster-slim")
 			.ReuseIfExists()
 			.ExposePort(2113, 2113)
 			.WithEnvironment("EVENTSTORE_ENABLE_ATOM_PUB_OVER_HTTP=true",
@@ -49,13 +49,6 @@ public abstract class IntegrationTests : IAsyncDisposable {
 			.ReuseIfExists()
 			.ExposePort(5000, 80)
 			.Build();
-	}
-
-	public void Dispose() {
-		HttpClient?.Dispose();
-		_testServer?.Dispose();
-		_streamStore?.Dispose();
-		_eventStore?.Dispose();
 	}
 
 	protected async IAsyncEnumerable<(AccountNumber accountNumber, AccountName accountName)>
@@ -106,7 +99,7 @@ public abstract class IntegrationTests : IAsyncDisposable {
 		await Retry.ExecuteAsync(async () => {
 			using var response =
 				await client.SendAsync(new HttpRequestMessage(HttpMethod.Get, "http://localhost:5000/") {
-					Headers = {Accept = {new MediaTypeWithQualityHeaderValue("application/hal+json")}}
+					Headers = { Accept = { new MediaTypeWithQualityHeaderValue("application/hal+json") } }
 				});
 			if (response.StatusCode >= HttpStatusCode.BadRequest) {
 				throw new Exception();
@@ -148,7 +141,10 @@ public abstract class IntegrationTests : IAsyncDisposable {
 		.WaitAndRetryAsync(100, i => TimeSpan.FromMilliseconds(Math.Pow(i, 2)));
 
 	public ValueTask DisposeAsync() {
-		Dispose();
+		HttpClient?.Dispose();
+		_testServer?.Dispose();
+		_streamStore?.Dispose();
+		_eventStore?.Dispose();
 		return new(Task.CompletedTask);
 	}
 }

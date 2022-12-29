@@ -1,7 +1,5 @@
-using System;
+namespace SomeCompany.PurchaseOrders;
 
-namespace SomeCompany.PurchaseOrders {
-    partial class PurchaseOrderItem {
-        public decimal Total => Convert.ToDecimal(Quantity) * Convert.ToDecimal(UnitPrice);
-    }
+partial record PurchaseOrderItem {
+	public decimal Total => Convert.ToDecimal(Quantity) * Convert.ToDecimal(UnitPrice);
 }

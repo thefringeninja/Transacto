@@ -14,7 +14,7 @@ public class GeneralLedgerEventStoreRepository : IGeneralLedgerRepository {
 	public GeneralLedgerEventStoreRepository(EventStoreClient eventStore, IMessageTypeMapper messageTypeMapper) {
 		_eventStore = eventStore;
 		_messageTypeMapper = messageTypeMapper;
-		_inner = new EventStoreRepository<GeneralLedger>(eventStore, GeneralLedger.Factory, messageTypeMapper);
+		_inner = new EventStoreRepository<GeneralLedger>(eventStore, messageTypeMapper);
 	}
 
 	public async ValueTask<GeneralLedger> Get(CancellationToken cancellationToken = default) {
@@ -22,7 +22,7 @@ public class GeneralLedgerEventStoreRepository : IGeneralLedgerRepository {
 			return generalLedger;
 		}
 
-		await using var events = _eventStore.ReadStreamAsync(Direction.Backwards,
+		var events = _eventStore.ReadStreamAsync(Direction.Backwards,
 			GeneralLedger.Identifier, StreamPosition.End, int.MaxValue, cancellationToken: cancellationToken);
 
 		generalLedger = GeneralLedger.Factory();
@@ -47,9 +47,12 @@ public class GeneralLedgerEventStoreRepository : IGeneralLedgerRepository {
 			}
 		}
 
-		generalLedger.LoadFromHistory(stack);
+		foreach (var e in stack) {
+			generalLedger.ReadFromHistory(e);
+		}
 
-		UnitOfWork.Current.Attach(new(GeneralLedger.Identifier, generalLedger, streamPosition.ToInt64()));
+		UnitOfWork.Current.Attach(new(GeneralLedger.Identifier, generalLedger,
+			new Expected.Revision(StreamRevision.FromStreamPosition(streamPosition))));
 
 		return generalLedger;
 	}

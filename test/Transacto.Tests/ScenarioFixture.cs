@@ -1,6 +1,6 @@
 using AutoFixture;
 
-namespace Transacto; 
+namespace Transacto;
 
 internal class ScenarioFixture : Fixture {
 	public ScenarioFixture() {

@@ -3,9 +3,9 @@ using EventStore.Client;
 namespace Transacto.Framework;
 
 public static class CheckpointExtensions {
-	public static Position ToEventStorePosition(this Checkpoint checkpoint) =>
+	public static FromAll ToEventStorePosition(this Checkpoint checkpoint) =>
 		checkpoint == Checkpoint.None
-			? Position.Start
-			: new Position(BitConverter.ToUInt64(checkpoint.Memory[..8].Span),
-				BitConverter.ToUInt64(checkpoint.Memory[..8].Span));
+			? FromAll.Start
+			: FromAll.After(new Position(BitConverter.ToUInt64(checkpoint.Memory.Span[..8]),
+				BitConverter.ToUInt64(checkpoint.Memory.Span[..8])));
 }

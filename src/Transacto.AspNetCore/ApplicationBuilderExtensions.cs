@@ -1,5 +1,4 @@
 using Inflector;
-using Microsoft.Extensions.DependencyInjection;
 using Transacto;
 using Transacto.Plugins;
 

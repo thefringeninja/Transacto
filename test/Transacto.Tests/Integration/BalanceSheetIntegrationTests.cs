@@ -5,8 +5,9 @@ using NodaTime;
 using Transacto.Domain;
 using Transacto.Messages;
 using Transacto.Plugins.BalanceSheet;
+using Decimal = Transacto.Plugins.BalanceSheet.Decimal;
 
-namespace Transacto.Integration; 
+namespace Transacto.Integration;
 
 public class BalanceSheetIntegrationTests : IntegrationTests {
 	[AutoFixtureData(1)]
@@ -17,10 +18,10 @@ public class BalanceSheetIntegrationTests : IntegrationTests {
 		var accounts = await OpenBooks(createdOn).ToArrayAsync();
 
 		var debits = Array.ConvertAll(amounts, amount =>
-			new Debit(accounts.OrderBy(_ => Guid.NewGuid()).First().accountNumber, amount));
+			new Debit(accounts.MinBy(_ => Guid.NewGuid()).accountNumber, amount));
 
 		var credits = Array.ConvertAll(amounts, amount =>
-			new Credit(accounts.OrderBy(_ => Guid.NewGuid()).First().accountNumber, amount));
+			new Credit(accounts.MinBy(_ => Guid.NewGuid()).accountNumber, amount));
 
 		var journalEntry = new JournalEntry {
 			JournalEntryNumber = 1,
@@ -51,11 +52,9 @@ public class BalanceSheetIntegrationTests : IntegrationTests {
 							? existing.Balance + (item.Type == JournalEntry.Type.Debit
 								? item.Amount
 								: -item.Amount)
-							: new() {
-								DecimalValue = item.Type == JournalEntry.Type.Debit
-									? item.Amount
-									: -item.Amount
-							}
+							: Decimal.Create(item.Type == JournalEntry.Type.Debit
+								? item.Amount
+								: -item.Amount)
 					})).Values.OrderBy(x => x.AccountNumber).ToImmutableArray(),
 			LineItemGroupings = ImmutableArray<LineItemGrouping>.Empty
 		};

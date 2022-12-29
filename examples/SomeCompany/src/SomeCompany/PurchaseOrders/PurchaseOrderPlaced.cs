@@ -1,16 +1,16 @@
-using System;
+using System.Collections.Immutable;
 
-namespace SomeCompany.PurchaseOrders {
-    public class PurchaseOrderPlaced {
-        public Guid PurchaseOrderId { get; set; }
-        public int PurchaseOrderNumber { get; set; }
-        public Guid VendorId { get; set; }
-        public PurchaseOrderItem[] Items { get; set; } = Array.Empty<PurchaseOrderItem>();
+namespace SomeCompany.PurchaseOrders;
 
-        public class PurchaseOrderItem {
-            public Guid InventoryItemId { get; set; }
-            public decimal Quantity { get; set; }
-            public decimal UnitPrice { get; set; }
-        }
-    }
+public record PurchaseOrderPlaced {
+	public Guid PurchaseOrderId { get; init; }
+	public int PurchaseOrderNumber { get; init; }
+	public Guid VendorId { get; init; }
+	public ImmutableArray<PurchaseOrderItem> Items { get; init; } = ImmutableArray<PurchaseOrderItem>.Empty;
+
+	public record PurchaseOrderItem {
+		public Guid InventoryItemId { get; init; }
+		public decimal Quantity { get; init; }
+		public decimal UnitPrice { get; init; }
+	}
 }

@@ -1,7 +1,8 @@
+using System.Collections.Immutable;
 using Transacto.Domain;
 using Transacto.Messages;
 
-namespace Transacto.Application; 
+namespace Transacto.Application;
 
 public class AccountingPeriodClosingHandlers {
 	private readonly IGeneralLedgerRepository _generalLedger;
@@ -20,8 +21,8 @@ public class AccountingPeriodClosingHandlers {
 	}
 
 	public async ValueTask Handle(AccountingPeriodClosing @event, CancellationToken cancellationToken) {
-		var generalLedgerEntryIdentifiers =
-			Array.ConvertAll(@event.GeneralLedgerEntryIds, id => new GeneralLedgerEntryIdentifier(id));
+		var generalLedgerEntryIdentifiers = ImmutableHashSet.CreateRange(
+			ImmutableArray.CreateRange(@event.GeneralLedgerEntryIds, id => new GeneralLedgerEntryIdentifier(id)));
 
 		var chartOfAccounts = await _chartOfAccounts.Get(cancellationToken);
 

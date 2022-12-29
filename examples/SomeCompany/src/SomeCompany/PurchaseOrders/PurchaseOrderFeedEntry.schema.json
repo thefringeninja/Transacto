@@ -1,0 +1,80 @@
+{
+	"$schema": "https://json-schema.org/draft/2019-09/hyper-schema",
+	"type": "object",
+	"title": "Purchase Order Feed Entry",
+	"additionalProperties": false,
+	"required": [
+		"vendorId",
+		"items",
+		"purchaseOrderNumber",
+		"purchaseOrderId",
+		"_events"
+	],
+	"properties": {
+		"purchaseOrderId": {
+			"title": "Purchase Order Id",
+			"$ref": "#/definitions/uuid",
+			"format": "uuid"
+		},
+		"purchaseOrderNumber": {
+			"title": "Purchase Order Number",
+			"type": "integer"
+		},
+		"vendorId": {
+			"title": "Vendor Id",
+			"$ref": "#/definitions/uuid",
+			"x-schema-form": {
+				"key": "vendorId",
+				"type": "uuid"
+			}
+		},
+		"items": {
+			"type": "array",
+			"items": {
+				"$ref": "#/definitions/PurchaseOrderFeedEntryItem"
+			}
+		},
+		"events": {
+			"type": "array",
+			"items": {
+				"type": "string"
+			}
+		}
+	},
+	"definitions": {
+		"PurchaseOrderFeedEntryItem": {
+			"type": "object",
+			"title": "Item",
+			"additionalProperties": false,
+			"required": [
+				"sku",
+				"itemId",
+				"quantity",
+				"unitPrice"
+			],
+			"properties": {
+				"inventoryItemId": {
+					"title": "Item Id",
+					"$ref": "#/definitions/uuid",
+					"x-schema-form": {
+						"key": "itemId",
+						"type": "uuid"
+					}
+				},
+				"quantity": {
+					"type": "number",
+					"title": "Quantity"
+				},
+				"unitPrice": {
+					"type": "number",
+					"title": "Unit Price"
+				}
+			}
+		},
+		"uuid": {
+			"type": "string",
+			"pattern": "^[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{12}$",
+			"format": "uuid"
+		}
+	}
+}

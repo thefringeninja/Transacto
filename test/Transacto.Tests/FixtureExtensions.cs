@@ -3,7 +3,7 @@ using AutoFixture.Kernel;
 using NodaTime;
 using Transacto.Domain;
 
-namespace Transacto; 
+namespace Transacto;
 
 public static class FixtureExtensions {
 	public static void CustomizeAccountName(this IFixture fixture) {

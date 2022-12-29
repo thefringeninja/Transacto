@@ -1,9 +1,9 @@
 namespace Transacto.Messages; 
 
 public record GeneralLedgerEntryCreated {
-	public Guid GeneralLedgerEntryId { get; init; }
-	public string ReferenceNumber { get; init; } = default!;
-	public string CreatedOn { get; init; } = default!;
-	public string Period { get; init; } = default!;
-	public override string ToString() => $"General ledger entry {ReferenceNumber} was created.";
+	public required Guid GeneralLedgerEntryId { get; init; }
+	public required string ReferenceNumber { get; init; }
+	public required string CreatedOn { get; init; }
+	public required string Period { get; init; }
+	public override string ToString() => $"General ledger entry {ReferenceNumber} was created in {Period}.";
 }

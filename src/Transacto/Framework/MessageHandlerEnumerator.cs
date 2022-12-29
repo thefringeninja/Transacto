@@ -1,6 +1,6 @@
 using System.Collections;
 
-namespace Transacto.Framework; 
+namespace Transacto.Framework;
 
 public class MessageHandlerEnumerator<TReturn> : IEnumerator<MessageHandler<TReturn>> {
 	private readonly MessageHandler<TReturn>[] _handlers;
@@ -16,16 +16,12 @@ public class MessageHandlerEnumerator<TReturn> : IEnumerator<MessageHandler<TRet
 
 	public void Reset() => _index = -1;
 
-	public MessageHandler<TReturn> Current {
-		get {
-			if (_index == -1)
-				throw new InvalidOperationException("Enumeration has not started. Call MoveNext.");
-			if (_index == _handlers.Length)
-				throw new InvalidOperationException("Enumeration has already ended. Call Reset.");
-
-			return _handlers[_index];
-		}
-	}
+	public MessageHandler<TReturn> Current => _index switch {
+		-1 => throw new InvalidOperationException("Enumeration has not started. Call MoveNext."),
+		var index when index == _handlers.Length => throw new InvalidOperationException(
+			"Enumeration has already ended. Call Reset."),
+		_ => _handlers[_index]
+	};
 
 	object IEnumerator.Current => Current;
 

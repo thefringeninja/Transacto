@@ -1,7 +1,7 @@
 using AutoFixture;
 using NodaTime;
 
-namespace Transacto.Domain; 
+namespace Transacto.Domain;
 
 public class AccountingPeriodTests {
 	[AutoFixtureData]
@@ -48,13 +48,12 @@ public class AccountingPeriodTests {
 		var daysInMonth = CalendarSystem.Iso.GetDaysInMonth(date.Year, date.Month);
 
 		for (var day = 0; day < daysInMonth; day++) {
-			yield return new object[] {period, date.PlusDays(day), true};
+			yield return new object[] { period, date.PlusDays(day), true };
 		}
 
-		yield return new object[] {period, date.PlusDays(daysInMonth), false};
+		yield return new object[] { period, date.PlusDays(daysInMonth), false };
 
-		yield return new object[] {period, date.PlusDays(-1), false};
-
+		yield return new object[] { period, date.PlusDays(-1), false };
 	}
 
 	[MemberData(nameof(ContainsCases))]
@@ -63,8 +62,8 @@ public class AccountingPeriodTests {
 	}
 
 	public static IEnumerable<object[]> MonthOutOfRangeCases() {
-		yield return new object[] {0};
-		yield return new object[] {13};
+		yield return new object[] { 0 };
+		yield return new object[] { 13 };
 	}
 
 	[MemberData(nameof(MonthOutOfRangeCases))]
@@ -74,11 +73,11 @@ public class AccountingPeriodTests {
 	}
 
 	public static IEnumerable<object[]> InvalidValueCases() {
-		yield return new object[] {string.Empty};
-		yield return new object[] {"a"};
-		yield return new object[] {"0"};
-		yield return new object[] {"aaaaaa"};
-		yield return new object[] {"0110000"};
+		yield return new object[] { string.Empty };
+		yield return new object[] { "a" };
+		yield return new object[] { "0" };
+		yield return new object[] { "aaaaaa" };
+		yield return new object[] { "0110000" };
 	}
 
 	[MemberData(nameof(InvalidValueCases))]

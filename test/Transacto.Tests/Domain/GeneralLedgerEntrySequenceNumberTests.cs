@@ -1,4 +1,4 @@
-namespace Transacto.Domain; 
+namespace Transacto.Domain;
 
 public class GeneralLedgerEntrySequenceNumberTests {
 	[AutoFixtureData]
@@ -25,7 +25,7 @@ public class GeneralLedgerEntrySequenceNumberTests {
 		Assert.Equal(nameof(value), ex.ParamName);
 	}
 
-		public void SequenceNumberZeroThrows() {
+	public void SequenceNumberZeroThrows() {
 		const int value = 0;
 		var ex = Assert.Throws<ArgumentOutOfRangeException>(() =>
 			new GeneralLedgerEntrySequenceNumber(value));

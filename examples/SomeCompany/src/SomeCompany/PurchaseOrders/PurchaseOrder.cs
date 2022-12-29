@@ -1,49 +1,34 @@
-using System.Collections.Generic;
-using System.Linq;
-using System.Text.Json.Serialization;
+using System.Collections.Immutable;
 using Transacto.Domain;
 
-namespace SomeCompany.PurchaseOrders {
-	public partial class PurchaseOrder : IBusinessTransaction {
-		public GeneralLedgerEntryNumber ReferenceNumber => new GeneralLedgerEntryNumber();
+namespace SomeCompany.PurchaseOrders;
 
-		public void Apply(GeneralLedgerEntry generalLedgerEntry, AccountIsDeactivated accountIsDeactivated) {
-			var (accountsPayable, inventoryInTransit) =
-				PurchaseOrderItems.Aggregate((new Credit(new AccountNumber(2150)), new Debit(new AccountNumber(1400))),
-					Accumulate);
+public partial record PurchaseOrder : IBusinessTransaction {
+	public GeneralLedgerEntrySequenceNumber SequenceNumber => new(PurchaseOrderNumber);
 
-			generalLedgerEntry.ApplyCredit(accountsPayable, accountIsDeactivated);
-			generalLedgerEntry.ApplyDebit(inventoryInTransit, accountIsDeactivated);
-			//generalLedgerEntry.ApplyTransaction(this);
-		}
+	public IEnumerable<object> GetTransactionItems() {
+		var (accountsPayable, inventoryInTransit) = Aggregate();
 
-		private static (Credit, Debit) Accumulate((Credit, Debit) _, PurchaseOrderItem item) {
-			var (accountsPayable, inventoryInTransit) = _;
-			return (accountsPayable + item.Total, inventoryInTransit + item.Total);
-		}
-
-		public IEnumerable<object> GetAdditionalChanges() {
-			yield return new PurchaseOrderPlaced {
-				PurchaseOrderId = PurchaseOrderId,
-				VendorId = VendorId,
-				PurchaseOrderNumber = PurchaseOrderNumber,
-				Items = PurchaseOrderItems
-					.Select(x => new PurchaseOrderPlaced.PurchaseOrderItem {
-						Quantity = (decimal)x.Quantity,
-						UnitPrice = (decimal)x.UnitPrice,
-						InventoryItemId = x.ItemId
-					}).ToArray()
-			};
-		}
-
-		public int? Version { get; set; }
-
-		[JsonIgnore]
-		public long Position { get; set; }
-
-		public GeneralLedgerEntrySequenceNumber SequenceNumber => new GeneralLedgerEntrySequenceNumber()
-		public IEnumerable<object> GetTransactionItems() {
-			throw new System.NotImplementedException();
-		}
+		yield return accountsPayable;
+		yield return inventoryInTransit;
+		yield return new PurchaseOrderPlaced {
+			PurchaseOrderId = PurchaseOrderId,
+			VendorId = VendorId,
+			PurchaseOrderNumber = PurchaseOrderNumber,
+			Items = ImmutableArray.CreateRange(PurchaseOrderItems,
+				x => new PurchaseOrderPlaced.PurchaseOrderItem {
+					Quantity = (decimal)x.Quantity,
+					UnitPrice = (decimal)x.UnitPrice,
+					InventoryItemId = x.ItemId
+				})
+		};
 	}
+
+	private static (Credit, Debit) Accumulate(
+		(Credit accountsPayable, Debit inventoryInTransit) accounts, PurchaseOrderItem item) =>
+		(accounts.accountsPayable + item.Total, accounts.inventoryInTransit + item.Total);
+
+	private (Credit accountsPayable, Debit inventoryInTransit) Aggregate() => PurchaseOrderItems.Aggregate(
+		(new Credit(new AccountNumber(2150)), new Debit(new AccountNumber(1400))),
+		Accumulate);
 }

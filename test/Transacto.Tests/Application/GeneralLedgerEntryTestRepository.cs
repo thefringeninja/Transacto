@@ -1,13 +1,13 @@
 using Transacto.Domain;
 using Transacto.Testing;
 
-namespace Transacto.Application; 
+namespace Transacto.Application;
 
 internal class GeneralLedgerEntryTestRepository : IGeneralLedgerEntryRepository {
 	private readonly FactRecorderRepository<GeneralLedgerEntry> _inner;
 
 	public GeneralLedgerEntryTestRepository(IFactRecorder facts) {
-		_inner = new FactRecorderRepository<GeneralLedgerEntry>(facts, GeneralLedgerEntry.Factory);
+		_inner = new FactRecorderRepository<GeneralLedgerEntry>(facts);
 	}
 
 	public async ValueTask<GeneralLedgerEntry> Get(GeneralLedgerEntryIdentifier identifier,

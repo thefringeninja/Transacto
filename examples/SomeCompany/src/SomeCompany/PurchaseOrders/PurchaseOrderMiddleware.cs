@@ -1,81 +1,66 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Net;
 using Hallo;
-using Microsoft.AspNetCore.Builder;
-using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Routing;
-using Transacto;
+using Microsoft.AspNetCore.Mvc;
 using Transacto.Framework;
+using Transacto.Framework.Http;
 
-namespace SomeCompany.PurchaseOrders {
-	public static class PurchaseOrderMiddleware {
-		public static void UsePurchaseOrders(this IEndpointRouteBuilder builder,
-			PurchaseOrderRepository purchaseOrders) {
-			builder
-				.MapGet(string.Empty, async context => {
-					var orders = await purchaseOrders.List(context.RequestAborted);
+namespace SomeCompany.PurchaseOrders;
 
-					return new HalResponse(context.Request, PurchaseOrderListRepresentation.Instance,
-						ETag.Create(orders.Max(x => x.Position)), new Optional<object>(orders));
-				})
-				.MapPost(string.Empty, async (HttpContext context, PurchaseOrder purchaseOrder) => {
-					if (purchaseOrder.PurchaseOrderId == Guid.Empty) {
-						purchaseOrder.PurchaseOrderId = Guid.NewGuid();
-					}
+public static class PurchaseOrderMiddleware {
+	public static void UsePurchaseOrders(this IEndpointRouteBuilder builder, PurchaseOrderRepository purchaseOrders) {
+		builder.MapGet(string.Empty, async (CancellationToken ct) => {
+			var orders = await purchaseOrders.List(ct);
 
-					await purchaseOrders.Save(purchaseOrder, context.RequestAborted);
+			return Results.Extensions.Hal(orders, Checkpoint.None, PurchaseOrderListRepresentation.Instance);
+		});
 
-					return new HalResponse(context.Request, PurchaseOrderRepresentation.Instance,
-						ETag.Create(purchaseOrder.Version), purchaseOrder) {
-						StatusCode = HttpStatusCode.Created,
-						Headers = {
-							Location = new Uri(purchaseOrder.PurchaseOrderId.ToString())
-						}
-					};
-				})
-				.MapGet("{purchaseOrderId:guid}", async context => {
-					if (!context.TryParseGuid(nameof(PurchaseOrder.PurchaseOrderId), out var purchaseOrderId)) {
-						return new HalResponse(context.Request, PurchaseOrderRepresentation.Instance) {
-							StatusCode = HttpStatusCode.NotFound
-						};
-					}
+		builder.MapPost(string.Empty, async ([FromBody] PurchaseOrder purchaseOrder, CancellationToken ct) => {
+			if (purchaseOrder.PurchaseOrderId == Guid.Empty) {
+				purchaseOrder = purchaseOrder with {
+					PurchaseOrderId = Guid.NewGuid()
+				};
+			}
 
-					var order = await purchaseOrders.Get(purchaseOrderId, context.RequestAborted);
+			await purchaseOrders.Save(purchaseOrder, -1, ct);
 
-					return new HalResponse(context.Request, PurchaseOrderRepresentation.Instance,
-						ETag.Create(order.HasValue ? order.Value.Position : new long?()), order) {
-						StatusCode = order.HasValue ? HttpStatusCode.OK : HttpStatusCode.NotFound
-					};
-				})
-				.MapPut("{purchaseOrderId:guid}", async (HttpContext context, PurchaseOrder purchaseOrder) => {
-					if (!context.TryParseGuid(nameof(purchaseOrder.PurchaseOrderId), out var purchaseOrderId)) {
-						return new HalResponse(context.Request, PurchaseOrderRepresentation.Instance) {
-							StatusCode = HttpStatusCode.NotFound
-						};
-					}
+			return Results.Extensions.Hal(purchaseOrder, 0.ToCheckpoint(),
+				PurchaseOrderRepresentation.Instance, HttpStatusCode.Created);
+		});
 
-					purchaseOrder.PurchaseOrderId = purchaseOrderId;
+		builder.MapGet("{purchaseOrderId:guid}", async (Guid purchaseOrderId, CancellationToken ct) =>
+			await purchaseOrders.Get(purchaseOrderId, ct) switch {
+				{ BusinessTransaction.HasValue: true } envelope => Results.Extensions.Hal(
+					envelope.BusinessTransaction.Value, envelope.ExpectedRevision.ToCheckpoint(),
+					PurchaseOrderRepresentation.Instance),
+				_ => Results.Extensions.Hal<PurchaseOrder>(null, Checkpoint.None,
+					PurchaseOrderRepresentation.Instance, HttpStatusCode.NotFound)
+			});
 
-					await purchaseOrders.Save(purchaseOrder, context.RequestAborted);
+		builder.MapPut("{purchaseOrderId:guid}", async (Guid purchaseOrderId, DocumentRevision documentRevision,
+			[FromBody] PurchaseOrder purchaseOrder, CancellationToken ct) => {
+			purchaseOrder = purchaseOrder with {
+				PurchaseOrderId = purchaseOrderId
+			};
 
-					return new HalResponse(context.Request, PurchaseOrderRepresentation.Instance,
-						ETag.Create(purchaseOrder.Version), purchaseOrder);
-				})
-				.MapBusinessTransaction<PurchaseOrder>("{purchaseOrderId:guid}");
-		}
+			await purchaseOrders.Save(purchaseOrder, documentRevision.Value.HasValue
+				? documentRevision.Value.Value + 1
+				: -1, ct);
+
+			return Results.Extensions.Hal(purchaseOrder, Checkpoint.None, PurchaseOrderRepresentation.Instance);
+		});
+
+		builder.MapBusinessTransaction<PurchaseOrder>("{purchaseOrderId:guid}");
+	}
 
 
-		private class PurchaseOrderListRepresentation : Hal<IEnumerable<PurchaseOrder>>,
-			IHalState<IEnumerable<PurchaseOrder>> {
-			public static readonly PurchaseOrderListRepresentation Instance = new PurchaseOrderListRepresentation();
-			public object StateFor(IEnumerable<PurchaseOrder> resource) => resource.ToArray();
-		}
+	private class PurchaseOrderListRepresentation : Hal<IEnumerable<PurchaseOrder>>,
+		IHalState<IEnumerable<PurchaseOrder>> {
+		public static readonly PurchaseOrderListRepresentation Instance = new();
+		public object StateFor(IEnumerable<PurchaseOrder> resource) => resource.ToArray();
+	}
 
-		private class PurchaseOrderRepresentation : Hal<PurchaseOrder>, IHalState<PurchaseOrder> {
-			public object StateFor(PurchaseOrder resource) => resource;
-			public static readonly PurchaseOrderRepresentation Instance = new PurchaseOrderRepresentation();
-		}
+	private class PurchaseOrderRepresentation : Hal<PurchaseOrder>, IHalState<PurchaseOrder> {
+		public object StateFor(PurchaseOrder resource) => resource;
+		public static readonly PurchaseOrderRepresentation Instance = new();
 	}
 }

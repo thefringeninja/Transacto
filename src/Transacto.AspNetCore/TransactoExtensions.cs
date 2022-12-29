@@ -1,16 +1,13 @@
 using EventStore.Client;
-using Microsoft.AspNetCore.Builder;
-using Microsoft.Extensions.DependencyInjection;
 using Npgsql;
 using Serilog;
 using SqlStreamStore;
 
 namespace Transacto;
 
-public class TransactoHost {
-	public static WebApplicationBuilder Create(EventStoreClient eventStore,
+public static class TransactoExtensions {
+	public static WebApplicationBuilder AddTransacto(this WebApplicationBuilder builder, EventStoreClient eventStore,
 		NpgsqlConnectionStringBuilder connectionStringBuilder, IStreamStore streamStore, params IPlugin[] plugins) {
-		var builder = WebApplication.CreateBuilder();
 		builder.Logging.AddSerilog();
 
 		builder.Services

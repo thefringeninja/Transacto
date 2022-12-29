@@ -49,7 +49,7 @@ public class UnitOfWork {
 	/// <param name="streamName">The aggregate identifier.</param>
 	/// <param name="aggregate">The aggregate if found, otherwise <c>null</c>.</param>
 	/// <returns><c>true</c> if the aggregate was found, otherwise <c>false</c>.</returns>
-	public bool TryGet(string streamName, out AggregateRoot? aggregate) {
+	public bool TryGet(string streamName, out IAggregateRoot? aggregate) {
 		aggregate = null;
 		if (!_transactions.TryGetValue(streamName, out var transaction)) {
 			return false;

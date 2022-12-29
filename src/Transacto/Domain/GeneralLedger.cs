@@ -1,12 +1,13 @@
+using System.Collections.Immutable;
 using NodaTime;
 using Transacto.Framework;
 using Transacto.Messages;
 
 namespace Transacto.Domain; 
 
-public class GeneralLedger : AggregateRoot {
+public class GeneralLedger : AggregateRoot, IAggregateRoot<GeneralLedger> {
 	public const string Identifier = "generalLedger";
-	public static readonly Func<GeneralLedger> Factory = () => new GeneralLedger();
+	public static GeneralLedger Factory() => new();
 
 	private State _state;
 
@@ -53,7 +54,7 @@ public class GeneralLedger : AggregateRoot {
 
 	public void BeginClosingPeriod(EquityAccount retainedEarningsAccount,
 		GeneralLedgerEntryIdentifier closingGeneralLedgerEntryIdentifier,
-		GeneralLedgerEntryIdentifier[] generalLedgerEntryIdentifiers, LocalDateTime closingOn) {
+		ImmutableArray<GeneralLedgerEntryIdentifier> generalLedgerEntryIdentifiers, LocalDateTime closingOn) {
 		if (_state.PeriodClosing) {
 			throw new PeriodClosingInProcessException(_state.AccountingPeriod);
 		}
@@ -62,14 +63,15 @@ public class GeneralLedger : AggregateRoot {
 
 		Apply(new AccountingPeriodClosing {
 			Period = _state.AccountingPeriod.ToString(),
-			GeneralLedgerEntryIds = Array.ConvertAll(generalLedgerEntryIdentifiers, id => id.ToGuid()),
+			GeneralLedgerEntryIds =
+				ImmutableArray.CreateRange(generalLedgerEntryIdentifiers, identifier => identifier.ToGuid()),
 			ClosingOn = Time.Format.LocalDateTime(closingOn),
 			RetainedEarningsAccountNumber = retainedEarningsAccount.AccountNumber.ToInt32(),
 			ClosingGeneralLedgerEntryId = closingGeneralLedgerEntryIdentifier.ToGuid()
 		});
 	}
 
-	public void CompleteClosingPeriod(GeneralLedgerEntryIdentifier[] generalLedgerEntryIdentifiers,
+	public void CompleteClosingPeriod(ImmutableHashSet<GeneralLedgerEntryIdentifier> generalLedgerEntryIdentifiers,
 		GeneralLedgerEntry closingEntry, TrialBalance trialBalance) {
 		if (!_state.PeriodClosing) {
 			throw new PeriodOpenException(_state.AccountingPeriod);
@@ -82,16 +84,16 @@ public class GeneralLedger : AggregateRoot {
 		trialBalance.Transfer(closingEntry);
 
 		trialBalance.MustBeInBalance();
-
+		
 		Apply(new AccountingPeriodClosed {
-			GeneralLedgerEntryIds =
-				Array.ConvertAll(generalLedgerEntryIdentifiers, identifier => identifier.ToGuid()),
+			GeneralLedgerEntryIds = ImmutableArray.CreateRange<GeneralLedgerEntryIdentifier, Guid>(
+				generalLedgerEntryIdentifiers.ToImmutableArray(), identifier => identifier.ToGuid()),
 			ClosingGeneralLedgerEntryId = closingEntry.Identifier.ToGuid(),
 			Period = _state.AccountingPeriod.ToString(),
 			Balance = trialBalance.Select(x => new BalanceLineItem {
 				Amount = x.Balance.ToDecimal(),
 				AccountNumber = x.AccountNumber.ToInt32()
-			}).ToArray()
+			}).ToImmutableArray()
 		});
 	}
 

@@ -22,10 +22,6 @@ public class GeneralLedgerEntryHandlers {
 	public async ValueTask Handle(PostGeneralLedgerEntry command, CancellationToken cancellationToken = default) {
 		var generalLedger = await _generalLedger.Get(cancellationToken);
 
-		if (command.BusinessTransaction == null) {
-			throw new NotImplementedException();
-		}
-
 		var entry = generalLedger.Create(new GeneralLedgerEntryIdentifier(command.GeneralLedgerEntryId),
 			command.BusinessTransaction, _getPrefix(command.BusinessTransaction),
 			OffsetDateTime.FromDateTimeOffset(command.CreatedOn).LocalDateTime, _accountIsDeactivated);

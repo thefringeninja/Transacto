@@ -1,8 +1,8 @@
 namespace Transacto.Messages; 
 
 public record BalanceLineItem {
-	public int AccountNumber { get; init; }
-	public decimal Amount { get; init; }
+	public required int AccountNumber { get; init; }
+	public required decimal Amount { get; init; }
 
 	public void Deconstruct(out int accountNumber, out decimal amount) {
 		accountNumber = AccountNumber;

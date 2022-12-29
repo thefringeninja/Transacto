@@ -1,3 +1,4 @@
+using System.Collections.Immutable;
 using System.Text;
 using System.Text.Json;
 using EventStore.Client;
@@ -5,7 +6,7 @@ using NodaTime;
 using Transacto.Domain;
 using Transacto.Messages;
 
-namespace Transacto.Integration; 
+namespace Transacto.Integration;
 
 public class AccountingPeriodClosingProcessIntegrationTests : IntegrationTests {
 	[AutoFixtureData(1)]
@@ -14,7 +15,7 @@ public class AccountingPeriodClosingProcessIntegrationTests : IntegrationTests {
 		var accountingPeriodClosedSource = new TaskCompletionSource<ResolvedEvent>();
 		var checkpointSource = new TaskCompletionSource<Position>();
 
-		await EventStoreClient.SubscribeToAllAsync((_, e, _) => {
+		await EventStoreClient.SubscribeToAllAsync(FromAll.Start, (_, e, _) => {
 			switch (e.Event.EventType) {
 				case nameof(AccountingPeriodClosed):
 					accountingPeriodClosedSource.TrySetResult(e);
@@ -41,7 +42,8 @@ public class AccountingPeriodClosingProcessIntegrationTests : IntegrationTests {
 		var command = new BeginClosingAccountingPeriod {
 			ClosingOn = createdOn.ToDateTimeUnspecified(),
 			ClosingGeneralLedgerEntryId = closingEntryIdentifier.ToGuid(),
-			RetainedEarningsAccountNumber = 3900
+			RetainedEarningsAccountNumber = 3900,
+			GeneralLedgerEntryIds = ImmutableArray<Guid>.Empty
 		};
 
 		await HttpClient.SendCommand("/general-ledger", command, TransactoSerializerOptions.Commands);

@@ -3,10 +3,10 @@ using NodaTime;
 using Transacto.Framework;
 using Transacto.Messages;
 
-namespace Transacto.Domain; 
+namespace Transacto.Domain;
 
-public class GeneralLedgerEntry : AggregateRoot {
-	public static readonly Func<GeneralLedgerEntry> Factory = () => new GeneralLedgerEntry();
+public class GeneralLedgerEntry : AggregateRoot, IAggregateRoot<GeneralLedgerEntry> {
+	public static GeneralLedgerEntry Factory() => new();
 
 	private State _state;
 
@@ -41,11 +41,13 @@ public class GeneralLedgerEntry : AggregateRoot {
 		AccountIsDeactivated accountIsDeactivated) : this(identifier,
 		new GeneralLedgerEntryNumber(prefix, businessTransaction.SequenceNumber), accountingPeriod, createdOn) {
 		foreach (var item in businessTransaction.GetTransactionItems()) {
-			if (item is Credit credit) {
-				ApplyCredit(credit, accountIsDeactivated);
-			}
-			else if (item is Debit debit) {
-				ApplyDebit(debit, accountIsDeactivated);
+			switch (item) {
+				case Credit credit:
+					ApplyCredit(credit, accountIsDeactivated);
+					break;
+				case Debit debit:
+					ApplyDebit(debit, accountIsDeactivated);
+					break;
 			}
 		}
 

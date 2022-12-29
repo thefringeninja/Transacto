@@ -11,61 +11,84 @@ using SerilogTimings;
 namespace Transacto;
 
 public class TestProject : ITestProject {
-	private static readonly string[] LifecycleMethods = { "InitializeAsync", "DisposeAsync" };
+	private static readonly string[] LifecycleMethods = { "InitializeAsync", "DisposeAsync", "Dispose" };
 	private static readonly IEnumerable<object[]> NoParameters = new[] { Array.Empty<object>() };
 
+	static TestProject() {
+		Log.Logger = new LoggerConfiguration()
+			.Enrich.FromLogContext()
+			.WriteTo.Console(
+				outputTemplate:
+				"{Message:lj}{NewLine}{Exception}",
+				theme: AnsiConsoleTheme.Literate)
+			.MinimumLevel.Override("Microsoft.AspNetCore", LogEventLevel.Warning)
+			.CreateLogger();
+	}
+
 	public void Configure(TestConfiguration configuration, TestEnvironment environment) {
-		var discovery = new CustomDiscovery();
-		var execution = new CustomExecution();
-
-		configuration.Conventions.Add(discovery, execution);
+		configuration.Conventions.Add(new TestDiscovery(), new ParallelExecution());
+		configuration.Conventions.Add(new IntegrationTestDiscovery(), new SerialExecution());
 	}
 
-	private class CustomDiscovery : IDiscovery {
-		public IEnumerable<Type> TestClasses(IEnumerable<Type> concreteClasses)
-			=> concreteClasses.Where(x => x.Name.EndsWith("Tests"));
+	private class TestDiscovery : IDiscovery {
+		public IEnumerable<Type> TestClasses(IEnumerable<Type> concreteClasses) => concreteClasses
+			.Where(x => x.Name.EndsWith("Tests") && !x.Name.EndsWith("IntegrationTests"))
+			.Shuffle();
 
-		public IEnumerable<MethodInfo> TestMethods(IEnumerable<MethodInfo> publicMethods)
-			=> publicMethods
-				.Where(x => !LifecycleMethods.Contains(x.Name))
-				.Shuffle();
+		public IEnumerable<MethodInfo> TestMethods(IEnumerable<MethodInfo> publicMethods) => publicMethods
+			.Where(x => !LifecycleMethods.Contains(x.Name))
+			.Shuffle();
 	}
 
-	private class CustomExecution : IExecution {
+	private class IntegrationTestDiscovery : IDiscovery {
+		public IEnumerable<Type> TestClasses(IEnumerable<Type> concreteClasses) => concreteClasses
+			.Where(x => x.Name.EndsWith("IntegrationTests"));
+
+		public IEnumerable<MethodInfo> TestMethods(IEnumerable<MethodInfo> publicMethods) => publicMethods
+			.Where(x => !LifecycleMethods.Contains(x.Name));
+	}
+
+
+	private class ParallelExecution : IExecution {
+		public Task Run(TestSuite testSuite) => Task.WhenAll(
+			from testClass in testSuite.TestClasses
+			from test in testClass.Tests
+			from result in RunTest(testClass, test)
+			select result);
+	}
+
+	private class SerialExecution : IExecution {
 		public async Task Run(TestSuite testSuite) {
-			Log.Logger = new LoggerConfiguration()
-				.Enrich.FromLogContext()
-				.WriteTo.Console(
-					outputTemplate:
-					"{Message:lj}{NewLine}{Exception}",
-					theme: AnsiConsoleTheme.Literate)
-				.MinimumLevel.Override("Microsoft.AspNetCore", LogEventLevel.Warning)
-				.CreateLogger();
-
 			foreach (var testClass in testSuite.TestClasses) {
 				foreach (var test in testClass.Tests) {
-					using var testOp = Operation.At(LogEventLevel.Information, LogEventLevel.Error)
-						.Begin("{TestName}", test.Name);
-
-					var results = await RunTest().ToArrayAsync();
-
-					if (results.Any(x => x is Failed)) {
-						testOp.Abandon();
-					} else {
-						testOp.Complete();
-					}
-
-					async IAsyncEnumerable<TestResult> RunTest() {
-						foreach (var parameters in UsingInputAttributes(test)) {
-							var instance = testClass.Construct(GetConstructorParameters(testClass));
-
-							await TryLifecycleMethod(testClass, instance, "InitializeAsync");
-							yield return await test.Run(instance, parameters);
-							await TryLifecycleMethod(testClass, instance, "DisposeAsync");
-						}
+					foreach (var result in RunTest(testClass, test)) {
+						await result;
 					}
 				}
 			}
+		}
+	}
+
+	private static IEnumerable<Task> RunTest(TestClass testClass, Test test) =>
+		from parameters in UsingInputAttributes(test)
+		let instance = testClass.Construct(GetConstructorParameters(testClass))
+		select RunSingleTest(testClass, test, instance, parameters);
+
+	private static async Task RunSingleTest(TestClass testClass, Test test, object instance,
+		object[] parameters) {
+		using var testOp = Operation.At(LogEventLevel.Information, LogEventLevel.Error)
+			.Begin("{TestName}({Parameters})", test.Name, parameters);
+
+		try {
+			await TryLifecycleMethod(testClass, instance, "InitializeAsync");
+			var result = await test.Run(instance, parameters);
+			if (result is Failed failed) {
+				testOp.Abandon(failed.Reason);
+			}
+
+			testOp.Complete();
+		} finally {
+			await TryLifecycleMethod(testClass, instance, "DisposeAsync");
 		}
 	}
 
@@ -75,12 +98,8 @@ public class TestProject : ITestProject {
 		.ToArray();
 
 
-	private static async Task TryLifecycleMethod(TestClass testClass, object instance, string name) {
-		var method = testClass.Type.GetMethod(name);
-
-		if (method != null)
-			await method.Call(instance);
-	}
+	private static Task TryLifecycleMethod(TestClass testClass, object instance, string name) =>
+		testClass.Type.GetMethod(name)?.Call(instance) ?? Task.CompletedTask;
 
 	private static IEnumerable<object[]> UsingInputAttributes(Test test)
 		=> test.HasParameters

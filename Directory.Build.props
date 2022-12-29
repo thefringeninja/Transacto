@@ -1,11 +1,12 @@
 <Project>
 	<PropertyGroup>
-		<TargetFramework>net6.0</TargetFramework>
+		<TargetFramework>net7.0</TargetFramework>
 		<RootNamespace>Transacto</RootNamespace>
 		<Nullable>enable</Nullable>
 		<NullableContextOptions>enable</NullableContextOptions>
 		<TreatWarningsAsErrors>true</TreatWarningsAsErrors>
-		<LangVersion>10.0</LangVersion>
+		<EnablePreviewFeatures>True</EnablePreviewFeatures>
+		<LangVersion>11.0</LangVersion>
 		<PreserveCompilationContext>true</PreserveCompilationContext>
 		<RestoreSources>
 			$(RestoreSources);
@@ -14,8 +15,4 @@
 		</RestoreSources>
 		<ImplicitUsings>enable</ImplicitUsings>
 	</PropertyGroup>
-	
-	<ItemGroup>
-		<FrameworkReference Include="Microsoft.AspNetCore.App" />
-	</ItemGroup>
 </Project>

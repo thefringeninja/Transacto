@@ -1,4 +1,4 @@
-namespace Transacto.Domain; 
+namespace Transacto.Domain;
 
 public class GeneralLedgerEntryIdentifierTests {
 	[AutoFixtureData]
@@ -20,7 +20,7 @@ public class GeneralLedgerEntryIdentifierTests {
 		Assert.True(left != right);
 	}
 
-		public void EmptyValueThrows() {
+	public void EmptyValueThrows() {
 		Assert.Throws<ArgumentOutOfRangeException>(() => new GeneralLedgerEntryIdentifier(Guid.Empty));
 	}
 

@@ -1,16 +1,13 @@
 using System.Collections.Concurrent;
-using System.Net;
 using System.Text.Json;
 using Hallo;
-using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Routing;
-using Microsoft.Extensions.DependencyInjection;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.Net.Http.Headers;
 using Transacto;
 using Transacto.Domain;
 using Transacto.Framework.CommandHandling;
+using Transacto.Framework.Http;
 using Transacto.Messages;
-using Results = Transacto.Framework.Http.Results;
 
 // ReSharper disable CheckNamespace
 namespace Microsoft.AspNetCore.Builder; 
@@ -28,35 +25,30 @@ public static partial class ApplicationBuilderExtensions {
 
 
 	private static IEndpointRouteBuilder MapCommandsInternal(this IEndpointRouteBuilder builder, string route,
-		JsonSerializerOptions serializerOptions,
-		params Type[] commandTypes) {
+		JsonSerializerOptions serializerOptions, params Type[] commandTypes) {
 		var map = commandTypes.ToDictionary(commandType => commandType.Name);
 		var schemaCache = new JsonCommandSchemaCache(commandTypes);
-		CommandDispatcher? dispatcher = null;
-
-		builder.MapPost(route, async (HttpRequest request) => {
-			dispatcher ??= new CommandDispatcher(request.HttpContext.RequestServices.GetServices<CommandHandlerModule>());
-
+		builder.MapPost(route, async (HttpRequest request, [FromServices] CommandDispatcher dispatcher) => {
 			if (!MediaTypeHeaderValue.TryParse(request.ContentType, out var mediaType)) {
 				return Results.Text($"No media type specified.",
-					HttpStatusCode.UnsupportedMediaType);
+					statusCode: 415);
 			}
 
 			if (!mediaType.MediaType.Equals("multipart/form-data", StringComparison.OrdinalIgnoreCase)) {
 				return Results.Text($"Media type '{mediaType.MediaType}' not supported.",
-					HttpStatusCode.UnsupportedMediaType);
+					statusCode: 415);
 			}
 
 			if (!request.Form.TryGetValue("command", out var commandName)) {
-				return Results.Text("No command type was specified.", HttpStatusCode.BadRequest);
+				return Results.Text("No command type was specified.", statusCode: 400);
 			}
 
-			if (!map.TryGetValue(commandName, out var commandType)) {
-				return Results.Text($"The command type '{commandName}' was not recognized.", HttpStatusCode.BadRequest);
+			if (!map.TryGetValue(commandName.ToString(), out var commandType)) {
+				return Results.Text($"The command type '{commandName}' was not recognized.", statusCode: 400);
 			}
 
 			if (request.Form.Files.Count != 1) {
-				return Results.Text("No command was found on the request.", HttpStatusCode.BadRequest);
+				return Results.Text("No command was found on the request.", statusCode: 400);
 			}
 
 			await using var commandStream = request.Form.Files[0].OpenReadStream();
@@ -64,7 +56,7 @@ public static partial class ApplicationBuilderExtensions {
 
 			var checkpoint = await dispatcher.Handle(command!, request.HttpContext.RequestAborted);
 
-			return Results.CommandHandled(checkpoint);
+			return Results.Extensions.CommandHandled(checkpoint);
 		});
 
 		return builder;

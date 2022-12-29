@@ -4,7 +4,7 @@ using Npgsql;
 using Projac.Npgsql;
 using Projac.Sql;
 
-namespace Transacto.Infrastructure.Npgsql; 
+namespace Transacto.Infrastructure.Npgsql;
 
 public abstract class NpgsqlProjection : SqlProjection {
 	protected NpgsqlScripts Scripts { get; }
@@ -33,25 +33,19 @@ public abstract class NpgsqlProjection : SqlProjection {
 			Parameters = { statement.Parameters }
 		};
 		await using var reader = await command.ExecuteReaderAsync(cancellationToken);
-		if (!await reader.ReadAsync(cancellationToken)) {
-			return Position.Start;
-		}
-
-		unchecked {
-			return new Position((ulong)reader.GetInt64(0), (ulong)reader.GetInt64(1));
-		}
+		return !await reader.ReadAsync(cancellationToken)
+			? Position.Start
+			: new Position(unchecked((ulong)reader.GetInt64(0)), unchecked((ulong)reader.GetInt64(1)));
 	}
 
 	public async Task WriteCheckpoint(NpgsqlTransaction transaction, Position checkpoint,
 		CancellationToken cancellationToken) {
-		SqlQueryCommand statement;
-		unchecked {
-			statement = Sql.QueryStatement(NpgsqlScripts.WriteCheckpoint, new {
+		var statement = unchecked(
+			Sql.QueryStatement(NpgsqlScripts.WriteCheckpoint, new {
 				projection = GetType().Name,
 				commit = (long)checkpoint.CommitPosition,
 				prepare = (long)checkpoint.PreparePosition
-			});
-		}
+			}));
 
 		await using var command = new NpgsqlCommand(statement.Text, transaction.Connection, transaction) {
 			Parameters = { statement.Parameters }

@@ -10,10 +10,9 @@ public class ProcessManagerEventHandlerModule : IEnumerable<MessageHandler<Check
 	}
 
 	protected IMessageHandlerBuilder<TEvent, Checkpoint> Build<TEvent>() where TEvent : class =>
-		new MessageHandlerBuilder<TEvent, Checkpoint>(handler => {
-			_handlers.Add(new MessageHandler<Checkpoint>(typeof(TEvent),
-				(command, token) => handler((TEvent)command, token)));
-		});
+		new MessageHandlerBuilder<TEvent, Checkpoint>(handler => _handlers.Add(new MessageHandler<Checkpoint>(
+			typeof(TEvent),
+			(command, token) => handler((TEvent)command, token))));
 
 	protected void Handle<TEvent>(Func<TEvent, CancellationToken, ValueTask<Checkpoint>> handler) =>
 		_handlers.Add(new MessageHandler<Checkpoint>(typeof(TEvent),

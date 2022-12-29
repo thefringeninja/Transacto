@@ -8,8 +8,7 @@ public class ChartOfAccountsEventStoreRepository : IChartOfAccountsRepository {
 	private readonly EventStoreRepository<ChartOfAccounts> _inner;
 
 	public ChartOfAccountsEventStoreRepository(EventStoreClient eventStore, IMessageTypeMapper messageTypeMapper) {
-		_inner = new EventStoreRepository<ChartOfAccounts>(eventStore,
-			ChartOfAccounts.Factory, messageTypeMapper);
+		_inner = new EventStoreRepository<ChartOfAccounts>(eventStore, messageTypeMapper);
 	}
 
 	public ValueTask<Optional<ChartOfAccounts>> GetOptional(CancellationToken cancellationToken = default)

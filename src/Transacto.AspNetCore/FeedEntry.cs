@@ -1,7 +1,6 @@
-using System.Text.Json.Serialization;
+using System.Collections.Immutable;
 
-namespace Transacto; 
-
-public abstract class FeedEntry {
-	[JsonPropertyName("_events")] public List<string> Events { get; } = new();
+namespace Transacto;
+public interface IFeedEntry {
+	public ImmutableArray<string> Events { get; init; }
 }

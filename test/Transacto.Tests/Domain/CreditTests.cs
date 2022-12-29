@@ -1,4 +1,4 @@
-namespace Transacto.Domain; 
+namespace Transacto.Domain;
 
 public class CreditTests {
 	[AutoFixtureData]
@@ -47,8 +47,8 @@ public class CreditTests {
 		Assert.Equal(sut.AccountNumber, result.AccountNumber);
 		Assert.Equal(sut.Amount - amount, result.Amount);
 	}
-		
-		
+
+
 	[AutoFixtureData]
 	public void DecimalAdditionOperator(Credit sut, decimal amount) {
 		var result = sut + amount;

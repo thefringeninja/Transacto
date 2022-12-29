@@ -1,13 +1,14 @@
+using System.Collections.Immutable;
 using NodaTime;
 using Transacto.Domain;
 using Transacto.Framework;
 using Transacto.Infrastructure.SqlStreamStore;
 using Transacto.Messages;
 
-namespace Transacto.Integration; 
+namespace Transacto.Integration;
 
 public class BusinessTransactionIntegrationTests : IntegrationTests {
-		public async Task Somewthing() {
+	public async Task Somewthing() {
 		var now = DateTime.UtcNow;
 		var period = AccountingPeriod.Open(LocalDate.FromDateTime(now));
 		var transactionId = Guid.NewGuid();
@@ -22,9 +23,11 @@ public class BusinessTransactionIntegrationTests : IntegrationTests {
 		}, TransactoSerializerOptions.BusinessTransactions(typeof(BusinessTransaction)));
 	}
 
-	private class BusinessTransactionEntry : FeedEntry {
-		public Guid TransactonId { get; set; }
-		public int ReferenceNumber { get; set; }
+	private record BusinessTransactionEntry : IFeedEntry {
+		public Guid TransactonId { get; init; }
+		public int ReferenceNumber { get; init; }
+
+		public required ImmutableArray<string> Events { get; init; }
 	}
 
 	private class BusinessTransactionFeed : StreamStoreFeedProjection<BusinessTransactionEntry> {
@@ -32,7 +35,8 @@ public class BusinessTransactionIntegrationTests : IntegrationTests {
 			messageTypeMapper) {
 			When<BusinessTransaction>((e, _) => new BusinessTransactionEntry {
 				TransactonId = e.TransactionId,
-				ReferenceNumber = e.TransactionNumber
+				ReferenceNumber = e.TransactionNumber,
+				Events = ImmutableArray<string>.Empty
 			});
 		}
 	}

@@ -1,40 +1,32 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
+using System.Collections.Immutable;
 using Transacto.Domain;
 
-namespace SomeCompany.ReceiptOfGoods {
-	partial class ReceiptOfGoods : IBusinessTransaction {
-		private static (Credit, Debit) Accumulate((Credit, Debit) _, ReceiptOfGoodsItem item) {
-			var (inventoryInTransit, inventoryOnHand) = _;
-			return (inventoryInTransit + item.Total, inventoryOnHand + item.Total);
-		}
+namespace SomeCompany.ReceiptOfGoods;
 
-		public GeneralLedgerEntryNumber ReferenceNumber =>
-			new GeneralLedgerEntryNumber("goodsReceipt", ReceiptOfGoodsNumber);
+partial record ReceiptOfGoods : IBusinessTransaction {
+	public GeneralLedgerEntrySequenceNumber SequenceNumber => new(ReceiptOfGoodsNumber);
 
-		public void Apply(GeneralLedgerEntry entry, AccountIsDeactivated accountIsDeactivated) {
-			var (inventoryInTransit, inventoryOnHand) = ReceiptOfGoodsItems.Aggregate(
-				(new Credit(new AccountNumber(1400)), new Debit(new AccountNumber(1450))),
-				Accumulate);
+	public IEnumerable<object> GetTransactionItems() {
+		var (inventoryInTransit, inventoryOnHand) = Aggregate();
 
-			entry.ApplyCredit(inventoryInTransit, accountIsDeactivated);
-			entry.ApplyDebit(inventoryOnHand, accountIsDeactivated);
-			entry.ApplyTransaction(this);
-		}
-
-		public IEnumerable<object> GetAdditionalChanges() {
-			yield return new GoodsReceived {
-				ReceiptId = ReceiptOfGoodsId,
-				ReceiptNumber = ReceiptOfGoodsNumber,
-				Items = ReceiptOfGoodsItems.Select(item => new GoodsReceived.ReceiptItem {
-					Quantity = Convert.ToDecimal(item.Quantity),
-					InventoryItemId = item.ItemId,
-					UnitPrice = Convert.ToDecimal(item.UnitPrice)
-				}).ToArray()
-			};
-		}
-
-		public int? Version { get; set; }
+		yield return inventoryInTransit;
+		yield return inventoryOnHand;
+		yield return new GoodsReceived {
+			ReceiptId = ReceiptOfGoodsId,
+			ReceiptNumber = ReceiptOfGoodsNumber,
+			Items = ImmutableArray.CreateRange(ReceiptOfGoodsItems, item => new GoodsReceived.ReceiptItem {
+				Quantity = Convert.ToDecimal(item.Quantity),
+				InventoryItemId = item.ItemId,
+				UnitPrice = Convert.ToDecimal(item.UnitPrice)
+			})
+		};
 	}
+
+	private (Credit inventoryInTransit, Debit inventoryOnHand) Aggregate() => ReceiptOfGoodsItems.Aggregate(
+		(new Credit(new AccountNumber(1400)), new Debit(new AccountNumber(1450))),
+		Accumulate);
+
+	private static (Credit, Debit) Accumulate(
+		(Credit inventoryInTransit, Debit inventoryOnHand) accounts, ReceiptOfGoodsItem item) =>
+		(accounts.inventoryInTransit + item.Total, accounts.inventoryOnHand + item.Total);
 }

@@ -1,6 +1,5 @@
 using System.Text.Json;
 using EventStore.Client;
-using Microsoft.Extensions.Hosting;
 using Npgsql;
 using Projac.Sql;
 using Projac.Sql.Executors;
@@ -60,7 +59,7 @@ public class NpgsqlProjectionHost : IHostedService {
 		var projector = new CheckpointAwareProjector(_connectionFactory, _messageTypeMap, projectors);
 		var checkpoint = projectors.Select(p => p.Checkpoint).Min();
 
-		Interlocked.Exchange(ref _subscription, await _eventStore.SubscribeToAllAsync(checkpoint,
+		Interlocked.Exchange(ref _subscription, await _eventStore.SubscribeToAllAsync(FromAll.After(checkpoint), 
 			projector.ProjectAsync,
 			subscriptionDropped: (_, reason, ex) => {
 				if (reason == SubscriptionDroppedReason.Disposed) {

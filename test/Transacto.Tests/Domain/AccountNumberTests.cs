@@ -1,4 +1,4 @@
-namespace Transacto.Domain; 
+namespace Transacto.Domain;
 
 public class AccountNumberTests {
 	[AutoFixtureData]
@@ -19,10 +19,10 @@ public class AccountNumberTests {
 	}
 
 	public static IEnumerable<object[]> InvalidAccountNumberCases() {
-		yield return new object[] {-1};
-		yield return new object[] {999};
-		yield return new object[] {9000};
-		yield return new object[] {int.MaxValue};
+		yield return new object[] { -1 };
+		yield return new object[] { 999 };
+		yield return new object[] { 9000 };
+		yield return new object[] { int.MaxValue };
 	}
 
 	[MemberData(nameof(InvalidAccountNumberCases))]
