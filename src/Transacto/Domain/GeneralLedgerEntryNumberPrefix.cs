@@ -1,4 +1,4 @@
-namespace Transacto.Domain; 
+namespace Transacto.Domain;
 
 public readonly struct GeneralLedgerEntryNumberPrefix : IEquatable<GeneralLedgerEntryNumberPrefix> {
 	public const int MaxPrefixLength = 255;

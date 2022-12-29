@@ -10,7 +10,7 @@ using Transacto.Infrastructure.Npgsql;
 using Transacto.Infrastructure.SqlStreamStore;
 using Transacto.Plugins;
 
-namespace Transacto; 
+namespace Transacto;
 
 public static class ServiceCollectionExtensions {
 	public static IServiceCollection AddTransacto(this IServiceCollection services, params IPlugin[] plugins) =>

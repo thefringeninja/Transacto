@@ -4,7 +4,7 @@ using Transacto.Domain;
 using Transacto.Framework;
 using Transacto.Messages;
 
-namespace Transacto.Infrastructure.EventStore; 
+namespace Transacto.Infrastructure.EventStore;
 
 public class GeneralLedgerEventStoreRepository : IGeneralLedgerRepository {
 	private readonly EventStoreClient _eventStore;

@@ -1,6 +1,6 @@
 using System.Text.Json;
 
-namespace Transacto.Messages; 
+namespace Transacto.Messages;
 
 public record BusinessTransactionApplied {
 	public required Guid GeneralLedgerEntryId { get; init; }

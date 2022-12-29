@@ -1,4 +1,4 @@
-namespace Transacto.Framework; 
+namespace Transacto.Framework;
 
 public interface IMessageTypeMapper {
 	string Map(Type type) => !TryMap(type, out var t) ? throw new TypeNotFoundException(type) : t!;

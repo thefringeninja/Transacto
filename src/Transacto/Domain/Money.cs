@@ -1,4 +1,4 @@
-namespace Transacto.Domain; 
+namespace Transacto.Domain;
 
 public readonly struct Money : IEquatable<Money>, IComparable<Money> {
 	private readonly decimal _value;

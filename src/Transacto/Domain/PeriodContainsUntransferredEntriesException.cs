@@ -1,6 +1,6 @@
 using System.Collections.Immutable;
 
-namespace Transacto.Domain; 
+namespace Transacto.Domain;
 
 public class PeriodContainsUntransferredEntriesException : Exception {
 	public AccountingPeriod AccountingPeriod { get; }

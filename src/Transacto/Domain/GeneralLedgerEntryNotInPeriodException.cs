@@ -1,6 +1,6 @@
 using NodaTime;
 
-namespace Transacto.Domain; 
+namespace Transacto.Domain;
 
 public class GeneralLedgerEntryNotInPeriodException : Exception {
 	public GeneralLedgerEntryNumber Number { get; }

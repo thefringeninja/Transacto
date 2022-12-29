@@ -2,7 +2,7 @@ using NodaTime;
 using Transacto.Domain;
 using Transacto.Messages;
 
-namespace Transacto.Application; 
+namespace Transacto.Application;
 
 public class GeneralLedgerEntryHandlers {
 	private readonly IGeneralLedgerRepository _generalLedger;

@@ -1,7 +1,7 @@
 using System.Text.Json.Serialization;
 using Transacto.Domain;
 
-namespace Transacto.Messages; 
+namespace Transacto.Messages;
 
 public partial record PostGeneralLedgerEntry {
 	[JsonPropertyName("document")] public required IBusinessTransaction BusinessTransaction { get; init; }

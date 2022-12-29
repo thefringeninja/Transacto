@@ -6,7 +6,7 @@ using Transacto.Framework.ProcessManagers;
 using Transacto.Infrastructure.EventStore;
 using Transacto.Messages;
 
-namespace Transacto.Plugins.GeneralLedger; 
+namespace Transacto.Plugins.GeneralLedger;
 
 public class AccountingPeriodClosingModule : ProcessManagerEventHandlerModule {
 	public AccountingPeriodClosingModule(EventStoreClient eventStore, IMessageTypeMapper messageTypeMapper,

@@ -17,7 +17,7 @@ public readonly struct Checkpoint : IEquatable<Checkpoint>, IComparable<Checkpoi
 	public static bool operator >(Checkpoint left, Checkpoint right) => left.CompareTo(right) > 0;
 	public static bool operator <=(Checkpoint left, Checkpoint right) => left.CompareTo(right) <= 0;
 	public static bool operator >=(Checkpoint left, Checkpoint right) => left.CompareTo(right) >= 0;
-	
+
 	public int CompareTo(Checkpoint other) {
 		var maxLength = Math.Max(_value.Length, other._value.Length);
 		int result = 0;

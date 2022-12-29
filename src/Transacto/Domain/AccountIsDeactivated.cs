@@ -1,3 +1,3 @@
-namespace Transacto.Domain; 
+namespace Transacto.Domain;
 
 public delegate bool AccountIsDeactivated(AccountNumber accountNumber);

@@ -1,4 +1,4 @@
-namespace Transacto.Messages; 
+namespace Transacto.Messages;
 
 public record GeneralLedgerOpened {
 	public required string OpenedOn { get; init; }

@@ -1,4 +1,4 @@
-namespace Transacto.Domain; 
+namespace Transacto.Domain;
 
 public class GeneralLedgerEntryNotInBalanceException : Exception {
 	public GeneralLedgerEntryIdentifier GeneralLedgerEntryIdentifier { get; }

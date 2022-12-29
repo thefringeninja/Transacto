@@ -41,8 +41,8 @@ public class EventStoreRepository<TAggregateRoot> where TAggregateRoot : Aggrega
 					throw new InvalidOperationException();
 				case StreamMessage.Event (var e):
 					aggregate.ReadFromHistory(JsonSerializer.Deserialize(e.OriginalEvent.Data.Span,
-						                          _messageTypeMapper.Map(e.OriginalEvent.EventType),
-						                          _serializerOptions) ?? throw new InvalidOperationException());
+						_messageTypeMapper.Map(e.OriginalEvent.EventType),
+						_serializerOptions) ?? throw new InvalidOperationException());
 					version = version == Optional<StreamRevision>.Empty ? 0 : version.Value.Next();
 					break;
 			}

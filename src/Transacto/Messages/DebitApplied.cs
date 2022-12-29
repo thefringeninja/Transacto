@@ -1,4 +1,4 @@
-namespace Transacto.Messages; 
+namespace Transacto.Messages;
 
 public record DebitApplied {
 	public required Guid GeneralLedgerEntryId { get; init; }

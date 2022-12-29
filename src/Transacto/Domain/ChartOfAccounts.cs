@@ -3,7 +3,7 @@ using System.Security.Principal;
 using Transacto.Framework;
 using Transacto.Messages;
 
-namespace Transacto.Domain; 
+namespace Transacto.Domain;
 
 public class ChartOfAccounts : AggregateRoot, IAggregateRoot<ChartOfAccounts> {
 	public const string Identifier = "chartOfAccounts";

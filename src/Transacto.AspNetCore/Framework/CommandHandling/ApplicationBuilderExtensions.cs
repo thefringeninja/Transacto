@@ -10,7 +10,7 @@ using Transacto.Framework.Http;
 using Transacto.Messages;
 
 // ReSharper disable CheckNamespace
-namespace Microsoft.AspNetCore.Builder; 
+namespace Microsoft.AspNetCore.Builder;
 // ReSharper restore CheckNamespace
 
 public static partial class ApplicationBuilderExtensions {

@@ -1,4 +1,4 @@
-namespace Transacto.Domain; 
+namespace Transacto.Domain;
 
 public interface IBusinessTransaction {
 	public GeneralLedgerEntrySequenceNumber SequenceNumber { get; }

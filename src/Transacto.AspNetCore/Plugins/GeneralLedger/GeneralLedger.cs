@@ -4,7 +4,7 @@ using Transacto.Domain;
 using Transacto.Framework.Projections;
 using Transacto.Messages;
 
-namespace Transacto.Plugins.GeneralLedger; 
+namespace Transacto.Plugins.GeneralLedger;
 
 internal class GeneralLedger : IPlugin {
 	public string Name { get; } = nameof(GeneralLedger);

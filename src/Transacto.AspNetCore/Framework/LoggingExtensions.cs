@@ -1,6 +1,6 @@
 using Microsoft.Extensions.Logging.Abstractions;
 
-namespace Transacto.Framework; 
+namespace Transacto.Framework;
 
 public static class LoggingExtensions {
 	public static IMessageHandlerBuilder<T, TReturn> Log<T, TReturn>(

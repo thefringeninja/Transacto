@@ -1,4 +1,4 @@
-namespace Transacto.Domain; 
+namespace Transacto.Domain;
 
 public class AccountDeactivatedException : Exception {
 	public AccountNumber AccountNumber { get; }

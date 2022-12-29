@@ -1,6 +1,6 @@
 using System.Collections;
 
-namespace Transacto.Framework.CommandHandling; 
+namespace Transacto.Framework.CommandHandling;
 
 public abstract class CommandHandlerModule : IEnumerable<MessageHandler<Checkpoint>> {
 	private readonly List<MessageHandler<Checkpoint>> _handlers;
@@ -16,7 +16,8 @@ public abstract class CommandHandlerModule : IEnumerable<MessageHandler<Checkpoi
 		});
 
 	protected void Handle<TCommand>(Func<TCommand, CancellationToken, ValueTask<Checkpoint>> handler) =>
-		_handlers.Add(new MessageHandler<Checkpoint>(typeof(TCommand), (command, token) => handler((TCommand)command, token)));
+		_handlers.Add(new MessageHandler<Checkpoint>(typeof(TCommand),
+			(command, token) => handler((TCommand)command, token)));
 
 	public MessageHandler<Checkpoint>[] Handlers => _handlers.ToArray();
 

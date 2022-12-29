@@ -5,7 +5,7 @@ using Serilog;
 using SqlStreamStore;
 using Transacto.Framework;
 
-namespace Transacto.Infrastructure.SqlStreamStore; 
+namespace Transacto.Infrastructure.SqlStreamStore;
 
 public class StreamStoreProjectionHost : IHostedService {
 	private readonly EventStoreClient _eventStore;
@@ -56,7 +56,7 @@ public class StreamStoreProjectionHost : IHostedService {
 		var projector = new CheckpointAwareProjector(_streamStore, _messageTypeMap, projections);
 		var checkpoint = projections.Select(x => x.Checkpoint).Min();
 
-		Interlocked.Exchange(ref _subscription, await _eventStore.SubscribeToAllAsync(FromAll.After(checkpoint), 
+		Interlocked.Exchange(ref _subscription, await _eventStore.SubscribeToAllAsync(FromAll.After(checkpoint),
 			projector.ProjectAsync,
 			subscriptionDropped: (_, reason, ex) => {
 				if (reason == SubscriptionDroppedReason.Disposed) {

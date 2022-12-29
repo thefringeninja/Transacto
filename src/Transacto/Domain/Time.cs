@@ -1,7 +1,7 @@
 using NodaTime;
 using NodaTime.Text;
 
-namespace Transacto.Domain; 
+namespace Transacto.Domain;
 
 public static class Time {
 	private static LocalDatePattern LocalDatePattern = LocalDatePattern.CreateWithInvariantCulture("yyyyMMdd");

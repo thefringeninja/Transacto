@@ -1,6 +1,6 @@
 using System.Collections;
 
-namespace Transacto.Domain; 
+namespace Transacto.Domain;
 
 public class TrialBalance : IEnumerable<Account> {
 	private readonly ChartOfAccounts _chartOfAccounts;

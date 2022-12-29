@@ -1,4 +1,4 @@
-namespace Transacto.Framework; 
+namespace Transacto.Framework;
 
 public class TypeNotFoundException : Exception {
 	public Type Type { get; }

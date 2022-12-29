@@ -1,7 +1,7 @@
 using Transacto.Infrastructure.Npgsql;
 
 // ReSharper disable CheckNamespace
-namespace Microsoft.Extensions.DependencyInjection; 
+namespace Microsoft.Extensions.DependencyInjection;
 // ReSharper restore CheckNamespace
 
 public static partial class ServiceCollectionExtensions {

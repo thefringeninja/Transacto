@@ -3,7 +3,7 @@ using Transacto;
 using Transacto.Plugins;
 
 // ReSharper disable CheckNamespace
-namespace Microsoft.AspNetCore.Builder; 
+namespace Microsoft.AspNetCore.Builder;
 // ReSharper restore CheckNamespace
 
 static partial class ApplicationBuilderExtensions {
