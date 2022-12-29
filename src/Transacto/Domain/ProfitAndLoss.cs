@@ -7,12 +7,12 @@ public class ProfitAndLoss {
 
 	private readonly AccountingPeriod _accountingPeriod;
 	private readonly ChartOfAccounts _chartOfAccounts;
-	private readonly AccountCollection _current;
+	private readonly AccountBalanceCollection _current;
 
 	public ProfitAndLoss(AccountingPeriod accountingPeriod, ChartOfAccounts chartOfAccounts) {
 		_accountingPeriod = accountingPeriod;
 		_chartOfAccounts = chartOfAccounts;
-		_current = new AccountCollection();
+		_current = new AccountBalanceCollection();
 	}
 
 	public GeneralLedgerEntry GetClosingEntry(AccountIsDeactivated accountIsDeactivated,
@@ -23,8 +23,7 @@ public class ProfitAndLoss {
 			_accountingPeriod,
 			closedOn);
 
-		foreach (var account in _current.Where(x => x.Balance != Money.Zero)
-			         .OrderBy(x => x.AccountNumber.ToInt32())) {
+		foreach (var account in _current.Where(x => x.Balance != Money.Zero)) {
 			switch (account) {
 				case IncomeAccount: {
 					if (account.Balance > Money.Zero) {

@@ -1,7 +1,7 @@
 using System.Collections.Immutable;
 using NodaTime;
 
-namespace Transacto.Domain; 
+namespace Transacto.Domain;
 
 public class AccountingPeriodClosingProcess {
 	private readonly AccountingPeriod _accountingPeriod;
@@ -18,7 +18,7 @@ public class AccountingPeriodClosingProcess {
 		ChartOfAccounts chartOfAccounts,
 		AccountingPeriod accountingPeriod,
 		LocalDateTime closingOn,
-		ImmutableHashSet<GeneralLedgerEntryIdentifier> generalLedgerEntryIdentifiers,
+		IEnumerable<GeneralLedgerEntryIdentifier> generalLedgerEntryIdentifiers,
 		GeneralLedgerEntryIdentifier closingGeneralLedgerEntryIdentifier,
 		EquityAccount retainedEarningsAccount,
 		AccountIsDeactivated accountIsDeactivated) {
@@ -27,7 +27,7 @@ public class AccountingPeriodClosingProcess {
 		_closingGeneralLedgerEntryIdentifier = closingGeneralLedgerEntryIdentifier;
 		_retainedEarningsAccount = retainedEarningsAccount;
 		_accountIsDeactivated = accountIsDeactivated;
-		_generalLedgerEntryIdentifiers = new();
+		_generalLedgerEntryIdentifiers = new(generalLedgerEntryIdentifiers);
 		TrialBalance = new TrialBalance(chartOfAccounts);
 		ProfitAndLoss = new ProfitAndLoss(accountingPeriod, chartOfAccounts);
 	}
@@ -43,14 +43,18 @@ public class AccountingPeriodClosingProcess {
 	}
 
 	public GeneralLedgerEntry Complete() {
-		if (_generalLedgerEntryIdentifiers.Count > 0) {
-			throw new PeriodContainsUntransferredEntriesException(_accountingPeriod,
-				_generalLedgerEntryIdentifiers.ToImmutableArray());
-		}
+		MustNotContainUntransferredEntries();
 
 		TrialBalance.MustBeInBalance();
 
 		return ProfitAndLoss.GetClosingEntry(_accountIsDeactivated, _retainedEarningsAccount,
 			_closingOn, _closingGeneralLedgerEntryIdentifier);
+	}
+
+	private void MustNotContainUntransferredEntries() {
+		if (_generalLedgerEntryIdentifiers.Count > 0) {
+			throw new PeriodContainsUntransferredEntriesException(_accountingPeriod,
+				_generalLedgerEntryIdentifiers.ToImmutableArray());
+		}
 	}
 }

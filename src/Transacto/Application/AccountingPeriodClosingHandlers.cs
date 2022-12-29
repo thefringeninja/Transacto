@@ -29,7 +29,7 @@ public class AccountingPeriodClosingHandlers {
 		var accountingPeriodClosingProcess = new AccountingPeriodClosingProcess(
 			chartOfAccounts, AccountingPeriod.Parse(@event.Period), Time.Parse.LocalDateTime(@event.ClosingOn),
 			generalLedgerEntryIdentifiers, new GeneralLedgerEntryIdentifier(@event.ClosingGeneralLedgerEntryId),
-			(EquityAccount)chartOfAccounts[new AccountNumber(@event.RetainedEarningsAccountNumber)],
+			chartOfAccounts.Get<EquityAccount>(new AccountNumber(@event.RetainedEarningsAccountNumber)),
 			_accountIsDeactivated);
 
 		foreach (var identifier in generalLedgerEntryIdentifiers) {

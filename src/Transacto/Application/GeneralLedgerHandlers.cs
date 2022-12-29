@@ -3,7 +3,7 @@ using NodaTime;
 using Transacto.Domain;
 using Transacto.Messages;
 
-namespace Transacto.Application; 
+namespace Transacto.Application;
 
 public class GeneralLedgerHandlers {
 	private readonly IGeneralLedgerRepository _generalLedger;
@@ -27,7 +27,7 @@ public class GeneralLedgerHandlers {
 		var chartOfAccounts = await _chartOfAccounts.Get(cancellationToken);
 
 		generalLedger.BeginClosingPeriod(
-			(EquityAccount)chartOfAccounts[new AccountNumber(command.RetainedEarningsAccountNumber)],
+			chartOfAccounts.Get<EquityAccount>(new AccountNumber(command.RetainedEarningsAccountNumber)),
 			new GeneralLedgerEntryIdentifier(command.ClosingGeneralLedgerEntryId),
 			ImmutableArray.CreateRange(command.GeneralLedgerEntryIds, id => new GeneralLedgerEntryIdentifier(id)),
 			LocalDateTime.FromDateTime(command.ClosingOn.DateTime));

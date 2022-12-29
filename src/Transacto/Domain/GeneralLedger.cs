@@ -86,13 +86,13 @@ public class GeneralLedger : AggregateRoot, IAggregateRoot<GeneralLedger> {
 		trialBalance.MustBeInBalance();
 		
 		Apply(new AccountingPeriodClosed {
-			GeneralLedgerEntryIds = ImmutableArray.CreateRange<GeneralLedgerEntryIdentifier, Guid>(
+			GeneralLedgerEntryIds = ImmutableArray.CreateRange(
 				generalLedgerEntryIdentifiers.ToImmutableArray(), identifier => identifier.ToGuid()),
 			ClosingGeneralLedgerEntryId = closingEntry.Identifier.ToGuid(),
 			Period = _state.AccountingPeriod.ToString(),
-			Balance = trialBalance.Select(x => new BalanceLineItem {
-				Amount = x.Balance.ToDecimal(),
-				AccountNumber = x.AccountNumber.ToInt32()
+			Balance = trialBalance.Select(account => new BalanceLineItem {
+				Amount = account.Balance.ToDecimal(),
+				AccountNumber = account.AccountNumber.ToInt32()
 			}).ToImmutableArray()
 		});
 	}

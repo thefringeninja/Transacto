@@ -4,11 +4,11 @@ namespace Transacto.Domain;
 
 public class TrialBalance : IEnumerable<Account> {
 	private readonly ChartOfAccounts _chartOfAccounts;
-	private readonly AccountCollection _current;
+	private readonly AccountBalanceCollection _current;
 
 	public TrialBalance(ChartOfAccounts chartOfAccounts) {
 		_chartOfAccounts = chartOfAccounts;
-		_current = new AccountCollection();
+		_current = new AccountBalanceCollection();
 	}
 
 	public void Transfer(GeneralLedgerEntry generalLedgerEntry) {
@@ -24,10 +24,8 @@ public class TrialBalance : IEnumerable<Account> {
 	}
 
 	public void MustBeInBalance() {
-		var balance = _current.Select(account => account switch {
-			ExpenseAccount or AssetAccount => account.Balance,
-			_ => -account.Balance
-		}).Sum();
+		var balance = _current.GetBalance();
+
 		if (balance != Money.Zero) {
 			throw new TrialBalanceFailedException(balance);
 		}

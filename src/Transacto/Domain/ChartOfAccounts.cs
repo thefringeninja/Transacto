@@ -1,4 +1,5 @@
 using System.Collections.Immutable;
+using System.Security.Principal;
 using Transacto.Framework;
 using Transacto.Messages;
 
@@ -6,38 +7,46 @@ namespace Transacto.Domain;
 
 public class ChartOfAccounts : AggregateRoot, IAggregateRoot<ChartOfAccounts> {
 	public const string Identifier = "chartOfAccounts";
-	public static ChartOfAccounts Factory() => new ChartOfAccounts();
+	public static ChartOfAccounts Factory() => new();
 
 	public override string Id { get; } = Identifier;
 
 	private State _state;
 
 	public Account this[AccountNumber accountNumber] =>
-		_state.Accounts.TryGetValue(accountNumber, out var account)
-			? Account.For(accountNumber, account.AccountName)
+		_state.Accounts.TryGetValue(accountNumber, out var info)
+			? info.Account
 			: throw new AccountNotFoundException(accountNumber);
 
 	private ChartOfAccounts() {
 		_state = new State();
 	}
 
+	public TAccount Get<TAccount>(AccountNumber accountNumber) where TAccount : Account =>
+		this[accountNumber] is TAccount account ? account : throw new AccountNotFoundException(accountNumber);
+
 	protected override void ApplyEvent(object _) => _state = _ switch {
 		AccountDefined e => _state with {
 			Accounts = _state.Accounts.Add(new AccountNumber(e.AccountNumber),
-				new(new AccountName(e.AccountName)))
+				new(Account.For(new AccountNumber(e.AccountNumber), new AccountName(e.AccountName))))
 		},
 		AccountDeactivated e => _state with {
 			Accounts = _state.Accounts.SetItem(new AccountNumber(e.AccountNumber),
-				new(_state.Accounts[new AccountNumber(e.AccountNumber)].AccountName, false))
+				_state.Accounts[new AccountNumber(e.AccountNumber)] with {
+					IsActive = false
+				})
 		},
 		AccountReactivated e => _state with {
 			Accounts = _state.Accounts.SetItem(new AccountNumber(e.AccountNumber),
-				new(_state.Accounts[new AccountNumber(e.AccountNumber)].AccountName))
+				_state.Accounts[new AccountNumber(e.AccountNumber)] with {
+					IsActive = true
+				})
 		},
 		AccountRenamed e => _state with {
 			Accounts = _state.Accounts.SetItem(new AccountNumber(e.AccountNumber),
-				new(new AccountName(e.NewAccountName), _state.Accounts[new AccountNumber(e.AccountNumber)]
-					.IsActive))
+				_state.Accounts[new AccountNumber(e.AccountNumber)] with {
+					Account = Account.For(new AccountNumber(e.AccountNumber), new AccountName(e.NewAccountName))
+				})
 		},
 		_ => _state
 	};
@@ -107,6 +116,7 @@ public class ChartOfAccounts : AggregateRoot, IAggregateRoot<ChartOfAccounts> {
 	private record State {
 		public ImmutableDictionary<AccountNumber, AccountInfo> Accounts { get; init; }
 			= ImmutableDictionary<AccountNumber, AccountInfo>.Empty;
-		public record AccountInfo(AccountName AccountName, bool IsActive = true);
+
+		public record AccountInfo(Account Account, bool IsActive = true);
 	}
 }
