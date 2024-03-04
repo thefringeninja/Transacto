@@ -24,8 +24,7 @@ public abstract class NpgsqlProjection : SqlProjection {
 		When<TEvent>(e =>
 			Array.ConvertAll(handler(e), parameters => Sql.NonQueryStatement(Scripts[typeof(TEvent)], parameters)));
 
-	public async Task<Position> ReadCheckpoint(NpgsqlConnection connection,
-		CancellationToken cancellationToken) {
+	public async Task<FromAll> ReadCheckpoint(NpgsqlConnection connection, CancellationToken cancellationToken) {
 		await connection.OpenAsync(cancellationToken);
 		var statement = Sql.QueryStatement(NpgsqlScripts.ReadCheckpoint, new { projection = GetType().Name });
 
@@ -34,8 +33,8 @@ public abstract class NpgsqlProjection : SqlProjection {
 		};
 		await using var reader = await command.ExecuteReaderAsync(cancellationToken);
 		return !await reader.ReadAsync(cancellationToken)
-			? Position.Start
-			: new Position(unchecked((ulong)reader.GetInt64(0)), unchecked((ulong)reader.GetInt64(1)));
+			? FromAll.Start
+			: FromAll.After(new Position(unchecked((ulong)reader.GetInt64(0)), unchecked((ulong)reader.GetInt64(1))));
 	}
 
 	public async Task WriteCheckpoint(NpgsqlTransaction transaction, Position checkpoint,

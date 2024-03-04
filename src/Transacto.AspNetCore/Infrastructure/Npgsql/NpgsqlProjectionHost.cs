@@ -1,6 +1,7 @@
 using System.Text.Json;
 using EventStore.Client;
 using Npgsql;
+using Polly;
 using Projac.Sql;
 using Projac.Sql.Executors;
 using Serilog;
@@ -16,11 +17,6 @@ public class NpgsqlProjectionHost : IHostedService {
 	private readonly NpgsqlProjection[] _projections;
 	private readonly CancellationTokenSource _stopped;
 
-	private int _retryCount;
-	private int _subscribed;
-	private StreamSubscription? _subscription;
-	private CancellationTokenRegistration? _stoppedRegistration;
-
 	public NpgsqlProjectionHost(EventStoreClient eventStore, IMessageTypeMapper messageTypeMap,
 		Func<NpgsqlConnection> connectionFactory, params NpgsqlProjection[] projections) {
 		_eventStore = eventStore;
@@ -28,11 +24,6 @@ public class NpgsqlProjectionHost : IHostedService {
 		_connectionFactory = connectionFactory;
 		_projections = projections;
 		_stopped = new CancellationTokenSource();
-
-		_retryCount = 0;
-		_subscribed = 0;
-		_subscription = null;
-		_stoppedRegistration = null;
 	}
 
 	public async Task StartAsync(CancellationToken cancellationToken) {
@@ -42,51 +33,60 @@ public class NpgsqlProjectionHost : IHostedService {
 
 		await CreateSchema(cancellationToken);
 
-		await Subscribe(cancellationToken);
+		Subscribe();
 	}
 
-	private async Task Subscribe(CancellationToken cancellationToken) {
-		if (Interlocked.CompareExchange(ref _subscribed, 1, 0) == 1) {
-			return;
-		}
-
-		var registration = _stoppedRegistration;
-		if (registration != null) {
-			await registration.Value.DisposeAsync();
-		}
-
+	private async void Subscribe() {
 		var projectors = await ReadCheckpoints();
-		var projector = new CheckpointAwareProjector(_connectionFactory, _messageTypeMap, projectors);
+		
 		var checkpoint = projectors.Select(p => p.Checkpoint).Min();
+		
+		await Policy.Handle<Exception>(ex => ex is not OperationCanceledException)
+			.WaitAndRetryAsync(5, retryCount => TimeSpan.FromMilliseconds(retryCount * retryCount * 100))
+			.ExecuteAsync(Subscribe);
 
-		Interlocked.Exchange(ref _subscription, await _eventStore.SubscribeToAllAsync(FromAll.After(checkpoint),
-			projector.ProjectAsync,
-			subscriptionDropped: (_, reason, ex) => {
-				if (reason == SubscriptionDroppedReason.Disposed) {
-					return;
+		return;
+
+		async Task Subscribe() {
+			await using var subscription =
+				_eventStore.SubscribeToAll(checkpoint, filterOptions: new(EventTypeFilter.ExcludeSystemEvents()));
+
+			await foreach (var message in subscription.Messages) {
+				if (message is not StreamMessage.Event(var resolvedEvent)) {
+					continue;
 				}
 
-				if (Interlocked.Increment(ref _retryCount) == 5) {
-					Log.Error(ex, "Subscription dropped: {reason}", reason);
-					return;
+				if (!_messageTypeMap.TryMap(resolvedEvent.Event.EventType, out var type)) {
+					continue;
 				}
 
-				Log.Warning(ex, "Subscription dropped: {reason}; resubscribing...", reason);
-				Interlocked.Exchange(ref _subscribed, 0);
-				Task.Run(() => Subscribe(cancellationToken), cancellationToken);
-			},
-			filterOptions: new SubscriptionFilterOptions(EventTypeFilter.ExcludeSystemEvents()),
-			userCredentials: new UserCredentials("admin", "changeit"),
-			cancellationToken: _stopped.Token));
+				var e = JsonSerializer.Deserialize(resolvedEvent.Event.Data.Span, type, TransactoSerializerOptions.Events)!;
 
-		_stoppedRegistration = _stopped.Token.Register(_subscription.Dispose);
+				await Task.WhenAll(projectors
+					.Where(projection =>
+						projection.Checkpoint < FromAll.After(resolvedEvent.OriginalPosition ?? Position.Start))
+					.Select(async projector => {
+						await using var connection = _connectionFactory();
+						await connection.OpenAsync(_stopped.Token);
+						await using var transaction = await connection.BeginTransactionAsync(_stopped.Token);
+						var (projection, _) = projector;
+						var sqlProjector = new AsyncSqlProjector(projector.Resolver,
+							new ConnectedTransactionalSqlCommandExecutor(transaction));
+						await sqlProjector.ProjectAsync(e, _stopped.Token);
+						await projection.WriteCheckpoint(transaction, resolvedEvent.Event.Position, _stopped.Token);
+						await transaction.CommitAsync(_stopped.Token);
+					}));
 
+			}
+
+		}
+		
 		async ValueTask<Projector[]> ReadCheckpoints() {
 			await using var connection = _connectionFactory();
-			await connection.OpenAsync(cancellationToken);
+			await connection.OpenAsync(_stopped.Token);
 			return await Task.WhenAll(Array.ConvertAll(_projections,
 				async projection => new Projector(projection,
-					await projection.ReadCheckpoint(connection, cancellationToken))));
+					await projection.ReadCheckpoint(connection, _stopped.Token))));
 		}
 	}
 
@@ -97,46 +97,10 @@ public class NpgsqlProjectionHost : IHostedService {
 
 	public Task StopAsync(CancellationToken cancellationToken) {
 		_stopped.Cancel();
-		_stoppedRegistration?.Dispose();
 		return Task.CompletedTask;
 	}
 
-	private record Projector(NpgsqlProjection Projection, Position Checkpoint) {
+	private record Projector(NpgsqlProjection Projection, FromAll Checkpoint) {
 		public SqlProjectionHandlerResolver Resolver { get; } = Resolve.WhenEqualToHandlerMessageType(Projection);
-	}
-
-	private class CheckpointAwareProjector {
-		private readonly Func<NpgsqlConnection> _connectionFactory;
-		private readonly IMessageTypeMapper _messageTypeMapper;
-
-		private readonly Projector[] _projectors;
-
-		public CheckpointAwareProjector(Func<NpgsqlConnection> connectionFactory,
-			IMessageTypeMapper messageTypeMapper, Projector[] projectors) {
-			_connectionFactory = connectionFactory;
-			_messageTypeMapper = messageTypeMapper;
-			_projectors = projectors;
-		}
-
-		public Task ProjectAsync(StreamSubscription subscription, ResolvedEvent e,
-			CancellationToken cancellationToken) {
-			if (!_messageTypeMapper.TryMap(e.Event.EventType, out var type)) {
-				return Task.CompletedTask;
-			}
-
-			var message = JsonSerializer.Deserialize(e.Event.Data.Span, type, TransactoSerializerOptions.Events)!;
-			return Task.WhenAll(_projectors.Where(projection => projection.Checkpoint < e.OriginalPosition)
-				.Select(async projector => {
-					await using var connection = _connectionFactory();
-					await connection.OpenAsync(cancellationToken);
-					await using var transaction = await connection.BeginTransactionAsync(cancellationToken);
-					var (projection, _) = projector;
-					var sqlProjector = new AsyncSqlProjector(projector.Resolver,
-						new ConnectedTransactionalSqlCommandExecutor(transaction));
-					await sqlProjector.ProjectAsync(message, cancellationToken);
-					await projection.WriteCheckpoint(transaction, e.Event.Position, cancellationToken);
-					await transaction.CommitAsync(cancellationToken);
-				}));
-		}
 	}
 }

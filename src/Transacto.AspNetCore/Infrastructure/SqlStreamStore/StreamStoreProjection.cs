@@ -1,4 +1,5 @@
 using System.Text.Json;
+using EventStore.Client;
 using Projac;
 using SqlStreamStore;
 using SqlStreamStore.Streams;
@@ -17,13 +18,13 @@ public abstract class StreamStoreProjection : Projection<IStreamStore> {
 		StreamName = streamName;
 	}
 
-	public async ValueTask<Position> ReadCheckpoint(IStreamStore streamStore,
+	public async ValueTask<FromAll> ReadCheckpoint(IStreamStore streamStore,
 		CancellationToken cancellationToken) {
 		var page = await streamStore.ReadStreamBackwards(StreamName, StreamVersion.End, 1,
 			false, cancellationToken);
 
 		if (page.Status == PageReadStatus.StreamNotFound) {
-			return Position.Start;
+			return FromAll.Start;
 		}
 
 		var metadata = JsonSerializer.Deserialize<Dictionary<string, string>>(page.Messages[0].JsonMetadata)!;
@@ -32,7 +33,7 @@ public abstract class StreamStoreProjection : Projection<IStreamStore> {
 		       ulong.TryParse(commitValue, out var commit) &&
 		       metadata.TryGetValue("prepare", out var prepareValue) &&
 		       ulong.TryParse(prepareValue, out var prepare)
-			? new Position(commit, prepare)
-			: Position.Start;
+			? FromAll.After(new Position(commit, prepare))
+			: FromAll.Start;
 	}
 }
