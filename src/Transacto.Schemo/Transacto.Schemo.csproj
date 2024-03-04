@@ -24,7 +24,7 @@
 		<!-- Generator dependencies -->
 		<PackageReference Include="DotLiquid" Version="2.0.385" GeneratePathProperty="true" PrivateAssets="all"/>
 		<PackageReference Include="Namotion.Reflection" Version="1.0.23" GeneratePathProperty="true" PrivateAssets="all"/>
-		<PackageReference Include="Newtonsoft.Json" Version="9.0.1" GeneratePathProperty="true" PrivateAssets="all"/>
+		<PackageReference Include="Newtonsoft.Json" Version="13.0.1" GeneratePathProperty="true" PrivateAssets="all"/>
 		<PackageReference Include="NJsonSchema" Version="10.4.6" GeneratePathProperty="true" PrivateAssets="all"/>
 		<PackageReference Include="NJsonSchema.CodeGeneration" Version="10.4.6" GeneratePathProperty="true" PrivateAssets="all"/>
 		<PackageReference Include="NJsonSchema.CodeGeneration.CSharp" Version="10.4.6" GeneratePathProperty="true" PrivateAssets="all"/>
