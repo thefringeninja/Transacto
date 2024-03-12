@@ -7,7 +7,7 @@ using Transacto.Messages;
 namespace Transacto.Integration;
 
 public class ChartOfAccountsIntegrationTests : IntegrationTests {
-	public async Task hal() {
+	private async Task hal() {
 		var checkpoint = await SetupChartOfAccounts();
 
 		var position = checkpoint.ToEventStorePosition();

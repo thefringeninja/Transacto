@@ -12,7 +12,7 @@ namespace Transacto.Integration;
 
 public class AccountingPeriodClosingProcessIntegrationTests : IntegrationTests {
 	[AutoFixtureData(1)]
-	public async Task when_closing_the_period(LocalDateTime createdOn,
+	private async Task when_closing_the_period(LocalDateTime createdOn,
 		GeneralLedgerEntryIdentifier closingEntryIdentifier) {
 		var period = AccountingPeriod.Open(createdOn.Date);
 		await OpenBooks(createdOn).LastAsync();
