@@ -45,7 +45,7 @@ public abstract class IntegrationTests : IAsyncDisposable {
 		_streamStore = new Builder()
 			.UseContainer()
 			.WithName("transacto-sss-test")
-			.UseImage("sqlstreamstore/server:1.2.0-beta.5-alpine3.9")
+			.UseImage("ghcr.io/thefringeninja/sqlstreamstore-server:1.2.0-beta.8-alpine3.9")
 			.ReuseIfExists()
 			.ExposePort(5000, 80)
 			.Build();
