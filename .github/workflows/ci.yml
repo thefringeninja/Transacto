@@ -30,6 +30,13 @@ jobs:
         source-url: https://nuget.pkg.github.com/thefringeninja/index.json
       env:
         NUGET_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    - name: ghcr login
+      uses: docker/login-action@v3
+      with:
+        registry: ghcr.io
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+      
     - name: Compile
       run: |
         dotnet build --configuration release
