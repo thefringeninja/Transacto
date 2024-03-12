@@ -7,6 +7,12 @@
       "commands": [
         "gpr"
       ]
+    },
+    "fixie.console": {
+      "version": "3.4.0",
+      "commands": [
+        "fixie"
+      ]
     }
   }
 }

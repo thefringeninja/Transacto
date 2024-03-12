@@ -1,5 +1,6 @@
 using System.Text.Json;
 using EventStore.Client;
+using Polly;
 
 namespace Transacto.Framework.ProcessManagers;
 
@@ -10,10 +11,6 @@ public class ProcessManagerHost : IHostedService {
 	private readonly CancellationTokenSource _stopped;
 	private readonly ProcessManagerEventDispatcher _dispatcher;
 
-	private int _subscribed;
-	private StreamSubscription? _subscription;
-	private CancellationTokenRegistration? _stoppedRegistration;
-	private Checkpoint _checkpoint;
 
 	public ProcessManagerHost(EventStoreClient eventStore, IMessageTypeMapper messageTypeMapper,
 		string checkpointStreamName, ProcessManagerEventHandlerModule eventHandlerModule) {
@@ -22,21 +19,16 @@ public class ProcessManagerHost : IHostedService {
 		_checkpointStreamName = checkpointStreamName;
 		_stopped = new CancellationTokenSource();
 
-		_subscribed = 0;
-		_subscription = null;
-		_stoppedRegistration = null;
 		_dispatcher = new ProcessManagerEventDispatcher(eventHandlerModule);
-		_checkpoint = Checkpoint.None;
 	}
 
 	public async Task StartAsync(CancellationToken cancellationToken) {
 		await SetStreamMetadata(cancellationToken);
-		await Subscribe(cancellationToken);
+		Subscribe();
 	}
 
 	public Task StopAsync(CancellationToken cancellationToken) {
 		_stopped.Cancel();
-		_stoppedRegistration?.Dispose();
 		return Task.CompletedTask;
 	}
 
@@ -45,58 +37,50 @@ public class ProcessManagerHost : IHostedService {
 			new StreamMetadata(maxCount: 5), options => options.ThrowOnAppendFailure = false,
 			cancellationToken: cancellationToken);
 
-	private async Task Subscribe(CancellationToken cancellationToken) {
-		if (Interlocked.CompareExchange(ref _subscribed, 1, 0) == 1) {
-			return;
-		}
+	private async void Subscribe() {
+		var checkpoint = await ReadCheckpoint();
 
-		var registration = _stoppedRegistration;
-		if (registration != null) {
-			await registration.Value.DisposeAsync();
-		}
+		await Policy.Handle<Exception>(ex => ex is not OperationCanceledException)
+			.RetryForeverAsync((_, retryCount) =>
+				Task.Delay(TimeSpan.FromMilliseconds(Math.Max(retryCount * retryCount * 100, 1000))))
+			.ExecuteAsync(Subscribe);
+		return;
 
-		Interlocked.Exchange(ref _subscription, await Subscribe());
+		async Task Subscribe() {
+			await using var subscription = _eventStore.SubscribeToAll(checkpoint.ToEventStorePosition(),
+				filterOptions: new SubscriptionFilterOptions(EventTypeFilter.ExcludeSystemEvents()));
 
-		_stoppedRegistration = _stopped.Token.Register(_subscription.Dispose);
+			await foreach (var message in subscription.Messages) {
+				if (message is not StreamMessage.Event (var resolvedEvent)) {
+					continue;
+				}
 
-		async Task<StreamSubscription> Subscribe() {
-			_checkpoint = await _eventStore.ReadStreamAsync(Direction.Backwards, _checkpointStreamName,
-					StreamPosition.End, cancellationToken: cancellationToken)
-				.Messages
-				.OfType<StreamMessage.Event>()
-				.Select(e => new Checkpoint(e.ResolvedEvent.Event.Data))
-				.FirstOrDefaultAsync(cancellationToken);
+				if (!_messageTypeMapper.TryMap(resolvedEvent.Event.EventType, out var type)) {
+					return;
+				}
 
-			return await _eventStore.SubscribeToAllAsync(
-				_checkpoint.ToEventStorePosition(), HandleAsync, subscriptionDropped: (_, reason, _) => {
-					if (reason == SubscriptionDroppedReason.Disposed) {
-						return;
-					}
+				var e = JsonSerializer.Deserialize(resolvedEvent.Event.Data.Span, type,
+					TransactoSerializerOptions.Events)!;
 
-					//Log.Error(ex, "Subscription dropped: {reason}", reason);
-				},
-				filterOptions: new SubscriptionFilterOptions(EventTypeFilter.ExcludeSystemEvents()),
-				userCredentials: new UserCredentials("admin", "changeit"),
-				cancellationToken: _stopped.Token);
-		}
+				checkpoint = await _dispatcher.Handle(e, _stopped.Token);
 
-		async Task HandleAsync(StreamSubscription s, ResolvedEvent e, CancellationToken ct) {
-			if (!_messageTypeMapper.TryMap(e.Event.EventType, out var type)) {
-				return;
+				if (checkpoint == Checkpoint.None) {
+					continue;
+				}
+
+				await _eventStore.AppendToStreamAsync(_checkpointStreamName, StreamState.Any, new[] {
+					new EventData(Uuid.NewUuid(), "checkpoint", checkpoint.Memory,
+						contentType: "application/octet-stream")
+				}, cancellationToken: _stopped.Token);
 			}
-
-			var message = JsonSerializer.Deserialize(e.Event.Data.Span, type, TransactoSerializerOptions.Events)!;
-
-			_checkpoint = await _dispatcher.Handle(message, ct);
-
-			if (_checkpoint == Checkpoint.None) {
-				return;
-			}
-
-			await _eventStore.AppendToStreamAsync(_checkpointStreamName, StreamState.Any, new[] {
-				new EventData(Uuid.NewUuid(), "checkpoint", _checkpoint.Memory,
-					contentType: "application/octet-stream")
-			}, cancellationToken: ct);
 		}
 	}
+
+	private ValueTask<Checkpoint> ReadCheckpoint() =>
+		_eventStore.ReadStreamAsync(Direction.Backwards, _checkpointStreamName,
+				StreamPosition.End, 1, cancellationToken: _stopped.Token)
+			.Messages
+			.OfType<StreamMessage.Event>()
+			.Select(e => new Checkpoint(e.ResolvedEvent.Event.Data))
+			.SingleOrDefaultAsync(_stopped.Token);
 }

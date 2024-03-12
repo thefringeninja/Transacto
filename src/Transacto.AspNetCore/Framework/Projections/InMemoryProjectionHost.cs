@@ -1,7 +1,7 @@
 using System.Text.Json;
 using EventStore.Client;
+using Polly;
 using Projac;
-using Serilog;
 
 namespace Transacto.Framework.Projections;
 
@@ -11,9 +11,6 @@ public class InMemoryProjectionHost : IHostedService {
 	private readonly InMemoryProjectionDatabase _target;
 	private readonly CancellationTokenSource _stopped;
 
-	private int _subscribed;
-	private StreamSubscription? _subscription;
-	private CancellationTokenRegistration? _stoppedRegistration;
 	private readonly Projector<InMemoryProjectionDatabase> _projector;
 
 	public InMemoryProjectionHost(EventStoreClient eventStore, IMessageTypeMapper messageTypeMapper,
@@ -23,52 +20,48 @@ public class InMemoryProjectionHost : IHostedService {
 		_target = target;
 		_stopped = new CancellationTokenSource();
 
-		_subscribed = 0;
-		_subscription = null;
-		_stoppedRegistration = null;
-
 		_projector = new Projector<InMemoryProjectionDatabase>(
 			EnvelopeResolve.WhenAssignableToHandlerMessageType(projections.SelectMany(_ => _).ToArray()));
 	}
 
-	public Task StartAsync(CancellationToken cancellationToken) => Subscribe(cancellationToken);
+	public Task StartAsync(CancellationToken cancellationToken) {
+		Subscribe();
 
-	private async Task Subscribe(CancellationToken cancellationToken) {
-		if (Interlocked.CompareExchange(ref _subscribed, 1, 0) == 1) {
-			return;
-		}
+		return Task.CompletedTask;
+	}
 
-		var registration = _stoppedRegistration;
-		if (registration != null) {
-			await registration.Value.DisposeAsync();
-		}
+	private async void Subscribe() {
+		var checkpoint = FromAll.Start;
 
-		Interlocked.Exchange(ref _subscription, await _eventStore.SubscribeToAllAsync(
-			FromAll.Start,
-			ProjectAsync,
-			subscriptionDropped: (_, reason, ex) => {
-				if (reason == SubscriptionDroppedReason.Disposed) {
-					return;
+		await Policy.Handle<Exception>(ex => ex is not OperationCanceledException)
+			.WaitAndRetryAsync(5, retryCount => TimeSpan.FromMilliseconds(retryCount * retryCount * 100))
+			.ExecuteAsync(Subscribe);
+		return;
+
+		async Task Subscribe() {
+			await using var subscription = _eventStore.SubscribeToAll(checkpoint,
+				filterOptions: new SubscriptionFilterOptions(EventTypeFilter.ExcludeSystemEvents()));
+
+			await foreach (var message in subscription.Messages) {
+				if (message is not StreamMessage.Event(var resolvedEvent)) {
+					continue;
 				}
 
-				Log.Error(ex, "Subscription dropped: {reason}", reason);
-			},
-			filterOptions: new SubscriptionFilterOptions(EventTypeFilter.ExcludeSystemEvents()),
-			userCredentials: new UserCredentials("admin", "changeit"),
-			cancellationToken: _stopped.Token));
+				if (!_messageTypeMapper.TryMap(resolvedEvent.Event.EventType, out var type)) {
+					continue;
+				}
 
-		_stoppedRegistration = _stopped.Token.Register(_subscription.Dispose);
+				var e = JsonSerializer.Deserialize(resolvedEvent.Event.Data.Span, type!,
+					TransactoSerializerOptions.Events)!;
 
-		Task ProjectAsync(StreamSubscription s, ResolvedEvent e, CancellationToken ct) =>
-			_messageTypeMapper.TryMap(e.Event.EventType, out var type)
-				? _projector.ProjectAsync(_target, new Envelope(JsonSerializer.Deserialize(
-					e.Event.Data.Span, type, TransactoSerializerOptions.Events)!, e.OriginalEvent.Position), ct)
-				: Task.CompletedTask;
+				await _projector.ProjectAsync(_target, new Envelope(e, resolvedEvent.OriginalEvent.Position),
+					_stopped.Token);
+			}
+		}
 	}
 
 	public Task StopAsync(CancellationToken cancellationToken) {
 		_stopped.Cancel();
-		_stoppedRegistration?.Dispose();
 		return Task.CompletedTask;
 	}
 }

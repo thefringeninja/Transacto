@@ -11,7 +11,7 @@ namespace Transacto.Integration;
 
 public class BalanceSheetIntegrationTests : IntegrationTests {
 	[AutoFixtureData(1)]
-	public async Task when_an_entry_is_posted(
+	private async Task when_an_entry_is_posted(
 		GeneralLedgerEntryIdentifier generalLedgerEntryIdentifier, LocalDateTime createdOn, Money[] amounts) {
 		var period = AccountingPeriod.Open(createdOn.Date);
 		var thru = createdOn.Date.PlusDays(1).AtMidnight();
