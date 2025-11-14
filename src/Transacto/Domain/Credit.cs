@@ -1,6 +1,16 @@
+using System.Numerics;
+
 namespace Transacto.Domain;
 
-public readonly struct Credit : IEquatable<Credit> {
+public readonly struct Credit : IEquatable<Credit>,
+	IAdditiveIdentity<Credit, Money>,
+	IAdditionOperators<Credit, Money, Credit>,
+	IAdditionOperators<Credit, decimal, Credit>,
+	ISubtractionOperators<Credit, Money, Credit>,
+	ISubtractionOperators<Credit, decimal, Credit> {
+
+	public static Money AdditiveIdentity { get; } = Money.AdditiveIdentity;
+
 	public AccountNumber AccountNumber { get; }
 	public Money Amount { get; }
 

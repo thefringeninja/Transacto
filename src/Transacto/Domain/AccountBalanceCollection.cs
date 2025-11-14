@@ -17,7 +17,7 @@ internal class AccountBalanceCollection : IEnumerable<Account> {
 	}).Sum();
 
 	public IEnumerator<Account> GetEnumerator() =>
-		_items.Values.OrderBy(account => account.AccountNumber.ToInt32()).GetEnumerator();
+		_items.Values.OrderBy(account => account.AccountNumber).GetEnumerator();
 
 	IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
 }

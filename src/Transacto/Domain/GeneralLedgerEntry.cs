@@ -141,7 +141,6 @@ public class GeneralLedgerEntry : AggregateRoot, IAggregateRoot<GeneralLedgerEnt
 		public ImmutableList<Credit> Credits { get; init; } = ImmutableList<Credit>.Empty;
 		public AccountingPeriod AccountingPeriod { get; init; }
 
-		public Money Balance => Debits.Select(x => x.Amount).Sum() -
-		                        Credits.Select(x => x.Amount).Sum();
+		public Money Balance => Debits.Sum() - Credits.Sum();
 	}
 }

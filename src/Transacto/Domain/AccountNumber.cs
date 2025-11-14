@@ -1,6 +1,6 @@
 namespace Transacto.Domain;
 
-public readonly struct AccountNumber : IEquatable<AccountNumber> {
+public readonly struct AccountNumber : IEquatable<AccountNumber>, IComparable<AccountNumber> {
 	public AccountNumber(int value) {
 		ArgumentOutOfRangeException.ThrowIfLessThan(value, 1000);
 		ArgumentOutOfRangeException.ThrowIfGreaterThanOrEqual(value, 9000);
@@ -16,4 +16,5 @@ public readonly struct AccountNumber : IEquatable<AccountNumber> {
 	public static bool operator !=(AccountNumber left, AccountNumber right) => !left.Equals(right);
 	public override string ToString() => Value.ToString();
 	public int ToInt32() => Value;
+	public int CompareTo(AccountNumber other) => Value.CompareTo(other.Value);
 }

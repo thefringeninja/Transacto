@@ -1,9 +1,19 @@
+using System.Numerics;
+
 namespace Transacto.Domain;
 
-public readonly struct Money(decimal value) : IEquatable<Money>, IComparable<Money> {
+public readonly struct Money(decimal value) : IEquatable<Money>,
+	IComparable<Money>,
+	IAdditiveIdentity<Money, Money>,
+	IAdditionOperators<Money, Money, Money>,
+	IAdditionOperators<Money, decimal, Money>,
+	ISubtractionOperators<Money, Money, Money>,
+	ISubtractionOperators<Money, decimal, Money>,
+	IUnaryNegationOperators<Money, Money> {
 	private readonly decimal _value = value;
 
 	public static readonly Money Zero = new(decimal.Zero);
+	public static Money AdditiveIdentity { get; } = Zero;
 
 	public bool Equals(Money other) => _value == other._value;
 	public override bool Equals(object? obj) => obj is Money other && Equals(other);

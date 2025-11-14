@@ -11,8 +11,7 @@ public abstract record Account {
 			>= 2000 and < 3000 => new LiabilityAccount(accountName, accountNumber),
 			>= 3000 and < 4000 => new EquityAccount(accountName, accountNumber),
 			>= 4000 and < 5000 => new IncomeAccount(accountName, accountNumber),
-			>= 5000 and < 6000 => new ExpenseAccount(accountName, accountNumber),
-			>= 6000 and < 7000 => new ExpenseAccount(accountName, accountNumber),
+			>= 5000 and < 6000 or >= 6000 and < 7000 => new ExpenseAccount(accountName, accountNumber),
 			>= 7000 and < 8000 => new IncomeAccount(accountName, accountNumber),
 			>= 8000 and < 9000 => new ExpenseAccount(accountName, accountNumber),
 			_ => throw new ArgumentOutOfRangeException(nameof(accountNumber))

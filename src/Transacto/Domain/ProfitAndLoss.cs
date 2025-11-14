@@ -39,8 +39,7 @@ public class ProfitAndLoss(AccountingPeriod accountingPeriod, ChartOfAccounts ch
 			}
 		}
 
-		var retainedEarnings = entry.Debits.Select(x => x.Amount).Sum() -
-		                       entry.Credits.Select(x => x.Amount).Sum();
+		var retainedEarnings = entry.Debits.Sum() - entry.Credits.Sum();
 
 		if (retainedEarnings < Money.Zero) {
 			entry.ApplyDebit(new(retainedEarningsAccount.AccountNumber, -retainedEarnings), accountIsDeactivated);

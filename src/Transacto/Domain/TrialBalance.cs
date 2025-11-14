@@ -25,6 +25,6 @@ public class TrialBalance(ChartOfAccounts chartOfAccounts) : IEnumerable<Account
 		}
 	}
 
-	public IEnumerator<Account> GetEnumerator() => _current.OrderBy(x => x.AccountNumber.ToInt32()).GetEnumerator();
+	public IEnumerator<Account> GetEnumerator() => _current.OrderBy(x => x.AccountNumber).GetEnumerator();
 	IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
 }
