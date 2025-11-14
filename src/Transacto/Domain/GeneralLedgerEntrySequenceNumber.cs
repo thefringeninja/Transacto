@@ -1,13 +1,10 @@
 namespace Transacto.Domain;
 
-public readonly struct GeneralLedgerEntrySequenceNumber : IEquatable<GeneralLedgerEntrySequenceNumber> {
-	private readonly int _value;
-
-	public GeneralLedgerEntrySequenceNumber(int value) =>
-		_value = value switch {
-			<= 0 => throw new ArgumentOutOfRangeException(nameof(value)),
-			_ => value
-		};
+public readonly struct GeneralLedgerEntrySequenceNumber(int value) : IEquatable<GeneralLedgerEntrySequenceNumber> {
+	private readonly int _value = value switch {
+		<= 0 => throw new ArgumentOutOfRangeException(nameof(value)),
+		_ => value
+	};
 
 	public bool Equals(GeneralLedgerEntrySequenceNumber other) => _value == other._value;
 	public override bool Equals(object? obj) => obj is GeneralLedgerEntrySequenceNumber other && Equals(other);

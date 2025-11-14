@@ -14,7 +14,7 @@ public class TestSpecificationTextWriter : IEventCentricTestSpecificationWriter,
 	/// </summary>
 	/// <param name="writer">The text writer to write on.</param>
 	public TestSpecificationTextWriter(TextWriter writer) {
-		if (writer == null) throw new ArgumentNullException(nameof(writer));
+		ArgumentNullException.ThrowIfNull(writer);
 		_writer = new IndentedTextWriter(writer, "  ");
 	}
 

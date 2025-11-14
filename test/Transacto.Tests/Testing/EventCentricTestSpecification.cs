@@ -13,9 +13,9 @@ public class EventCentricTestSpecification {
 	/// <param name="when">The specification when.</param>
 	/// <param name="thens">The specification thens.</param>
 	public EventCentricTestSpecification(Fact[] givens, object when, Fact[] thens) {
-		if (givens == null) throw new ArgumentNullException(nameof(givens));
-		if (when == null) throw new ArgumentNullException(nameof(when));
-		if (thens == null) throw new ArgumentNullException(nameof(thens));
+		ArgumentNullException.ThrowIfNull(givens);
+		ArgumentNullException.ThrowIfNull(when);
+		ArgumentNullException.ThrowIfNull(thens);
 		Givens = givens;
 		When = when;
 		Thens = thens;
@@ -60,7 +60,7 @@ public class EventCentricTestSpecification {
 	/// <param name="actual">The actual events</param>
 	/// <returns>A new <see cref="EventCentricTestResult" />.</returns>
 	public EventCentricTestResult Fail(Fact[] actual) {
-		if (actual == null) throw new ArgumentNullException(nameof(actual));
+		ArgumentNullException.ThrowIfNull(actual);
 		return new EventCentricTestResult(this, TestResultState.Failed,
 			new Optional<Fact[]>(actual),
 			Optional<Exception>.Empty);
@@ -72,7 +72,7 @@ public class EventCentricTestSpecification {
 	/// <param name="actual">The actual exception</param>
 	/// <returns>A new <see cref="EventCentricTestResult" />.</returns>
 	public EventCentricTestResult Fail(Exception actual) {
-		if (actual == null) throw new ArgumentNullException(nameof(actual));
+		ArgumentNullException.ThrowIfNull(actual);
 		return new EventCentricTestResult(this, TestResultState.Failed,
 			Optional<Fact[]>.Empty,
 			new Optional<Exception>(actual));

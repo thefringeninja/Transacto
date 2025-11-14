@@ -5,16 +5,13 @@ using Transacto.Framework;
 
 namespace Transacto.Infrastructure.SqlStreamStore;
 
-public abstract class StreamStoreFeedProjection<TFeedEntry> : StreamStoreProjection
+public abstract class StreamStoreFeedProjection<TFeedEntry>(
+	string streamName,
+	IMessageTypeMapper messageTypeMapper,
+	JsonSerializerOptions? serializerOptions = null)
+	: StreamStoreProjection(streamName)
 	where TFeedEntry : IFeedEntry {
-	private readonly IMessageTypeMapper _messageTypeMapper;
-	private readonly JsonSerializerOptions _serializerOptions;
-
-	protected StreamStoreFeedProjection(string streamName, IMessageTypeMapper messageTypeMapper,
-		JsonSerializerOptions? serializerOptions = null) : base(streamName) {
-		_messageTypeMapper = messageTypeMapper;
-		_serializerOptions = serializerOptions ?? TransactoSerializerOptions.Events;
-	}
+	private readonly JsonSerializerOptions _serializerOptions = serializerOptions ?? TransactoSerializerOptions.Events;
 
 	protected void When<TEvent>(Func<TEvent, TFeedEntry, TFeedEntry> apply)
 		=> When<Envelope>(async (streamStore, e, ct) => {
@@ -26,14 +23,14 @@ public abstract class StreamStoreFeedProjection<TFeedEntry> : StreamStoreProject
 				: (JsonSerializer.Deserialize<TFeedEntry>(await page.Messages[0].GetJsonData(ct))!,
 					page.Messages[0].StreamVersion);
 
-			if (!_messageTypeMapper.TryMap(typeof(TEvent), out var type)) {
+			if (!messageTypeMapper.TryMap(typeof(TEvent), out var type)) {
 				type = "unknown";
 			}
 
 			target.Events.Add(type);
 
 			await streamStore.AppendToStream(StreamName, expectedVersion,
-				new NewStreamMessage(Guid.NewGuid(), _messageTypeMapper.Map(typeof(TEvent)),
+				new NewStreamMessage(Guid.NewGuid(), messageTypeMapper.Map(typeof(TEvent)),
 					JsonSerializer.Serialize(target, _serializerOptions),
 					JsonSerializer.Serialize(new Dictionary<string, string> {
 						["commit"] = e.Position.CommitPosition.ToString(),

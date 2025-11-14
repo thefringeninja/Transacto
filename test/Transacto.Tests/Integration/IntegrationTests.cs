@@ -19,36 +19,29 @@ namespace Transacto.Integration;
 
 //[Collection(nameof(IntegrationTests))]
 public abstract class IntegrationTests : IAsyncDisposable {
-	private readonly IContainerService _eventStore;
-	private readonly IContainerService _streamStore;
+	private readonly IContainerService _eventStore = new Builder()
+		.UseContainer()
+		.WithName("transacto-es-test")
+		.UseImage("eventstore/eventstore:lts")
+		.ReuseIfExists()
+		.ExposePort(2113, 2113)
+		.WithEnvironment("EVENTSTORE_ENABLE_ATOM_PUB_OVER_HTTP=true",
+			"EVENTSTORE_INSECURE=true")
+		.Build();
+	private readonly IContainerService _streamStore = new Builder()
+		.UseContainer()
+		.WithName("transacto-sss-test")
+		.UseImage("ghcr.io/thefringeninja/sqlstreamstore-server:1.2.0-beta.8-alpine3.9")
+		.ReuseIfExists()
+		.ExposePort(5000, 80)
+		.Build();
 
-	private TestServer _testServer;
-	protected HttpClient HttpClient { get; private set; }
+	private TestServer _testServer = null!;
+	protected HttpClient HttpClient { get; private set; } = null!;
 	protected EventStoreClient EventStoreClient => _testServer.Services.GetRequiredService<EventStoreClient>();
 
 	static IntegrationTests() {
 		Inflector.Inflector.SetDefaultCultureFunc = () => new CultureInfo("en-US");
-	}
-
-	protected IntegrationTests() {
-		HttpClient = null!;
-		_testServer = null!;
-		_eventStore = new Builder()
-			.UseContainer()
-			.WithName("transacto-es-test")
-			.UseImage("eventstore/eventstore:lts")
-			.ReuseIfExists()
-			.ExposePort(2113, 2113)
-			.WithEnvironment("EVENTSTORE_ENABLE_ATOM_PUB_OVER_HTTP=true",
-				"EVENTSTORE_INSECURE=true")
-			.Build();
-		_streamStore = new Builder()
-			.UseContainer()
-			.WithName("transacto-sss-test")
-			.UseImage("ghcr.io/thefringeninja/sqlstreamstore-server:1.2.0-beta.8-alpine3.9")
-			.ReuseIfExists()
-			.ExposePort(5000, 80)
-			.Build();
 	}
 
 	protected async IAsyncEnumerable<(AccountNumber accountNumber, AccountName accountName)>

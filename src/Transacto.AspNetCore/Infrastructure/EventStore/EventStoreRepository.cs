@@ -4,23 +4,16 @@ using Transacto.Framework;
 
 namespace Transacto.Infrastructure.EventStore;
 
-public class EventStoreRepository<TAggregateRoot> where TAggregateRoot : AggregateRoot, IAggregateRoot<TAggregateRoot> {
+public class EventStoreRepository<TAggregateRoot>(
+	EventStoreClient eventStore,
+	IMessageTypeMapper messageTypeMapper,
+	JsonSerializerOptions? serializerOptions = null)
+	where TAggregateRoot : AggregateRoot, IAggregateRoot<TAggregateRoot> {
 	private static readonly JsonSerializerOptions DefaultOptions = new() {
 		PropertyNamingPolicy = JsonNamingPolicy.CamelCase
 	};
 
-	private readonly EventStoreClient _eventStore;
-	private readonly IMessageTypeMapper _messageTypeMapper;
-	private readonly JsonSerializerOptions _serializerOptions;
-
-	public EventStoreRepository(
-		EventStoreClient eventStore,
-		IMessageTypeMapper messageTypeMapper,
-		JsonSerializerOptions? serializerOptions = null) {
-		_eventStore = eventStore;
-		_messageTypeMapper = messageTypeMapper;
-		_serializerOptions = serializerOptions ?? DefaultOptions;
-	}
+	private readonly JsonSerializerOptions _serializerOptions = serializerOptions ?? DefaultOptions;
 
 	public async ValueTask<Optional<TAggregateRoot>> GetById(string identifier,
 		CancellationToken cancellationToken = default) {
@@ -32,7 +25,7 @@ public class EventStoreRepository<TAggregateRoot> where TAggregateRoot : Aggrega
 
 		aggregate = TAggregateRoot.Factory();
 
-		await foreach (var message in _eventStore.ReadStreamAsync(Direction.Forwards, identifier, StreamPosition.Start,
+		await foreach (var message in eventStore.ReadStreamAsync(Direction.Forwards, identifier, StreamPosition.Start,
 			               cancellationToken: cancellationToken).Messages.WithCancellation(cancellationToken)) {
 			switch (message) {
 				case StreamMessage.NotFound:
@@ -41,7 +34,7 @@ public class EventStoreRepository<TAggregateRoot> where TAggregateRoot : Aggrega
 					throw new InvalidOperationException();
 				case StreamMessage.Event (var e):
 					aggregate.ReadFromHistory(JsonSerializer.Deserialize(e.OriginalEvent.Data.Span,
-						_messageTypeMapper.Map(e.OriginalEvent.EventType),
+						messageTypeMapper.Map(e.OriginalEvent.EventType),
 						_serializerOptions) ?? throw new InvalidOperationException());
 					version = version == Optional<StreamRevision>.Empty ? 0 : version.Value.Next();
 					break;

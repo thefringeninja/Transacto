@@ -25,12 +25,8 @@ public static class TransactoSerializerOptions {
 		IncludeFields = true
 	};
 
-	private class BusinessTransactionConverter : JsonConverter<IBusinessTransaction?> {
-		private readonly IDictionary<string, Type> _transactionTypes;
-
-		public BusinessTransactionConverter(params Type[] transactionTypes) {
-			_transactionTypes = transactionTypes.ToDictionary(GetBusinessTransactionPropertyName);
-		}
+	private class BusinessTransactionConverter(params Type[] transactionTypes) : JsonConverter<IBusinessTransaction?> {
+		private readonly IDictionary<string, Type> _transactionTypes = transactionTypes.ToDictionary(GetBusinessTransactionPropertyName);
 
 		private static string GetBusinessTransactionPropertyName(Type type) =>
 			char.ToLower(type.Name[0]) + type.Name[1..];

@@ -60,18 +60,12 @@ public static class FixtureExtensions {
 		fixture.Customize<YearMonth>(composer => composer.FromFactory<LocalDate>(x => x.ToYearMonth()));
 	}
 
-	private class IncreasingDateTimeOffsetGenerator : ISpecimenBuilder {
-		private readonly DateTimeOffset _seed;
-		private int _baseValue;
-
-		public IncreasingDateTimeOffsetGenerator(DateTimeOffset seed) {
-			_seed = seed;
-			_baseValue = 0;
-		}
+	private class IncreasingDateTimeOffsetGenerator(DateTimeOffset seed) : ISpecimenBuilder {
+		private int _baseValue = 0;
 
 		public object Create(object request, ISpecimenContext context) =>
 			typeof(DateTimeOffset) != request?.GetType()
 				? new NoSpecimen()
-				: _seed.AddMonths(Interlocked.Increment(ref _baseValue));
+				: seed.AddMonths(Interlocked.Increment(ref _baseValue));
 	}
 }

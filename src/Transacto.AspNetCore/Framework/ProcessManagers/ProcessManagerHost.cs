@@ -4,23 +4,15 @@ using Polly;
 
 namespace Transacto.Framework.ProcessManagers;
 
-public class ProcessManagerHost : IHostedService {
-	private readonly EventStoreClient _eventStore;
-	private readonly IMessageTypeMapper _messageTypeMapper;
-	private readonly string _checkpointStreamName;
-	private readonly CancellationTokenSource _stopped;
-	private readonly ProcessManagerEventDispatcher _dispatcher;
+public class ProcessManagerHost(
+	EventStoreClient eventStore,
+	IMessageTypeMapper messageTypeMapper,
+	string checkpointStreamName,
+	ProcessManagerEventHandlerModule eventHandlerModule)
+	: IHostedService {
+	private readonly CancellationTokenSource _stopped = new();
+	private readonly ProcessManagerEventDispatcher _dispatcher = new(eventHandlerModule);
 
-
-	public ProcessManagerHost(EventStoreClient eventStore, IMessageTypeMapper messageTypeMapper,
-		string checkpointStreamName, ProcessManagerEventHandlerModule eventHandlerModule) {
-		_eventStore = eventStore;
-		_messageTypeMapper = messageTypeMapper;
-		_checkpointStreamName = checkpointStreamName;
-		_stopped = new CancellationTokenSource();
-
-		_dispatcher = new ProcessManagerEventDispatcher(eventHandlerModule);
-	}
 
 	public async Task StartAsync(CancellationToken cancellationToken) {
 		await SetStreamMetadata(cancellationToken);
@@ -33,7 +25,7 @@ public class ProcessManagerHost : IHostedService {
 	}
 
 	private Task SetStreamMetadata(CancellationToken cancellationToken) =>
-		_eventStore.SetStreamMetadataAsync(_checkpointStreamName, StreamState.NoStream,
+		eventStore.SetStreamMetadataAsync(checkpointStreamName, StreamState.NoStream,
 			new StreamMetadata(maxCount: 5), options => options.ThrowOnAppendFailure = false,
 			cancellationToken: cancellationToken);
 
@@ -47,7 +39,7 @@ public class ProcessManagerHost : IHostedService {
 		return;
 
 		async Task Subscribe() {
-			await using var subscription = _eventStore.SubscribeToAll(checkpoint.ToEventStorePosition(),
+			await using var subscription = eventStore.SubscribeToAll(checkpoint.ToEventStorePosition(),
 				filterOptions: new SubscriptionFilterOptions(EventTypeFilter.ExcludeSystemEvents()));
 
 			await foreach (var message in subscription.Messages) {
@@ -55,7 +47,7 @@ public class ProcessManagerHost : IHostedService {
 					continue;
 				}
 
-				if (!_messageTypeMapper.TryMap(resolvedEvent.Event.EventType, out var type)) {
+				if (!messageTypeMapper.TryMap(resolvedEvent.Event.EventType, out var type)) {
 					return;
 				}
 
@@ -68,7 +60,7 @@ public class ProcessManagerHost : IHostedService {
 					continue;
 				}
 
-				await _eventStore.AppendToStreamAsync(_checkpointStreamName, StreamState.Any, new[] {
+				await eventStore.AppendToStreamAsync(checkpointStreamName, StreamState.Any, new[] {
 					new EventData(Uuid.NewUuid(), "checkpoint", checkpoint.Memory,
 						contentType: "application/octet-stream")
 				}, cancellationToken: _stopped.Token);
@@ -77,7 +69,7 @@ public class ProcessManagerHost : IHostedService {
 	}
 
 	private ValueTask<Checkpoint> ReadCheckpoint() =>
-		_eventStore.ReadStreamAsync(Direction.Backwards, _checkpointStreamName,
+		eventStore.ReadStreamAsync(Direction.Backwards, checkpointStreamName,
 				StreamPosition.End, 1, cancellationToken: _stopped.Token)
 			.Messages
 			.OfType<StreamMessage.Event>()

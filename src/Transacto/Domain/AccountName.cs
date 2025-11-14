@@ -1,10 +1,8 @@
 namespace Transacto.Domain;
 
-public readonly struct AccountName : IEquatable<AccountName> {
+public readonly struct AccountName(string value) : IEquatable<AccountName> {
 	public const int MaxLength = 256;
-	private readonly string _value;
-
-	public AccountName(string value) => _value = value.Length switch {
+	private readonly string _value = value.Length switch {
 		0 => throw new ArgumentException("Input was empty.", nameof(value)),
 		> MaxLength => throw new ArgumentException("Input was too long.", nameof(value)),
 		_ => value

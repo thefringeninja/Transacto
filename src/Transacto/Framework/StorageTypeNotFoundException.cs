@@ -1,10 +1,6 @@
 namespace Transacto.Framework;
 
-public class StorageTypeNotFoundException : Exception {
-	public string StorageType { get; }
-
-	public StorageTypeNotFoundException(string storageType, Exception? innerException = null)
-		: base($"No type for '{storageType}' was found.", innerException) {
-		StorageType = storageType;
-	}
+public class StorageTypeNotFoundException(string storageType, Exception? innerException = null)
+	: Exception($"No type for '{storageType}' was found.", innerException) {
+	public string StorageType { get; } = storageType;
 }

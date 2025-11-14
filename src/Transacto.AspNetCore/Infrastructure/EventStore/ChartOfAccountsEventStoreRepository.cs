@@ -4,12 +4,9 @@ using Transacto.Framework;
 
 namespace Transacto.Infrastructure.EventStore;
 
-public class ChartOfAccountsEventStoreRepository : IChartOfAccountsRepository {
-	private readonly EventStoreRepository<ChartOfAccounts> _inner;
-
-	public ChartOfAccountsEventStoreRepository(EventStoreClient eventStore, IMessageTypeMapper messageTypeMapper) {
-		_inner = new EventStoreRepository<ChartOfAccounts>(eventStore, messageTypeMapper);
-	}
+public class ChartOfAccountsEventStoreRepository(EventStoreClient eventStore, IMessageTypeMapper messageTypeMapper)
+	: IChartOfAccountsRepository {
+	private readonly EventStoreRepository<ChartOfAccounts> _inner = new(eventStore, messageTypeMapper);
 
 	public ValueTask<Optional<ChartOfAccounts>> GetOptional(CancellationToken cancellationToken = default)
 		=> _inner.GetById(ChartOfAccounts.Identifier, cancellationToken);

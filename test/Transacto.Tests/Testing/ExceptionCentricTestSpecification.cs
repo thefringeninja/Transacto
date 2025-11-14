@@ -13,9 +13,9 @@ public class ExceptionCentricTestSpecification {
 	/// <param name="when">The specification when.</param>
 	/// <param name="throws">The specification exception thrown.</param>
 	public ExceptionCentricTestSpecification(Fact[] givens, object when, Exception throws) {
-		if (givens == null) throw new ArgumentNullException(nameof(givens));
-		if (when == null) throw new ArgumentNullException(nameof(when));
-		if (throws == null) throw new ArgumentNullException(nameof(throws));
+		ArgumentNullException.ThrowIfNull(givens);
+		ArgumentNullException.ThrowIfNull(when);
+		ArgumentNullException.ThrowIfNull(throws);
 		Givens = givens;
 		When = when;
 		Throws = throws;
@@ -60,7 +60,7 @@ public class ExceptionCentricTestSpecification {
 	/// <param name="actual">The actual exception thrown</param>
 	/// <returns>A new <see cref="ExceptionCentricTestResult" />.</returns>
 	public ExceptionCentricTestResult Fail(Exception actual) {
-		if (actual == null) throw new ArgumentNullException(nameof(actual));
+		ArgumentNullException.ThrowIfNull(actual);
 		return new ExceptionCentricTestResult(this, TestResultState.Failed, new Optional<Exception>(actual),
 			Optional<Fact[]>.Empty);
 	}
@@ -71,7 +71,7 @@ public class ExceptionCentricTestSpecification {
 	/// <param name="actual">The actual events</param>
 	/// <returns>A new <see cref="ExceptionCentricTestResult" />.</returns>
 	public ExceptionCentricTestResult Fail(Fact[] actual) {
-		if (actual == null) throw new ArgumentNullException(nameof(actual));
+		ArgumentNullException.ThrowIfNull(actual);
 		return new ExceptionCentricTestResult(this, TestResultState.Failed, Optional<Exception>.Empty,
 			new Optional<Fact[]>(actual));
 	}

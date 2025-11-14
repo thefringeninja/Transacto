@@ -2,13 +2,8 @@ using NodaTime;
 
 namespace Transacto.Domain;
 
-public class ClosingDateBeforePeriodException : Exception {
-	public AccountingPeriod AccountingPeriod { get; }
-	public LocalDate Date { get; }
-
-	public ClosingDateBeforePeriodException(AccountingPeriod accountingPeriod, LocalDate date)
-		: base($"Closing date {date} is before period {accountingPeriod}.") {
-		AccountingPeriod = accountingPeriod;
-		Date = date;
-	}
+public class ClosingDateBeforePeriodException(AccountingPeriod accountingPeriod, LocalDate date)
+	: Exception($"Closing date {date} is before period {accountingPeriod}.") {
+	public AccountingPeriod AccountingPeriod { get; } = accountingPeriod;
+	public LocalDate Date { get; } = date;
 }

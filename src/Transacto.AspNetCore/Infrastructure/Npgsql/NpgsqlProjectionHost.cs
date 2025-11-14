@@ -10,24 +10,16 @@ using Transacto.Framework.Projections;
 
 namespace Transacto.Infrastructure.Npgsql;
 
-public class NpgsqlProjectionHost : IHostedService {
-	private readonly EventStoreClient _eventStore;
-	private readonly IMessageTypeMapper _messageTypeMap;
-	private readonly Func<NpgsqlConnection> _connectionFactory;
-	private readonly NpgsqlProjection[] _projections;
-	private readonly CancellationTokenSource _stopped;
-
-	public NpgsqlProjectionHost(EventStoreClient eventStore, IMessageTypeMapper messageTypeMap,
-		Func<NpgsqlConnection> connectionFactory, params NpgsqlProjection[] projections) {
-		_eventStore = eventStore;
-		_messageTypeMap = messageTypeMap;
-		_connectionFactory = connectionFactory;
-		_projections = projections;
-		_stopped = new CancellationTokenSource();
-	}
+public class NpgsqlProjectionHost(
+	EventStoreClient eventStore,
+	IMessageTypeMapper messageTypeMap,
+	Func<NpgsqlConnection> connectionFactory,
+	params NpgsqlProjection[] projections)
+	: IHostedService {
+	private readonly CancellationTokenSource _stopped = new();
 
 	public async Task StartAsync(CancellationToken cancellationToken) {
-		if (_projections.Length == 0) {
+		if (projections.Length == 0) {
 			return;
 		}
 
@@ -49,14 +41,14 @@ public class NpgsqlProjectionHost : IHostedService {
 
 		async Task Subscribe() {
 			await using var subscription =
-				_eventStore.SubscribeToAll(checkpoint, filterOptions: new(EventTypeFilter.ExcludeSystemEvents()));
+				eventStore.SubscribeToAll(checkpoint, filterOptions: new(EventTypeFilter.ExcludeSystemEvents()));
 
 			await foreach (var message in subscription.Messages) {
 				if (message is not StreamMessage.Event(var resolvedEvent)) {
 					continue;
 				}
 
-				if (!_messageTypeMap.TryMap(resolvedEvent.Event.EventType, out var type)) {
+				if (!messageTypeMap.TryMap(resolvedEvent.Event.EventType, out var type)) {
 					continue;
 				}
 
@@ -66,7 +58,7 @@ public class NpgsqlProjectionHost : IHostedService {
 					.Where(projection =>
 						projection.Checkpoint < FromAll.After(resolvedEvent.OriginalPosition ?? Position.Start))
 					.Select(async projector => {
-						await using var connection = _connectionFactory();
+						await using var connection = connectionFactory();
 						await connection.OpenAsync(_stopped.Token);
 						await using var transaction = await connection.BeginTransactionAsync(_stopped.Token);
 						var (projection, _) = projector;
@@ -82,18 +74,18 @@ public class NpgsqlProjectionHost : IHostedService {
 		}
 		
 		async ValueTask<Projector[]> ReadCheckpoints() {
-			await using var connection = _connectionFactory();
+			await using var connection = connectionFactory();
 			await connection.OpenAsync(_stopped.Token);
-			return await Task.WhenAll(Array.ConvertAll(_projections,
+			return await Task.WhenAll(Array.ConvertAll(projections,
 				async projection => new Projector(projection,
 					await projection.ReadCheckpoint(connection, _stopped.Token))));
 		}
 	}
 
 	private Task CreateSchema(CancellationToken cancellationToken) =>
-		Task.WhenAll(_projections.Select(p =>
+		Task.WhenAll(projections.Select(p =>
 			new AsyncSqlProjector(Resolve.WhenEqualToHandlerMessageType(p),
-				new NpgsqlExecutor(_connectionFactory)).ProjectAsync(new CreateSchema(), cancellationToken)));
+				new NpgsqlExecutor(connectionFactory)).ProjectAsync(new CreateSchema(), cancellationToken)));
 
 	public Task StopAsync(CancellationToken cancellationToken) {
 		_stopped.Cancel();

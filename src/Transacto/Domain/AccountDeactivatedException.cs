@@ -1,10 +1,6 @@
 namespace Transacto.Domain;
 
-public class AccountDeactivatedException : Exception {
-	public AccountNumber AccountNumber { get; }
-
-	public AccountDeactivatedException(AccountNumber accountNumber) : base(
-		$"Account {accountNumber} was deactivated.") {
-		AccountNumber = accountNumber;
-	}
+public class AccountDeactivatedException(AccountNumber accountNumber)
+	: Exception($"Account {accountNumber} was deactivated.") {
+	public AccountNumber AccountNumber { get; } = accountNumber;
 }

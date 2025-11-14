@@ -155,18 +155,15 @@ public class GeneralLedgerEntryTests {
 			new GeneralLedgerEntryTestRepository(_facts), _getPrefix, _ => false), _facts);
 	}
 
-	private class TestTransaction : IBusinessTransaction {
-		private readonly Debit[] _debits;
-		private readonly Credit[] _credits;
-		public GeneralLedgerEntrySequenceNumber SequenceNumber { get; }
+	private class TestTransaction(
+		GeneralLedgerEntrySequenceNumber sequenceNumber,
+		Debit[]? debits = null,
+		Credit[]? credits = null)
+		: IBusinessTransaction {
+		private readonly Debit[] _debits = debits ?? Array.Empty<Debit>();
+		private readonly Credit[] _credits = credits ?? Array.Empty<Credit>();
+		public GeneralLedgerEntrySequenceNumber SequenceNumber { get; } = sequenceNumber;
 		public IEnumerable<object> GetTransactionItems() => _credits.Cast<object>().Concat(_debits.Cast<object>());
-
-		public TestTransaction(GeneralLedgerEntrySequenceNumber sequenceNumber, Debit[]? debits = null,
-			Credit[]? credits = null) {
-			SequenceNumber = sequenceNumber;
-			_debits = debits ?? Array.Empty<Debit>();
-			_credits = credits ?? Array.Empty<Credit>();
-		}
 	}
 
 	private class BadTransaction : IBusinessTransaction {

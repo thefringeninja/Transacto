@@ -2,25 +2,17 @@ using NodaTime;
 
 namespace Transacto.Domain;
 
-public class ProfitAndLoss {
+public class ProfitAndLoss(AccountingPeriod accountingPeriod, ChartOfAccounts chartOfAccounts) {
 	private static bool IgnoreInactiveAccount(AccountNumber _) => false;
 
-	private readonly AccountingPeriod _accountingPeriod;
-	private readonly ChartOfAccounts _chartOfAccounts;
-	private readonly AccountBalanceCollection _current;
-
-	public ProfitAndLoss(AccountingPeriod accountingPeriod, ChartOfAccounts chartOfAccounts) {
-		_accountingPeriod = accountingPeriod;
-		_chartOfAccounts = chartOfAccounts;
-		_current = new AccountBalanceCollection();
-	}
+	private readonly AccountBalanceCollection _current = new();
 
 	public GeneralLedgerEntry GetClosingEntry(AccountIsDeactivated accountIsDeactivated,
 		EquityAccount retainedEarningsAccount, LocalDateTime closedOn,
 		GeneralLedgerEntryIdentifier closingGeneralLedgerEntryIdentifier) {
 		var entry = new GeneralLedgerEntry(closingGeneralLedgerEntryIdentifier,
-			new GeneralLedgerEntryNumber(new("jec"), new(int.Parse(_accountingPeriod.ToString()))),
-			_accountingPeriod,
+			new GeneralLedgerEntryNumber(new("jec"), new(int.Parse(accountingPeriod.ToString()))),
+			accountingPeriod,
 			closedOn);
 
 		foreach (var account in _current.Where(x => x.Balance != Money.Zero)) {
@@ -63,12 +55,12 @@ public class ProfitAndLoss {
 
 	public void Transfer(GeneralLedgerEntry generalLedgerEntry) {
 		foreach (var credit in generalLedgerEntry.Credits) {
-			_current.AddOrUpdate(credit.AccountNumber, () => _chartOfAccounts[credit.AccountNumber],
+			_current.AddOrUpdate(credit.AccountNumber, () => chartOfAccounts[credit.AccountNumber],
 				account => account.Credit(credit.Amount));
 		}
 
 		foreach (var debit in generalLedgerEntry.Debits) {
-			_current.AddOrUpdate(debit.AccountNumber, () => _chartOfAccounts[debit.AccountNumber],
+			_current.AddOrUpdate(debit.AccountNumber, () => chartOfAccounts[debit.AccountNumber],
 				account => account.Debit(debit.Amount));
 		}
 	}

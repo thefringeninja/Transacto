@@ -5,11 +5,7 @@ using Transacto.Messages;
 namespace Transacto.Framework;
 
 public class MessageTypeMapperTests {
-	private readonly IMessageTypeMapper _sut;
-
-	public MessageTypeMapperTests() {
-		_sut = MessageTypeMapper.Create(MessageTypeMapper.ScopedFromType(typeof(SomeEvent)));
-	}
+	private readonly IMessageTypeMapper _sut = MessageTypeMapper.Create(MessageTypeMapper.ScopedFromType(typeof(SomeEvent)));
 
 	public void DuplicateTypeRegistrationThrows() {
 		Assert.Throws<ArgumentException>(() => MessageTypeMapper.Create(

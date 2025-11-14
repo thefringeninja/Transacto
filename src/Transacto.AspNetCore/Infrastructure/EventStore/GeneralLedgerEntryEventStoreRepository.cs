@@ -4,13 +4,11 @@ using Transacto.Framework;
 
 namespace Transacto.Infrastructure.EventStore;
 
-public class GeneralLedgerEntryEventStoreRepository : IGeneralLedgerEntryRepository {
-	private readonly EventStoreRepository<GeneralLedgerEntry> _inner;
-
-	public GeneralLedgerEntryEventStoreRepository(EventStoreClient eventStore,
-		IMessageTypeMapper messageTypeMapper) {
-		_inner = new EventStoreRepository<GeneralLedgerEntry>(eventStore, messageTypeMapper);
-	}
+public class GeneralLedgerEntryEventStoreRepository(
+	EventStoreClient eventStore,
+	IMessageTypeMapper messageTypeMapper)
+	: IGeneralLedgerEntryRepository {
+	private readonly EventStoreRepository<GeneralLedgerEntry> _inner = new(eventStore, messageTypeMapper);
 
 	public async ValueTask<GeneralLedgerEntry> Get(GeneralLedgerEntryIdentifier identifier,
 		CancellationToken cancellationToken = default) =>

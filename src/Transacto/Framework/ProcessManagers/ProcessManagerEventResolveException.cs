@@ -1,12 +1,7 @@
 namespace Transacto.Framework.ProcessManagers;
 
-public class ProcessManagerEventResolveException : Exception {
-	public Type EventType { get; }
-	public int HandlerCount { get; }
-
-	public ProcessManagerEventResolveException(Type eventType, int handlerCount)
-		: base($"Expected one registration for event {eventType}, {handlerCount} found.") {
-		EventType = eventType;
-		HandlerCount = handlerCount;
-	}
+public class ProcessManagerEventResolveException(Type eventType, int handlerCount)
+	: Exception($"Expected one registration for event {eventType}, {handlerCount} found.") {
+	public Type EventType { get; } = eventType;
+	public int HandlerCount { get; } = handlerCount;
 }

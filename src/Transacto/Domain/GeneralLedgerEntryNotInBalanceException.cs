@@ -1,10 +1,6 @@
 namespace Transacto.Domain;
 
-public class GeneralLedgerEntryNotInBalanceException : Exception {
-	public GeneralLedgerEntryIdentifier GeneralLedgerEntryIdentifier { get; }
-
-	public GeneralLedgerEntryNotInBalanceException(GeneralLedgerEntryIdentifier generalLedgerEntryIdentifier)
-		: base("The general ledger entry was not in balance.") {
-		GeneralLedgerEntryIdentifier = generalLedgerEntryIdentifier;
-	}
+public class GeneralLedgerEntryNotInBalanceException(GeneralLedgerEntryIdentifier generalLedgerEntryIdentifier)
+	: Exception("The general ledger entry was not in balance.") {
+	public GeneralLedgerEntryIdentifier GeneralLedgerEntryIdentifier { get; } = generalLedgerEntryIdentifier;
 }

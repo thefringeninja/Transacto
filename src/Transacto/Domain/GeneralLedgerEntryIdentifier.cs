@@ -1,9 +1,7 @@
 namespace Transacto.Domain;
 
-public readonly struct GeneralLedgerEntryIdentifier : IEquatable<GeneralLedgerEntryIdentifier> {
-	private readonly Guid _value;
-
-	public GeneralLedgerEntryIdentifier(Guid value) => _value = value switch {
+public readonly struct GeneralLedgerEntryIdentifier(Guid value) : IEquatable<GeneralLedgerEntryIdentifier> {
+	private readonly Guid _value = value switch {
 		{ } when value == Guid.Empty => throw new ArgumentOutOfRangeException(nameof(value)),
 		_ => value
 	};

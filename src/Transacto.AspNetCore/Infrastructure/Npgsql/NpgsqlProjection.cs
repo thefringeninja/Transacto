@@ -6,13 +6,9 @@ using Projac.Sql;
 
 namespace Transacto.Infrastructure.Npgsql;
 
-public abstract class NpgsqlProjection : SqlProjection {
-	protected NpgsqlScripts Scripts { get; }
+public abstract class NpgsqlProjection(NpgsqlScripts scripts) : SqlProjection {
+	protected NpgsqlScripts Scripts { get; } = scripts;
 	protected static readonly NpgsqlSyntax Sql = new();
-
-	protected NpgsqlProjection(NpgsqlScripts scripts) {
-		Scripts = scripts;
-	}
 
 	protected void When<TEvent>() =>
 		When<TEvent>(_ => Sql.NonQueryStatement(Scripts[typeof(TEvent)], Array.Empty<DbParameter>()));

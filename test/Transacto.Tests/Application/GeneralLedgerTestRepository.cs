@@ -3,12 +3,8 @@ using Transacto.Testing;
 
 namespace Transacto.Application;
 
-internal class GeneralLedgerTestRepository : IGeneralLedgerRepository {
-	private readonly FactRecorderRepository<GeneralLedger> _inner;
-
-	public GeneralLedgerTestRepository(IFactRecorder factRecorder) {
-		_inner = new FactRecorderRepository<GeneralLedger>(factRecorder);
-	}
+internal class GeneralLedgerTestRepository(IFactRecorder factRecorder) : IGeneralLedgerRepository {
+	private readonly FactRecorderRepository<GeneralLedger> _inner = new(factRecorder);
 
 	public async ValueTask<GeneralLedger> Get(CancellationToken cancellationToken = default) {
 		var optional = await _inner.GetOptional(GeneralLedger.Identifier, cancellationToken);

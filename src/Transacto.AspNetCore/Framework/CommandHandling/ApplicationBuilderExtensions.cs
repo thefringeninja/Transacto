@@ -70,16 +70,11 @@ public static partial class ApplicationBuilderExtensions {
 		}
 	}
 
-	private class JsonCommandSchemaCache {
-		private readonly ConcurrentDictionary<Type, JsonDocument> _scripts;
+	private class JsonCommandSchemaCache(params Type[] commandTypes) {
+		private readonly ConcurrentDictionary<Type, JsonDocument> _scripts = new();
 
-		public Type[] CommandTypes { get; }
+		public Type[] CommandTypes { get; } = commandTypes;
 		public JsonDocument this[Type commandType] => GetScript(commandType);
-
-		public JsonCommandSchemaCache(params Type[] commandTypes) {
-			CommandTypes = commandTypes;
-			_scripts = new ConcurrentDictionary<Type, JsonDocument>();
-		}
 
 		private JsonDocument GetScript(Type commandType) {
 			if (!CommandTypes.Contains(commandType)) {

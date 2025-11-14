@@ -4,7 +4,7 @@ internal class FactEqualityComparer : IEqualityComparer<Fact> {
 	private readonly IFactComparer _comparer;
 
 	public FactEqualityComparer(IFactComparer comparer) {
-		if (comparer == null) throw new ArgumentNullException(nameof(comparer));
+		ArgumentNullException.ThrowIfNull(comparer);
 		_comparer = comparer;
 	}
 

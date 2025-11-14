@@ -19,8 +19,8 @@ public struct Fact : IEquatable<Fact> {
 	///     <c>null</c>.
 	/// </exception>
 	public Fact(string identifier, object @event) {
-		if (identifier == null) throw new ArgumentNullException(nameof(identifier));
-		if (@event == null) throw new ArgumentNullException(nameof(@event));
+		ArgumentNullException.ThrowIfNull(identifier);
+		ArgumentNullException.ThrowIfNull(@event);
 		Identifier = identifier;
 		Event = @event;
 	}

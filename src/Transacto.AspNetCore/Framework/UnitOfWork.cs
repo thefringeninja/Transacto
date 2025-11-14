@@ -77,13 +77,7 @@ public class UnitOfWork {
 		protected override string GetKeyForItem(Transaction item) => item.StreamName;
 	}
 
-	private class DisposableAction : IDisposable {
-		private readonly Action _onDispose;
-
-		public DisposableAction(Action onDispose) {
-			_onDispose = onDispose;
-		}
-
-		public void Dispose() => _onDispose();
+	private class DisposableAction(Action onDispose) : IDisposable {
+		public void Dispose() => onDispose();
 	}
 }

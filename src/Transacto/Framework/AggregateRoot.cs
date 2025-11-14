@@ -1,12 +1,10 @@
 namespace Transacto.Framework;
 
 public abstract class AggregateRoot : IAggregateRoot {
-	private readonly IList<object> _changes;
+	private readonly IList<object> _changes = new List<object>();
 
 	public bool HasChanges => _changes.Count > 0;
 	public abstract string Id { get; }
-
-	protected AggregateRoot() => _changes = new List<object>();
 
 	public void ReadFromHistory(object @event) => Apply(@event, true);
 	public void MarkChangesAsCommitted() => _changes.Clear();

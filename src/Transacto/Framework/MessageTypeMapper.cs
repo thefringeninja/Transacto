@@ -84,12 +84,8 @@ public class MessageTypeMapper : IMessageTypeMapper {
 		}
 	}
 
-	private class ReflectionMessageTypeMapper : IMessageTypeMapper {
-		private readonly IMessageTypeMapper _inner;
-
-		public ReflectionMessageTypeMapper(Assembly messageAssembly, string? messageNamespace) {
-			_inner = new MessageTypeMapper(messageAssembly.DefinedTypes.Where(IsMessageType(messageNamespace)));
-		}
+	private class ReflectionMessageTypeMapper(Assembly messageAssembly, string? messageNamespace) : IMessageTypeMapper {
+		private readonly IMessageTypeMapper _inner = new MessageTypeMapper(messageAssembly.DefinedTypes.Where(IsMessageType(messageNamespace)));
 
 		private static Func<Type, bool> IsMessageType(string? messageNamespace) => type =>
 			string.Equals(messageNamespace, type.Namespace);

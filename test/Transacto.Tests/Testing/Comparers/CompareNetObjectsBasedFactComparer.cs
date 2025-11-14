@@ -17,7 +17,7 @@ public class CompareNetObjectsBasedFactComparer : IFactComparer {
 	///     <c>null</c>.
 	/// </exception>
 	public CompareNetObjectsBasedFactComparer(ICompareLogic logic) {
-		if (logic == null) throw new ArgumentNullException(nameof(logic));
+		ArgumentNullException.ThrowIfNull(logic);
 		_logic = logic;
 	}
 

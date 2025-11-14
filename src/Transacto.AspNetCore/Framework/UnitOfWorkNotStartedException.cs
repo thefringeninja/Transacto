@@ -1,6 +1,3 @@
 namespace Transacto.Framework;
 
-public class UnitOfWorkNotStartedException : Exception {
-	public UnitOfWorkNotStartedException() : base("The UnitOfWork has not started.") {
-	}
-}
+public class UnitOfWorkNotStartedException() : Exception("The UnitOfWork has not started.");

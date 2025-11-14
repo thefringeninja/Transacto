@@ -28,8 +28,8 @@ public class FactsBuilder {
 	///     <paramref name="events" /> is <c>null</c>.
 	/// </exception>
 	public FactsBuilder That(string identifier, params object[] events) {
-		if (identifier == null) throw new ArgumentNullException(nameof(identifier));
-		if (events == null) throw new ArgumentNullException(nameof(events));
+		ArgumentNullException.ThrowIfNull(identifier);
+		ArgumentNullException.ThrowIfNull(events);
 		if (events.Length == 0) return this;
 		var combinedFacts = new Fact[_facts.Length + events.Length];
 		_facts.CopyTo(combinedFacts, 0);
@@ -45,7 +45,7 @@ public class FactsBuilder {
 	/// <returns>A builder of facts.</returns>
 	/// <exception cref="System.ArgumentNullException">Thrown when the <paramref name="facts" /> is <c>null</c>.</exception>
 	public FactsBuilder That(params Fact[] facts) {
-		if (facts == null) throw new ArgumentNullException(nameof(facts));
+		ArgumentNullException.ThrowIfNull(facts);
 		var combinedFacts = new Fact[_facts.Length + facts.Length];
 		_facts.CopyTo(combinedFacts, 0);
 		facts.CopyTo(combinedFacts, _facts.Length);

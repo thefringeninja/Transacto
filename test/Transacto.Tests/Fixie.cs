@@ -117,10 +117,8 @@ internal abstract class DataAttribute : Attribute {
 }
 
 [AttributeUsage(AttributeTargets.Method, AllowMultiple = true)]
-internal class InlineDataAttribute : DataAttribute {
-	public IEnumerable<object[]> Parameters { get; }
-
-	public InlineDataAttribute(params object[] parameters) => Parameters = new[] { parameters };
+internal class InlineDataAttribute(params object[] parameters) : DataAttribute {
+	public IEnumerable<object[]> Parameters { get; } = new[] { parameters };
 
 	public override IEnumerable<object[]> GetParameters(Test test) => Parameters;
 }
@@ -147,17 +145,11 @@ internal class ClassDataAttribute : DataAttribute {
 }
 
 [AttributeUsage(AttributeTargets.Method)]
-internal class AutoFixtureDataAttribute : DataAttribute {
-	private readonly int _count;
-	private readonly Fixture _fixture;
-
-	public AutoFixtureDataAttribute(int count = 3) {
-		_count = count;
-		_fixture = new ScenarioFixture();
-	}
+internal class AutoFixtureDataAttribute(int count = 3) : DataAttribute {
+	private readonly Fixture _fixture = new ScenarioFixture();
 
 	public override IEnumerable<object[]> GetParameters(Test test) {
-		for (var i = 0; i < _count; i++) {
+		for (var i = 0; i < count; i++) {
 			yield return Array.ConvertAll(test.Parameters,
 				parameter => _fixture.Create(parameter.ParameterType, new SpecimenContext(_fixture)));
 		}
@@ -165,12 +157,8 @@ internal class AutoFixtureDataAttribute : DataAttribute {
 }
 
 [AttributeUsage(AttributeTargets.Method)]
-internal class MemberDataAttribute : DataAttribute {
-	public string Name { get; }
-
-	public MemberDataAttribute(string name) {
-		Name = name;
-	}
+internal class MemberDataAttribute(string name) : DataAttribute {
+	public string Name { get; } = name;
 
 	public override IEnumerable<object[]> GetParameters(Test test) =>
 		(test.Method.DeclaringType?.GetMethod(Name,
@@ -178,16 +166,10 @@ internal class MemberDataAttribute : DataAttribute {
 			?.Invoke(null, null) as IEnumerable<object[]>)!;
 }
 
-internal class SerilogTextWriter : TextWriter {
-	private readonly ILogger _logger;
-	private readonly StringBuilder _builder;
+internal class SerilogTextWriter(ILogger logger) : TextWriter {
+	private readonly StringBuilder _builder = new();
 
 	public override Encoding Encoding { get; } = Encoding.UTF8;
-
-	public SerilogTextWriter(ILogger logger) {
-		_logger = logger;
-		_builder = new StringBuilder();
-	}
 
 	public override void Write(char value) {
 		_builder.Append(value);
@@ -196,7 +178,7 @@ internal class SerilogTextWriter : TextWriter {
 			return;
 		}
 
-		_logger.Information(_builder.ToString().Trim());
+		logger.Information(_builder.ToString().Trim());
 		_builder.Clear();
 	}
 

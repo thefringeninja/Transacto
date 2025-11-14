@@ -8,9 +8,9 @@ public class EventCentricTestSpecificationRunner : IEventCentricTestSpecificatio
 	private readonly object _handler;
 
 	public EventCentricTestSpecificationRunner(IFactComparer comparer, object handler, IFactRecorder factRecorder) {
-		if (comparer == null) throw new ArgumentNullException(nameof(comparer));
-		if (handler == null) throw new ArgumentNullException(nameof(handler));
-		if (factRecorder == null) throw new ArgumentNullException(nameof(factRecorder));
+		ArgumentNullException.ThrowIfNull(comparer);
+		ArgumentNullException.ThrowIfNull(handler);
+		ArgumentNullException.ThrowIfNull(factRecorder);
 		_comparer = comparer;
 		_factRecorder = factRecorder;
 		_handler = handler;

@@ -3,13 +3,7 @@
 #endif
 
 namespace Transacto.Testing {
-	internal class WrappedEventComparerEqualityComparer : IEqualityComparer<object> {
-		private readonly IEventComparer _comparer;
-
-		public WrappedEventComparerEqualityComparer(IEventComparer comparer) {
-			_comparer = comparer;
-		}
-
+	internal class WrappedEventComparerEqualityComparer(IEventComparer comparer) : IEqualityComparer<object> {
 		bool IEqualityComparer<object>.Equals(object? x, object? y) {
 #if NET20
             using (var enumerator = _comparer.Compare(x, y).GetEnumerator()) 
@@ -17,7 +11,7 @@ namespace Transacto.Testing {
                 return !enumerator.MoveNext();
             }
 #else
-			return !_comparer.Compare(x!, y!).Any();
+			return !comparer.Compare(x!, y!).Any();
 #endif
 		}
 

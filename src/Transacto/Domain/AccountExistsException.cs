@@ -1,9 +1,6 @@
 namespace Transacto.Domain;
 
-public class AccountExistsException : Exception {
-	public AccountNumber AccountNumber { get; }
-
-	public AccountExistsException(AccountNumber accountNumber) : base($"Account {accountNumber} already exists.") {
-		AccountNumber = accountNumber;
-	}
+public class AccountExistsException(AccountNumber accountNumber)
+	: Exception($"Account {accountNumber} already exists.") {
+	public AccountNumber AccountNumber { get; } = accountNumber;
 }

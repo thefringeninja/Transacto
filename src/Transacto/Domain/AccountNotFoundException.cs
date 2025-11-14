@@ -1,9 +1,6 @@
 namespace Transacto.Domain;
 
-public class AccountNotFoundException : Exception {
-	public AccountNumber AccountNumber { get; }
-
-	public AccountNotFoundException(AccountNumber accountNumber) : base($"Account {accountNumber} was not found.") {
-		AccountNumber = accountNumber;
-	}
+public class AccountNotFoundException(AccountNumber accountNumber)
+	: Exception($"Account {accountNumber} was not found.") {
+	public AccountNumber AccountNumber { get; } = accountNumber;
 }

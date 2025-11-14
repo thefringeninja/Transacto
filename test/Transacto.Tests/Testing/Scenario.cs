@@ -13,7 +13,7 @@ public class Scenario : IScenarioInitialStateBuilder {
 	/// </returns>
 	/// <exception cref="System.ArgumentNullException">facts</exception>
 	public IScenarioGivenStateBuilder Given(params Fact[] facts) {
-		if (facts == null) throw new ArgumentNullException(nameof(facts));
+		ArgumentNullException.ThrowIfNull(facts);
 		return new TestSpecificationBuilder().Given(facts);
 	}
 
@@ -24,8 +24,8 @@ public class Scenario : IScenarioInitialStateBuilder {
 	/// <param name="events">The events that occurred.</param>
 	/// <returns>A builder continuation.</returns>
 	public IScenarioGivenStateBuilder Given(string identifier, params object[] events) {
-		if (identifier == null) throw new ArgumentNullException(nameof(identifier));
-		if (events == null) throw new ArgumentNullException(nameof(events));
+		ArgumentNullException.ThrowIfNull(identifier);
+		ArgumentNullException.ThrowIfNull(events);
 		return new TestSpecificationBuilder().Given(identifier, events);
 	}
 
@@ -43,7 +43,7 @@ public class Scenario : IScenarioInitialStateBuilder {
 	/// <param name="message">The command message.</param>
 	/// <returns>A builder continuation.</returns>
 	public IScenarioWhenStateBuilder When(object message) {
-		if (message == null) throw new ArgumentNullException(nameof(message));
+		ArgumentNullException.ThrowIfNull(message);
 		return new TestSpecificationBuilder().When(message);
 	}
 }

@@ -1,17 +1,12 @@
 namespace Transacto.Framework;
 
-public readonly struct Optional<T> : IEquatable<Optional<T>> {
+public readonly struct Optional<T>(T value) : IEquatable<Optional<T>> {
 	public static readonly Optional<T> Empty = default;
-	public bool HasValue { get; }
+	public bool HasValue { get; } = true;
 
 	public T Value => HasValue ? _value : throw new InvalidOperationException();
 
-	private readonly T _value;
-
-	public Optional(T value) {
-		HasValue = true;
-		_value = value;
-	}
+	private readonly T _value = value;
 
 	public bool Equals(Optional<T> other) =>
 		HasValue == other.HasValue && EqualityComparer<T>.Default.Equals(_value, other._value);

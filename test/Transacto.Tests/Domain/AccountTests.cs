@@ -3,11 +3,7 @@ using AutoFixture;
 namespace Transacto.Domain;
 
 public class AccountTests {
-	private readonly ScenarioFixture _fixture;
-
-	public AccountTests() {
-		_fixture = new ScenarioFixture();
-	}
+	private readonly ScenarioFixture _fixture = new();
 
 	private static IEnumerable<int> GenerateAccountNumbers() {
 		var rand = new Random();

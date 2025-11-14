@@ -1,10 +1,6 @@
 namespace Transacto.Domain;
 
-public class GeneralLedgerEntryWasPostedException : Exception {
-	public GeneralLedgerEntryIdentifier GeneralLedgerEntryIdentifier { get; }
-
-	public GeneralLedgerEntryWasPostedException(GeneralLedgerEntryIdentifier generalLedgerEntryIdentifier)
-		: base("The general ledger entry was posted.") {
-		GeneralLedgerEntryIdentifier = generalLedgerEntryIdentifier;
-	}
+public class GeneralLedgerEntryWasPostedException(GeneralLedgerEntryIdentifier generalLedgerEntryIdentifier)
+	: Exception("The general ledger entry was posted.") {
+	public GeneralLedgerEntryIdentifier GeneralLedgerEntryIdentifier { get; } = generalLedgerEntryIdentifier;
 }

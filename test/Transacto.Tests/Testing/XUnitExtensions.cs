@@ -39,10 +39,10 @@ internal static class XUnitExtensions {
 	/// <param name="factRecorder"></param>
 	public static async Task Assert(this IEventCentricTestSpecificationBuilder builder,
 		IFactComparer comparer, object handler, IFactRecorder factRecorder) {
-		if (builder == null) throw new ArgumentNullException(nameof(builder));
-		if (comparer == null) throw new ArgumentNullException(nameof(comparer));
-		if (handler == null) throw new ArgumentNullException(nameof(handler));
-		if (factRecorder == null) throw new ArgumentNullException(nameof(factRecorder));
+		ArgumentNullException.ThrowIfNull(builder);
+		ArgumentNullException.ThrowIfNull(comparer);
+		ArgumentNullException.ThrowIfNull(handler);
+		ArgumentNullException.ThrowIfNull(factRecorder);
 		var specification = builder.Build();
 		var runner = new EventCentricTestSpecificationRunner(comparer, handler, factRecorder);
 		var result = await runner.Run(specification);
@@ -87,10 +87,10 @@ internal static class XUnitExtensions {
 
 	public static async Task Assert(this IExceptionCentricTestSpecificationBuilder builder,
 		IExceptionComparer comparer, object handler, IFactRecorder factRecorder) {
-		if (builder == null) throw new ArgumentNullException(nameof(builder));
-		if (comparer == null) throw new ArgumentNullException(nameof(comparer));
-		if (handler == null) throw new ArgumentNullException(nameof(handler));
-		if (factRecorder == null) throw new ArgumentNullException(nameof(factRecorder));
+		ArgumentNullException.ThrowIfNull(builder);
+		ArgumentNullException.ThrowIfNull(comparer);
+		ArgumentNullException.ThrowIfNull(handler);
+		ArgumentNullException.ThrowIfNull(factRecorder);
 		var specification = builder.Build();
 		var runner = new ExceptionCentricTestSpecificationRunner(comparer, handler, factRecorder);
 		var result = await runner.Run(specification);
@@ -116,10 +116,7 @@ internal static class XUnitExtensions {
 		}
 	}
 
-	private class JsonDocumentComparer : BaseTypeComparer {
-		public JsonDocumentComparer(RootComparer rootComparer) : base(rootComparer) {
-		}
-
+	private class JsonDocumentComparer(RootComparer rootComparer) : BaseTypeComparer(rootComparer) {
 		public override bool IsTypeMatch(Type type1, Type type2) {
 			return type1 == type2 && type1 == typeof(JsonDocument);
 		}
