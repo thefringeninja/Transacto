@@ -33,11 +33,13 @@ public class TestProject : ITestProject {
 	private class TestDiscovery : IDiscovery {
 		public IEnumerable<Type> TestClasses(IEnumerable<Type> concreteClasses) => concreteClasses
 			.Where(x => x.Name.EndsWith("Tests") && !x.Name.EndsWith("IntegrationTests"))
-			.Shuffle();
+			//.Shuffle()
+		;
 
 		public IEnumerable<MethodInfo> TestMethods(IEnumerable<MethodInfo> publicMethods) => publicMethods
 			.Where(x => !LifecycleMethods.Contains(x.Name))
-			.Shuffle();
+			//.Shuffle()
+		;
 	}
 
 	private class IntegrationTestDiscovery : IDiscovery {

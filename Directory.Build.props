@@ -1,12 +1,11 @@
 <Project>
 	<PropertyGroup>
-		<TargetFramework>net7.0</TargetFramework>
+		<TargetFramework>net9.0</TargetFramework>
 		<RootNamespace>Transacto</RootNamespace>
 		<Nullable>enable</Nullable>
 		<NullableContextOptions>enable</NullableContextOptions>
 		<TreatWarningsAsErrors>true</TreatWarningsAsErrors>
 		<EnablePreviewFeatures>True</EnablePreviewFeatures>
-		<LangVersion>11.0</LangVersion>
 		<PreserveCompilationContext>true</PreserveCompilationContext>
 		<RestoreSources>
 			$(RestoreSources);
