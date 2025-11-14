@@ -1,10 +1,13 @@
 namespace Transacto.Domain;
 
-public readonly struct AccountNumber(int value) : IEquatable<AccountNumber> {
-	public int Value { get; } = value switch {
-		< 1000 or >= 9000 => throw new ArgumentOutOfRangeException(nameof(value)),
-		_ => value
-	};
+public readonly struct AccountNumber : IEquatable<AccountNumber> {
+	public AccountNumber(int value) {
+		ArgumentOutOfRangeException.ThrowIfLessThan(value, 1000);
+		ArgumentOutOfRangeException.ThrowIfGreaterThanOrEqual(value, 9000);
+		Value = value;
+	}
+
+	public int Value { get; }
 
 	public bool Equals(AccountNumber other) => Value == other.Value;
 	public override bool Equals(object? obj) => obj is AccountNumber other && Equals(other);

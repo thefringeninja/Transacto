@@ -8,9 +8,7 @@ public readonly struct Debit : IEquatable<Debit> {
 	}
 
 	public Debit(AccountNumber accountNumber, Money amount) {
-		if (amount < Money.Zero) {
-			throw new ArgumentOutOfRangeException(nameof(amount));
-		}
+		ArgumentOutOfRangeException.ThrowIfLessThan(amount, Money.Zero);
 
 		Amount = amount;
 		AccountNumber = accountNumber;

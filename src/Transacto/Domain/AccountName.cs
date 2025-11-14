@@ -1,12 +1,14 @@
 namespace Transacto.Domain;
 
-public readonly struct AccountName(string value) : IEquatable<AccountName> {
+public readonly struct AccountName : IEquatable<AccountName> {
 	public const int MaxLength = 256;
-	private readonly string _value = value.Length switch {
-		0 => throw new ArgumentException("Input was empty.", nameof(value)),
-		> MaxLength => throw new ArgumentException("Input was too long.", nameof(value)),
-		_ => value
-	};
+	private readonly string _value;
+
+	public AccountName(string value) {
+		ArgumentException.ThrowIfNullOrEmpty(value);
+		ArgumentException.ThrowIfLengthTooLong(value, MaxLength);
+		_value = value;
+	}
 
 	public bool Equals(AccountName other) => _value == other._value;
 	public override bool Equals(object? obj) => obj is AccountName other && Equals(other);
