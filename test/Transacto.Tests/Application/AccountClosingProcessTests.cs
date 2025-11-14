@@ -70,8 +70,7 @@ public class AccountClosingProcessTests {
 			ClosingOn = Time.Format.LocalDateTime(closingOn),
 			RetainedEarningsAccountNumber = retainedEarnings.AccountNumber.ToInt32(),
 			ClosingGeneralLedgerEntryId = closingGeneralLedgerEntryIdentifier.ToGuid(),
-			GeneralLedgerEntryIds = Array.ConvertAll(generalLedgerEntryIdentifiers, identifier => identifier.ToGuid())
-				.ToImmutableArray()
+			GeneralLedgerEntryIds = [..Array.ConvertAll(generalLedgerEntryIdentifiers, identifier => identifier.ToGuid())]
 		};
 		var net = income - expense;
 		var generalLedgerEntryFacts = generalLedgerEntryIdentifiers.SelectMany(
@@ -169,27 +168,28 @@ public class AccountClosingProcessTests {
 				new AccountingPeriodClosed {
 					Period = period.ToString(),
 					GeneralLedgerEntryIds =
-						Array.ConvertAll(generalLedgerEntryIdentifiers, identifier => identifier.ToGuid())
-							.ToImmutableArray(),
+						[..Array.ConvertAll(generalLedgerEntryIdentifiers, identifier => identifier.ToGuid())],
 					ClosingGeneralLedgerEntryId = closingGeneralLedgerEntryIdentifier.ToGuid(),
-					Balance = ImmutableArray.CreateRange(new[] {
-						new BalanceLineItem {
-							AccountNumber = cashAccount.AccountNumber.ToInt32(),
-							Amount = net.ToDecimal() * generalLedgerEntryIdentifiers.Length
-						},
-						new BalanceLineItem {
-							AccountNumber = retainedEarnings.AccountNumber.ToInt32(),
-							Amount = net.ToDecimal() * generalLedgerEntryIdentifiers.Length
-						},
-						new BalanceLineItem {
-							AccountNumber = incomeAccount.AccountNumber.ToInt32(),
-							Amount = Money.Zero.ToDecimal()
-						},
-						new BalanceLineItem {
-							AccountNumber = expenseAccount.AccountNumber.ToInt32(),
-							Amount = Money.Zero.ToDecimal()
+					Balance = [
+						..new[] {
+							new BalanceLineItem {
+								AccountNumber = cashAccount.AccountNumber.ToInt32(),
+								Amount = net.ToDecimal() * generalLedgerEntryIdentifiers.Length
+							},
+							new BalanceLineItem {
+								AccountNumber = retainedEarnings.AccountNumber.ToInt32(),
+								Amount = net.ToDecimal() * generalLedgerEntryIdentifiers.Length
+							},
+							new BalanceLineItem {
+								AccountNumber = incomeAccount.AccountNumber.ToInt32(),
+								Amount = Money.Zero.ToDecimal()
+							},
+							new BalanceLineItem {
+								AccountNumber = expenseAccount.AccountNumber.ToInt32(),
+								Amount = Money.Zero.ToDecimal()
+							}
 						}
-					})
+					]
 				})
 			.Assert(_handler, _facts);
 	}

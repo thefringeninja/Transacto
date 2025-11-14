@@ -15,7 +15,7 @@ public class MessageTypeMapper : IMessageTypeMapper {
 		new ReflectionMessageTypeMapper(type.Assembly, type.Namespace);
 
 	public static IMessageTypeMapper Create(params IMessageTypeMapper[] messageTypeMappers)
-		=> new CompositeMessageTypeMapper(messageTypeMappers.Concat(new[] { TransactoMessageTypeMapper.Instance })
+		=> new CompositeMessageTypeMapper(messageTypeMappers.Concat([TransactoMessageTypeMapper.Instance])
 			.ToArray());
 
 	public MessageTypeMapper(IEnumerable<Type> types) {
@@ -38,7 +38,7 @@ public class MessageTypeMapper : IMessageTypeMapper {
 		public IEnumerable<Type> Types => _inner.Types;
 
 		private TransactoMessageTypeMapper() => _inner = new CompositeMessageTypeMapper(
-			ScopedFromType(typeof(AccountDefined)), new MessageTypeMapper(new[] { typeof(JournalEntry) }));
+			ScopedFromType(typeof(AccountDefined)), new MessageTypeMapper([typeof(JournalEntry)]));
 	}
 
 	private class CompositeMessageTypeMapper : IMessageTypeMapper {

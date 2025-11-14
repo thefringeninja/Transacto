@@ -11,10 +11,10 @@ public class CommandHandlerResolveTests {
 	}
 
 	public void MultipleRegistrationsThrow() {
-		var sut = CommandResolve.WhenEqualToHandlerMessageType(new[] {
+		var sut = CommandResolve.WhenEqualToHandlerMessageType([
 			new MessageHandler<Checkpoint>(typeof(object), (_, _) => new ValueTask<Checkpoint>(Checkpoint.None)),
 			new MessageHandler<Checkpoint>(typeof(object), (_, _) => new ValueTask<Checkpoint>(Checkpoint.None))
-		});
+		]);
 
 		var ex = Assert.Throws<CommandResolveException>(() => sut.Invoke(new object()));
 
@@ -26,7 +26,7 @@ public class CommandHandlerResolveTests {
 		var handler =
 			new MessageHandler<Checkpoint>(typeof(object), (_, _) => new ValueTask<Checkpoint>(Checkpoint.None));
 
-		var sut = CommandResolve.WhenEqualToHandlerMessageType(new[] { handler });
+		var sut = CommandResolve.WhenEqualToHandlerMessageType([handler]);
 		Assert.Equal(handler, sut.Invoke(new object()));
 	}
 }

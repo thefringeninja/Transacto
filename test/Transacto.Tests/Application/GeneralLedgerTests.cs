@@ -51,7 +51,7 @@ public class GeneralLedgerTests {
 			.Then(GeneralLedger.Identifier, new AccountingPeriodClosing {
 				Period = AccountingPeriod.Open(openedOn.OnDayOfMonth(1)).ToString(),
 				GeneralLedgerEntryIds =
-					Array.ConvertAll(generalLedgerEntryIdentifiers, x => x.ToGuid()).ToImmutableArray(),
+					[..Array.ConvertAll(generalLedgerEntryIdentifiers, x => x.ToGuid())],
 				ClosingOn = Time.Format.LocalDateTime(openedOn.OnDayOfMonth(2).AtMidnight()),
 				RetainedEarningsAccountNumber = retainedEarnings.AccountNumber.ToInt32(),
 				ClosingGeneralLedgerEntryId = closingGeneralLedgerEntryIdentifier.ToGuid()

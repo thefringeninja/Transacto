@@ -60,10 +60,10 @@ public class ProcessManagerHost(
 					continue;
 				}
 
-				await eventStore.AppendToStreamAsync(checkpointStreamName, StreamState.Any, new[] {
+				await eventStore.AppendToStreamAsync(checkpointStreamName, StreamState.Any, [
 					new EventData(Uuid.NewUuid(), "checkpoint", checkpoint.Memory,
 						contentType: "application/octet-stream")
-				}, cancellationToken: _stopped.Token);
+				], cancellationToken: _stopped.Token);
 			}
 		}
 	}

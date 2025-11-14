@@ -67,20 +67,21 @@ internal class BalanceSheet : IPlugin {
 
 		public ImmutableSortedSet<Entry> PostedEntriesByDate { get; init; } = ImmutableSortedSet<Entry>.Empty;
 
-		public ImmutableArray<LineItem> GetLineItems(LocalDateTime thru) => PostedEntries.Values
-			.Where(entry => entry.CreatedOn < thru)
-			.Aggregate(ClosedBalance, (closedBalance, entry) => entry.Debits.Concat(entry.Credits
-					.Select(x => new KeyValuePair<int, decimal>(x.Key, -x.Value)))
-				.Aggregate(closedBalance, (cb, pair) => cb.SetItem(pair.Key,
-					cb.TryGetValue(pair.Key, out var balance)
-						? balance + pair.Value
-						: pair.Value)))
-			.Select(pair => new LineItem {
-				AccountNumber = pair.Key,
-				Balance = Decimal.Create(pair.Value),
-				Name = AccountNames[pair.Key]
-			})
-			.ToImmutableArray();
+		public ImmutableArray<LineItem> GetLineItems(LocalDateTime thru) => [
+			..PostedEntries.Values
+				.Where(entry => entry.CreatedOn < thru)
+				.Aggregate(ClosedBalance, (closedBalance, entry) => entry.Debits.Concat(entry.Credits
+						.Select(x => new KeyValuePair<int, decimal>(x.Key, -x.Value)))
+					.Aggregate(closedBalance, (cb, pair) => cb.SetItem(pair.Key,
+						cb.TryGetValue(pair.Key, out var balance)
+							? balance + pair.Value
+							: pair.Value)))
+				.Select(pair => new LineItem {
+					AccountNumber = pair.Key,
+					Balance = Decimal.Create(pair.Value),
+					Name = AccountNames[pair.Key]
+				})
+		];
 
 		public ReadModel Compact() => this with {
 			UnpostedEntries = UnpostedEntries.Compact(),
@@ -160,5 +161,5 @@ internal class BalanceSheet : IPlugin {
 			_ => readModel
 		});
 
-	public IEnumerable<Type> MessageTypes => Enumerable.Empty<Type>();
+	public IEnumerable<Type> MessageTypes => [];
 }

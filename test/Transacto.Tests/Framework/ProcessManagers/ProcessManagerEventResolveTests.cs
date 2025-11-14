@@ -3,16 +3,16 @@ namespace Transacto.Framework.ProcessManagers;
 public class ProcessManagerEventResolveTests {
 	public void ZeroRegistrationsDoesNotThrow() {
 		var sut = ProcessManagerEventResolve.WhenEqualToHandlerMessageType(
-			Array.Empty<MessageHandler<Checkpoint>>());
+			[]);
 
 		sut.Invoke(new object());
 	}
 
 	public void MultipleRegistrationsThrow() {
-		var sut = ProcessManagerEventResolve.WhenEqualToHandlerMessageType(new[] {
+		var sut = ProcessManagerEventResolve.WhenEqualToHandlerMessageType([
 			new MessageHandler<Checkpoint>(typeof(object), (_, _) => new ValueTask<Checkpoint>(Checkpoint.None)),
 			new MessageHandler<Checkpoint>(typeof(object), (_, _) => new ValueTask<Checkpoint>(Checkpoint.None))
-		});
+		]);
 
 		var ex = Assert.Throws<ProcessManagerEventResolveException>(() => sut.Invoke(new object()));
 
@@ -24,7 +24,7 @@ public class ProcessManagerEventResolveTests {
 		var handler =
 			new MessageHandler<Checkpoint>(typeof(object), (_, _) => new ValueTask<Checkpoint>(Checkpoint.None));
 
-		var sut = ProcessManagerEventResolve.WhenEqualToHandlerMessageType(new[] { handler });
+		var sut = ProcessManagerEventResolve.WhenEqualToHandlerMessageType([handler]);
 		Assert.Equal(handler, sut.Invoke(new object()));
 	}
 }

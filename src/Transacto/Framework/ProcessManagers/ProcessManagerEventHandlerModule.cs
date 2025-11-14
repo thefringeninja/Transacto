@@ -6,7 +6,7 @@ public class ProcessManagerEventHandlerModule : IEnumerable<MessageHandler<Check
 	private readonly List<MessageHandler<Checkpoint>> _handlers;
 
 	protected ProcessManagerEventHandlerModule() {
-		_handlers = new List<MessageHandler<Checkpoint>>();
+		_handlers = [];
 	}
 
 	protected IMessageHandlerBuilder<TEvent, Checkpoint> Build<TEvent>() where TEvent : class =>

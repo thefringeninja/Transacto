@@ -4,7 +4,7 @@ namespace Transacto.Testing;
 
 internal class FactRecorder : IFactRecorder {
 	private readonly IDictionary<string, IAggregateRoot> _aggregates = new Dictionary<string, IAggregateRoot>();
-	private readonly List<Fact> _recordedFacts = new();
+	private readonly List<Fact> _recordedFacts = [];
 
 	public void Record(string identifier, IEnumerable<object> events) =>
 		Record(events.Select(e => new Fact(identifier, e)));

@@ -11,7 +11,7 @@ public abstract class NpgsqlProjection(NpgsqlScripts scripts) : SqlProjection {
 	protected static readonly NpgsqlSyntax Sql = new();
 
 	protected void When<TEvent>() =>
-		When<TEvent>(_ => Sql.NonQueryStatement(Scripts[typeof(TEvent)], Array.Empty<DbParameter>()));
+		When<TEvent>(_ => Sql.NonQueryStatement(Scripts[typeof(TEvent)], []));
 
 	protected void When<TEvent>(Func<TEvent, DbParameter[]> handler) =>
 		When<TEvent>(e => Sql.NonQueryStatement(Scripts[typeof(TEvent)], handler(e)));

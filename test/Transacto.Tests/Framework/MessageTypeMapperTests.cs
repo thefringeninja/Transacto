@@ -56,7 +56,7 @@ public class MessageTypeMapperTests {
 
 		var messageTypes = typeof(AccountDefined).Assembly.GetTypes()
 			.Where(type => string.Equals(type.Namespace, typeof(AccountDefined).Namespace))
-			.Concat(new[] { typeof(JournalEntry) });
+			.Concat([typeof(JournalEntry)]);
 
 		Assert.Equal(messageTypes, sut.Types);
 		Assert.Equal(messageTypes.Select(x => x.Name), sut.StorageTypes);

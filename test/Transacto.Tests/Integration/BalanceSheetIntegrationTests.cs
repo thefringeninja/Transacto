@@ -25,11 +25,12 @@ public class BalanceSheetIntegrationTests : IntegrationTests {
 
 		var journalEntry = new JournalEntry {
 			JournalEntryNumber = 1,
-			Items = credits.Select(credit => new JournalEntry.Item(credit.AccountNumber.ToInt32(),
-					credit.Amount.ToDecimal(), JournalEntry.Type.Credit))
-				.Concat(debits.Select(debit => new JournalEntry.Item(debit.AccountNumber.ToInt32(),
-					debit.Amount.ToDecimal(), JournalEntry.Type.Debit)))
-				.ToImmutableArray()
+			Items = [
+				..credits.Select(credit => new JournalEntry.Item(credit.AccountNumber.ToInt32(),
+						credit.Amount.ToDecimal(), JournalEntry.Type.Credit))
+					.Concat(debits.Select(debit => new JournalEntry.Item(debit.AccountNumber.ToInt32(),
+						debit.Amount.ToDecimal(), JournalEntry.Type.Debit)))
+			]
 		};
 
 		var command = new PostGeneralLedgerEntry {
@@ -41,21 +42,23 @@ public class BalanceSheetIntegrationTests : IntegrationTests {
 
 		var expected = new BalanceSheetReport {
 			Thru = thru.ToDateTimeUnspecified(),
-			LineItems = journalEntry.Items.Aggregate(ImmutableDictionary<int, LineItem>.Empty, (items, item) =>
-				items.SetItem(
-					item.AccountNumber,
-					new LineItem {
-						AccountNumber = item.AccountNumber,
-						Name = accounts.Single(x => x.accountNumber.ToInt32() == item.AccountNumber).accountName
-							.ToString(),
-						Balance = items.TryGetValue(item.AccountNumber, out var existing)
-							? existing.Balance + (item.Type == JournalEntry.Type.Debit
-								? item.Amount
-								: -item.Amount)
-							: Decimal.Create(item.Type == JournalEntry.Type.Debit
-								? item.Amount
-								: -item.Amount)
-					})).Values.OrderBy(x => x.AccountNumber).ToImmutableArray(),
+			LineItems = [
+				..journalEntry.Items.Aggregate(ImmutableDictionary<int, LineItem>.Empty, (items, item) =>
+					items.SetItem(
+						item.AccountNumber,
+						new LineItem {
+							AccountNumber = item.AccountNumber,
+							Name = accounts.Single(x => x.accountNumber.ToInt32() == item.AccountNumber).accountName
+								.ToString(),
+							Balance = items.TryGetValue(item.AccountNumber, out var existing)
+								? existing.Balance + (item.Type == JournalEntry.Type.Debit
+									? item.Amount
+									: -item.Amount)
+								: Decimal.Create(item.Type == JournalEntry.Type.Debit
+									? item.Amount
+									: -item.Amount)
+						})).Values.OrderBy(x => x.AccountNumber)
+			],
 			LineItemGroupings = ImmutableArray<LineItemGrouping>.Empty
 		};
 

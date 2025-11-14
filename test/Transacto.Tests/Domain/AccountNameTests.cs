@@ -20,8 +20,8 @@ public class AccountNameTests {
 	}
 
 	public static IEnumerable<object[]> InvalidAccountNameCases() {
-		yield return new object[] { string.Empty };
-		yield return new object[] { new string('a', AccountName.MaxLength + 1) };
+		yield return [string.Empty];
+		yield return [new string('a', AccountName.MaxLength + 1)];
 	}
 
 	[MemberData(nameof(InvalidAccountNameCases))]

@@ -8,7 +8,7 @@ namespace Transacto.Plugins.GeneralLedger;
 
 internal class GeneralLedger : IPlugin {
 	public string Name { get; } = nameof(GeneralLedger);
-	public IEnumerable<Type> MessageTypes => Enumerable.Empty<Type>();
+	public IEnumerable<Type> MessageTypes => [];
 
 	public void Configure(IEndpointRouteBuilder builder) => builder
 		.MapBusinessTransaction<JournalEntry>("/entries")

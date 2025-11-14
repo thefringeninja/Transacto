@@ -2,12 +2,12 @@ namespace Transacto.Domain;
 
 public class GeneralLedgerEntryPrefixTests {
 	public static IEnumerable<object[]> InvalidPrefixCases() {
-		yield return new object[] { " " };
-		yield return new object[] { string.Empty };
-		yield return new object[] { " a" };
-		yield return new object[] { "a " };
-		yield return new object[] { "a\t" };
-		yield return new object[] { new string('a', GeneralLedgerEntryNumberPrefix.MaxPrefixLength + 1) };
+		yield return [" "];
+		yield return [string.Empty];
+		yield return [" a"];
+		yield return ["a "];
+		yield return ["a\t"];
+		yield return [new string('a', GeneralLedgerEntryNumberPrefix.MaxPrefixLength + 1)];
 	}
 
 	[MemberData(nameof(InvalidPrefixCases))]
@@ -73,12 +73,12 @@ public class GeneralLedgerEntryNumberTests {
 	}
 
 	public static IEnumerable<object[]> ParseInvalidValueTestCases() {
-		yield return new object[] { string.Empty };
-		yield return new object[] { "a" };
-		yield return new object[] { "a-" };
-		yield return new object[] { "a--1" };
-		yield return new object[] { "-1" };
-		yield return new object[] { " " };
+		yield return [string.Empty];
+		yield return ["a"];
+		yield return ["a-"];
+		yield return ["a--1"];
+		yield return ["-1"];
+		yield return [" "];
 	}
 
 	[MemberData(nameof(ParseInvalidValueTestCases))]

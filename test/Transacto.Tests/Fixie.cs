@@ -11,8 +11,8 @@ using SerilogTimings;
 namespace Transacto;
 
 public class TestProject : ITestProject {
-	private static readonly string[] LifecycleMethods = { "InitializeAsync", "DisposeAsync", "Dispose" };
-	private static readonly IEnumerable<object[]> NoParameters = new[] { Array.Empty<object>() };
+	private static readonly string[] LifecycleMethods = ["InitializeAsync", "DisposeAsync", "Dispose"];
+	private static readonly IEnumerable<object[]> NoParameters = [[]];
 
 	static TestProject() {
 		Log.Logger = new LoggerConfiguration()
@@ -118,7 +118,7 @@ internal abstract class DataAttribute : Attribute {
 
 [AttributeUsage(AttributeTargets.Method, AllowMultiple = true)]
 internal class InlineDataAttribute(params object[] parameters) : DataAttribute {
-	public IEnumerable<object[]> Parameters { get; } = new[] { parameters };
+	public IEnumerable<object[]> Parameters { get; } = [parameters];
 
 	public override IEnumerable<object[]> GetParameters(Test test) => Parameters;
 }
@@ -133,7 +133,7 @@ internal class ClassDataAttribute : DataAttribute {
 				nameof(classType));
 		}
 
-		if (classType.GetConstructor(Array.Empty<Type>()) is null) {
+		if (classType.GetConstructor([]) is null) {
 			throw new ArgumentException($"Expected {classType.FullName} to have an empty parameterless constructor.",
 				nameof(classType));
 		}

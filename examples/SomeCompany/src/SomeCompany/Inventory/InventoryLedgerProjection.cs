@@ -10,10 +10,10 @@ public class InventoryLedgerProjection : NpgsqlProjection {
 	public InventoryLedgerProjection() : base(new Scripts()) {
 		When<CreateSchema>();
 
-		When<InventoryItemDefined>(e => new[] {
+		When<InventoryItemDefined>(e => [
 			Sql.Parameter(() => e.InventoryItemId),
 			Sql.Parameter(() => e.Sku)
-		});
+		]);
 
 		When<PurchaseOrderPlaced>(e => e.Items.Select(item => new[] {
 			Sql.Parameter(() => item.InventoryItemId),

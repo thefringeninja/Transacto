@@ -11,7 +11,8 @@ public class AccountingPeriodClosingProcess(
 	GeneralLedgerEntryIdentifier closingGeneralLedgerEntryIdentifier,
 	EquityAccount retainedEarningsAccount,
 	AccountIsDeactivated accountIsDeactivated) {
-	private readonly HashSet<GeneralLedgerEntryIdentifier> _generalLedgerEntryIdentifiers = new(generalLedgerEntryIdentifiers);
+	private readonly HashSet<GeneralLedgerEntryIdentifier> _generalLedgerEntryIdentifiers =
+		[..generalLedgerEntryIdentifiers];
 
 	public TrialBalance TrialBalance { get; } = new(chartOfAccounts);
 	public ProfitAndLoss ProfitAndLoss { get; } = new(accountingPeriod, chartOfAccounts);
@@ -38,7 +39,7 @@ public class AccountingPeriodClosingProcess(
 	private void MustNotContainUntransferredEntries() {
 		if (_generalLedgerEntryIdentifiers.Count > 0) {
 			throw new PeriodContainsUntransferredEntriesException(accountingPeriod,
-				_generalLedgerEntryIdentifiers.ToImmutableArray());
+				[.._generalLedgerEntryIdentifiers]);
 		}
 	}
 }

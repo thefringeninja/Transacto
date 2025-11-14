@@ -90,10 +90,12 @@ public class GeneralLedger : AggregateRoot, IAggregateRoot<GeneralLedger> {
 				generalLedgerEntryIdentifiers.ToImmutableArray(), identifier => identifier.ToGuid()),
 			ClosingGeneralLedgerEntryId = closingEntry.Identifier.ToGuid(),
 			Period = _state.AccountingPeriod.ToString(),
-			Balance = trialBalance.Select(account => new BalanceLineItem {
-				Amount = account.Balance.ToDecimal(),
-				AccountNumber = account.AccountNumber.ToInt32()
-			}).ToImmutableArray()
+			Balance = [
+				..trialBalance.Select(account => new BalanceLineItem {
+					Amount = account.Balance.ToDecimal(),
+					AccountNumber = account.AccountNumber.ToInt32()
+				})
+			]
 		});
 	}
 

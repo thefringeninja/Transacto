@@ -3,7 +3,7 @@ using System.Collections;
 namespace Transacto.Framework.CommandHandling;
 
 public abstract class CommandHandlerModule : IEnumerable<MessageHandler<Checkpoint>> {
-	private readonly List<MessageHandler<Checkpoint>> _handlers = new();
+	private readonly List<MessageHandler<Checkpoint>> _handlers = [];
 
 	protected IMessageHandlerBuilder<TCommand, Checkpoint> Build<TCommand>() where TCommand : class =>
 		new MessageHandlerBuilder<TCommand, Checkpoint>(handler => {

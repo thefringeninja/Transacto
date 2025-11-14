@@ -18,8 +18,7 @@ internal static class XUnitExtensions {
 		IFactRecorder factRecorder) {
 		return builder.Assert(new CompareNetObjectsBasedFactComparer(new CompareLogic {
 			Config = {
-				CustomComparers = new List<BaseTypeComparer>
-					{ new JsonDocumentComparer(RootComparerFactory.GetRootComparer()) },
+				CustomComparers = [new JsonDocumentComparer(RootComparerFactory.GetRootComparer())],
 				IgnoreCollectionOrder = true
 			}
 		}), handler, factRecorder);

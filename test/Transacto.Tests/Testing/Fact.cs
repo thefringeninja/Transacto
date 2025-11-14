@@ -7,7 +7,7 @@ public struct Fact : IEquatable<Fact> {
 	/// <summary>
 	///     Returns an empty array of facts.
 	/// </summary>
-	public static readonly Fact[] Empty = new Fact[0];
+	public static readonly Fact[] Empty = [];
 
 	/// <summary>
 	///     Initializes a new instance of the <see cref="Fact" /> struct.

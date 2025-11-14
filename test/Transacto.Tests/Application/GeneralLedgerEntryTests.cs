@@ -34,8 +34,8 @@ public class GeneralLedgerEntryTests {
 				GeneralLedgerEntryId = generalLedgerEntryIdentifier.ToGuid(),
 				Period = AccountingPeriod.Open(openedOn).ToString(),
 				BusinessTransaction = new TestTransaction(sequenceNumber,
-					new[] { new Debit(assetAccount.AccountNumber, amount) },
-					new[] { new Credit(liabilityAccount.AccountNumber, amount) }),
+					[new Debit(assetAccount.AccountNumber, amount)],
+					[new Credit(liabilityAccount.AccountNumber, amount)]),
 				CreatedOn = openedOn.ToDateTimeUnspecified()
 			})
 			.Then(GeneralLedgerEntry.FormatStreamIdentifier(generalLedgerEntryIdentifier),
@@ -56,8 +56,8 @@ public class GeneralLedgerEntryTests {
 					GeneralLedgerEntryId = generalLedgerEntryIdentifier.ToGuid()
 				},
 				new TestTransaction(sequenceNumber,
-					new[] { new Debit(assetAccount.AccountNumber, amount) },
-					new[] { new Credit(liabilityAccount.AccountNumber, amount) }),
+					[new Debit(assetAccount.AccountNumber, amount)],
+					[new Credit(liabilityAccount.AccountNumber, amount)]),
 				new GeneralLedgerEntryPosted {
 					Period = AccountingPeriod.Open(openedOn).ToString(),
 					GeneralLedgerEntryId = generalLedgerEntryIdentifier.ToGuid()
@@ -99,7 +99,7 @@ public class GeneralLedgerEntryTests {
 			GeneralLedgerEntryId = generalLedgerEntryIdentifier.ToGuid(),
 			Period = AccountingPeriod.Open(openedOn).ToString(),
 			BusinessTransaction = new TestTransaction(referenceNumber.SequenceNumber,
-				new[] { new Debit(accountNumber, Money.Zero) }),
+				[new Debit(accountNumber, Money.Zero)]),
 			CreatedOn = openedOn.ToDateTimeUnspecified()
 		})
 		.Throws(new AccountDeactivatedException(accountNumber))
@@ -119,7 +119,7 @@ public class GeneralLedgerEntryTests {
 				GeneralLedgerEntryId = generalLedgerEntryIdentifier.ToGuid(),
 				Period = AccountingPeriod.Open(openedOn).ToString(),
 				BusinessTransaction = new TestTransaction(sequenceNumber,
-					credits: new[] { new Credit(accountNumber, Money.Zero) }),
+					credits: [new Credit(accountNumber, Money.Zero)]),
 				CreatedOn = openedOn.ToDateTimeUnspecified()
 			})
 			.Throws(new AccountDeactivatedException(accountNumber))
@@ -160,8 +160,8 @@ public class GeneralLedgerEntryTests {
 		Debit[]? debits = null,
 		Credit[]? credits = null)
 		: IBusinessTransaction {
-		private readonly Debit[] _debits = debits ?? Array.Empty<Debit>();
-		private readonly Credit[] _credits = credits ?? Array.Empty<Credit>();
+		private readonly Debit[] _debits = debits ?? [];
+		private readonly Credit[] _credits = credits ?? [];
 		public GeneralLedgerEntrySequenceNumber SequenceNumber { get; } = sequenceNumber;
 		public IEnumerable<object> GetTransactionItems() => _credits.Cast<object>().Concat(_debits.Cast<object>());
 	}

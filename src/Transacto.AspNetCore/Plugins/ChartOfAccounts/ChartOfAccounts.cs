@@ -42,7 +42,7 @@ internal class ChartOfAccounts : IPlugin {
 			}
 		});
 
-	public IEnumerable<Type> MessageTypes => Enumerable.Empty<Type>();
+	public IEnumerable<Type> MessageTypes => [];
 
 	private class ChartOfAccountsRepresentation : Hal<ReadModel>, IHalLinks<ReadModel>, IHalState<ReadModel> {
 		public IEnumerable<Link> LinksFor(ReadModel resource) {

@@ -77,6 +77,6 @@ public class CommandSerializerOptionTests {
 		public Guid TransactionId { get; set; }
 
 		public GeneralLedgerEntrySequenceNumber SequenceNumber { get; }
-		public IEnumerable<object> GetTransactionItems() => Enumerable.Empty<object>();
+		public IEnumerable<object> GetTransactionItems() => [];
 	}
 }
