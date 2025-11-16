@@ -1,5 +1,6 @@
 namespace Transacto.Messages;
 
-public partial record RenameAccount {
-	public override string ToString() => $"Renaming account {NewAccountName}-{AccountNumber}.";
+public partial record RenameAccount : IMessage {
+	public (string template, object[] args) GetMessage() => ("Renaming account {AccountNumber} to {NewAccountName}.",
+		[NewAccountName, AccountNumber]);
 }

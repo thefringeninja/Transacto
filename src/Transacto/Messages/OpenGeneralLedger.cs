@@ -1,5 +1,5 @@
 namespace Transacto.Messages;
 
-public partial record OpenGeneralLedger {
-	public override string ToString() => $"Opening general ledger on {OpenedOn:O}.";
+public partial record OpenGeneralLedger : IMessage {
+	public (string template, object[] args) GetMessage() => ("Opening general ledger on {OpenedOn:O}.", [OpenedOn]);
 }

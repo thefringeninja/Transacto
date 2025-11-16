@@ -1,8 +1,10 @@
 namespace Transacto.Messages;
 
-public record CreditApplied {
+public record CreditApplied : IMessage {
 	public required Guid GeneralLedgerEntryId { get; init; }
 	public required decimal Amount { get; init; }
 	public required int AccountNumber { get; init; }
-	public override string ToString() => $"A credit of {Amount} was applied to {AccountNumber}.";
+
+	public (string template, object[] args) GetMessage() =>
+		("A credit of {Amount:F2} was applied to {AccountNumber}.", [Amount, AccountNumber]);
 }

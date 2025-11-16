@@ -1,5 +1,6 @@
 namespace Transacto.Messages;
 
-public partial record DefineAccount {
-	public override string ToString() => $"Defining account {AccountName}-{AccountNumber}.";
+public partial record DefineAccount : IMessage {
+	public (string template, object[] args) GetMessage() => ("Defining account {AccountNumber} - {AccountName}.",
+		[AccountName, AccountNumber]);
 }

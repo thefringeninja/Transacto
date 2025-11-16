@@ -1,3 +1,5 @@
+using System.Diagnostics.CodeAnalysis;
+using System.Diagnostics.Contracts;
 using System.Numerics;
 
 namespace Transacto.Domain;
@@ -20,7 +22,10 @@ public readonly struct Money(decimal value) : IEquatable<Money>,
 	public override int GetHashCode() => _value.GetHashCode();
 	public decimal ToDecimal() => _value;
 	public int CompareTo(Money other) => _value.CompareTo(other._value);
-	public override string ToString() => _value.ToString();
+	public override string ToString() => ToString("f");
+
+	[Pure]
+	public string ToString([StringSyntax("NumericFormat")] string? format) => _value.ToString(format);
 
 	public static bool operator ==(Money left, Money right) => left.Equals(right);
 	public static bool operator !=(Money left, Money right) => !left.Equals(right);

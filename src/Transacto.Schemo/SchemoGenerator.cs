@@ -39,7 +39,7 @@ public class SchemoGenerator : ISourceGenerator {
 				where file.Path.EndsWith(".schema.json")
 				select GenerateSchema(file.Path, GetNamespace(file), cts.Token)).ToArray();
 
-			Task.WaitAll(fileTasks);
+			Task.WaitAll(fileTasks, cts.Token);
 			return Array.ConvertAll(fileTasks, fileTask => fileTask.Result);
 		}
 

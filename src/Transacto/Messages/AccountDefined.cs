@@ -1,8 +1,11 @@
+using System.Runtime.CompilerServices;
+
 namespace Transacto.Messages;
 
-public record AccountDefined {
+public record AccountDefined : IMessage {
 	public required string AccountName { get; init; }
 	public required int AccountNumber { get; init; }
 
-	public override string ToString() => $"Account {AccountNumber} - {AccountName} was defined.";
+	public (string template, object[] args) GetMessage() =>
+		("Account {AccountNumber} - {AccountName} was defined.", [AccountNumber, AccountName]);
 }

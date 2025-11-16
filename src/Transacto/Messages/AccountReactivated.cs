@@ -1,7 +1,8 @@
 namespace Transacto.Messages;
 
-public record AccountReactivated {
+public record AccountReactivated : IMessage {
 	public required int AccountNumber { get; init; }
 
-	public override string ToString() => $"Account {AccountNumber} was reactivated.";
+	public (string template, object[] args) GetMessage() =>
+		("Account {AccountNumber} was reactivated.", [AccountNumber]);
 }

@@ -1,33 +1,35 @@
 ﻿using System.Text.Json;
 using KellermanSoftware.CompareNetObjects;
 using KellermanSoftware.CompareNetObjects.TypeComparers;
+using Transacto.Testing;
 using Transacto.Testing.Comparers;
 using Xunit.Sdk;
 
-namespace Transacto.Testing;
+namespace Transacto;
 
 internal static class XUnitExtensions {
-	private static IExceptionComparer CreateExceptionComparer() {
-		return new CompareNetObjectsBasedExceptionComparer(new CompareLogic(new ComparisonConfig {
+	private static IExceptionComparer CreateExceptionComparer() =>
+		new CompareNetObjectsBasedExceptionComparer(new CompareLogic(new ComparisonConfig {
 			MembersToIgnore =
 				{ nameof(Exception.Source), nameof(Exception.StackTrace), nameof(Exception.TargetSite) }
 		}));
-	}
 
-	public static Task Assert(this IEventCentricTestSpecificationBuilder builder, object handler,
-		IFactRecorder factRecorder) {
-		return builder.Assert(new CompareNetObjectsBasedFactComparer(new CompareLogic {
+	private static CompareNetObjectsBasedFactComparer CreateComparer() =>
+		new(new CompareLogic {
 			Config = {
 				CustomComparers = [new JsonDocumentComparer(RootComparerFactory.GetRootComparer())],
 				IgnoreCollectionOrder = true
 			}
-		}), handler, factRecorder);
-	}
+		});
 
-	public static Task Assert(this IExceptionCentricTestSpecificationBuilder builder, object handler,
-		IFactRecorder factRecorder) {
-		return builder.Assert(CreateExceptionComparer(), handler, factRecorder);
-	}
+	public static Task Assert(this IEventCentricTestSpecificationBuilder builder, object handler,
+		IFactRecorder factRecorder) => builder.Assert(CreateComparer(), handler, factRecorder);
+
+	public static Task Assert(this EventCentricTestSpecification specification, object handler,
+		IFactRecorder factRecorder) => specification.Assert(CreateComparer(), handler, factRecorder);
+
+	public static async Task Assert(this EventSpecification test, object handler, IFactRecorder factRecorder) =>
+		await ((EventCentricTestSpecification)test).Assert(handler, factRecorder);
 
 	/// <summary>
 	///     Asserts that the specification is met.
@@ -39,10 +41,15 @@ internal static class XUnitExtensions {
 	public static async Task Assert(this IEventCentricTestSpecificationBuilder builder,
 		IFactComparer comparer, object handler, IFactRecorder factRecorder) {
 		ArgumentNullException.ThrowIfNull(builder);
+		await builder.Build().Assert(comparer, handler, factRecorder);
+	}
+
+	public static async Task Assert(this EventCentricTestSpecification specification, IFactComparer comparer,
+		object handler, IFactRecorder factRecorder) {
+		ArgumentNullException.ThrowIfNull(specification);
 		ArgumentNullException.ThrowIfNull(comparer);
 		ArgumentNullException.ThrowIfNull(handler);
 		ArgumentNullException.ThrowIfNull(factRecorder);
-		var specification = builder.Build();
 		var runner = new EventCentricTestSpecificationRunner(comparer, handler, factRecorder);
 		var result = await runner.Run(specification);
 
@@ -84,13 +91,28 @@ internal static class XUnitExtensions {
 		}
 	}
 
+
+	public static Task Assert(this IExceptionCentricTestSpecificationBuilder builder, object handler,
+		IFactRecorder factRecorder) => builder.Assert(CreateExceptionComparer(), handler, factRecorder);
+
+	public static Task Assert(this ExceptionCentricTestSpecification specification, object handler,
+		IFactRecorder factRecorder) => specification.Assert(CreateExceptionComparer(), handler, factRecorder);
+
+	public static async Task Assert(this ExceptionSpecification test, object handler, IFactRecorder factRecorder) =>
+		await ((ExceptionCentricTestSpecification)test).Assert(handler, factRecorder);
+
 	public static async Task Assert(this IExceptionCentricTestSpecificationBuilder builder,
 		IExceptionComparer comparer, object handler, IFactRecorder factRecorder) {
 		ArgumentNullException.ThrowIfNull(builder);
+		await builder.Build().Assert(comparer, handler, factRecorder);
+	}
+
+	public static async Task Assert(this ExceptionCentricTestSpecification specification, IExceptionComparer comparer,
+		object handler, IFactRecorder factRecorder) {
+		ArgumentNullException.ThrowIfNull(specification);
 		ArgumentNullException.ThrowIfNull(comparer);
 		ArgumentNullException.ThrowIfNull(handler);
 		ArgumentNullException.ThrowIfNull(factRecorder);
-		var specification = builder.Build();
 		var runner = new ExceptionCentricTestSpecificationRunner(comparer, handler, factRecorder);
 		var result = await runner.Run(specification);
 

@@ -1,7 +1,8 @@
 namespace Transacto.Messages;
 
-public record GeneralLedgerOpened {
+public record GeneralLedgerOpened : IMessage {
 	public required string OpenedOn { get; init; }
 
-	public override string ToString() => $"The general ledger was opened on {OpenedOn}.";
+	public (string template, object[] args) GetMessage() =>
+		("The general ledger was opened on {OpenedOn:D}.", [DateOnly.ParseExact(OpenedOn, "yyyyMMdd")]);
 }

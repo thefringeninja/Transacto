@@ -1,8 +1,9 @@
 namespace Transacto.Messages;
 
-public record DebitApplied {
+public record DebitApplied : IMessage {
 	public required Guid GeneralLedgerEntryId { get; init; }
 	public required decimal Amount { get; init; }
 	public required int AccountNumber { get; init; }
-	public override string ToString() => $"A debit of {Amount} was applied to {AccountNumber}.";
+	public (string template, object[] args) GetMessage() =>
+		("A debit of {Amount:F2} was applied to account {AccountNumber}.", [Amount, AccountNumber]);
 }

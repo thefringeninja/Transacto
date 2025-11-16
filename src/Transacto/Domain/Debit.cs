@@ -1,4 +1,5 @@
 using System.Numerics;
+using System.Text;
 
 namespace Transacto.Domain;
 
@@ -32,4 +33,16 @@ public readonly struct Debit : IEquatable<Debit>,
 	public static Debit operator -(Debit left, Money right) => new(left.AccountNumber, left.Amount - right);
 	public static Debit operator +(Debit left, decimal right) => new(left.AccountNumber, left.Amount + right);
 	public static Debit operator -(Debit left, decimal right) => new(left.AccountNumber, left.Amount - right);
+	
+	public override string ToString() {
+		var builder = new StringBuilder().Append(AccountNumber).Append('\t');
+		if (Amount < Money.Zero) {
+			builder.Append('(').Append(Amount).Append(')');
+		} else {
+			builder.Append(Amount);
+		}
+		
+		return builder.ToString();
+	}
+
 }

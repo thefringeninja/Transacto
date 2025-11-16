@@ -1,12 +1,17 @@
+using System.Globalization;
 using System.Reflection;
-using System.Text;
 using AutoFixture;
 using AutoFixture.Kernel;
 using Fixie;
+using Inflector;
+using Microsoft.Extensions.Logging;
 using Serilog;
 using Serilog.Events;
+using Serilog.Extensions.Logging;
 using Serilog.Sinks.SystemConsole.Themes;
 using SerilogTimings;
+using Transacto.Testing;
+using ILogger = Microsoft.Extensions.Logging.ILogger;
 
 namespace Transacto;
 
@@ -14,31 +19,71 @@ public class TestProject : ITestProject {
 	private static readonly string[] LifecycleMethods = ["InitializeAsync", "DisposeAsync", "Dispose"];
 	private static readonly IEnumerable<object[]> NoParameters = [[]];
 
-	static TestProject() {
-		Log.Logger = new LoggerConfiguration()
-			.Enrich.FromLogContext()
-			.WriteTo.Console(
-				outputTemplate:
-				"{Message:lj}{NewLine}{Exception}",
-				theme: AnsiConsoleTheme.Literate)
-			.MinimumLevel.Override("Microsoft.AspNetCore", LogEventLevel.Warning)
-			.CreateLogger();
-	}
-
 	public void Configure(TestConfiguration configuration, TestEnvironment environment) {
-		configuration.Conventions.Add(new TestDiscovery(), new ParallelExecution());
-		configuration.Conventions.Add(new IntegrationTestDiscovery(), new SerialExecution());
+		if (environment.CustomArguments.Contains("--print")) {
+			configuration.Conventions.Add(new SpecificationDiscovery(), new SpecificationDiscovery.Print(environment));
+		} else {
+			configuration.Conventions.Add(new TestDiscovery(), new ParallelExecution());
+			configuration.Conventions.Add(new IntegrationTestDiscovery(), new SerialExecution());
+		}
+	}
+	
+	private class SpecificationDiscovery : IDiscovery {
+		public SpecificationDiscovery() {
+			Inflector.Inflector.SetDefaultCultureFunc = () => CultureInfo.GetCultureInfo("en");
+		}
+		public IEnumerable<Type> TestClasses(IEnumerable<Type> concreteClasses) {
+			foreach (var type in concreteClasses) {
+				if (typeof(EventSpecification).IsAssignableFrom(type) || typeof(ExceptionSpecification).IsAssignableFrom(type)) {
+					yield return type;
+				}
+			}
+		}
+
+		public IEnumerable<MethodInfo> TestMethods(IEnumerable<MethodInfo> publicMethods) => publicMethods;
+
+		public class Print(TestEnvironment environment) : IExecution {
+			private readonly ILogger _logger = new SerilogLoggerFactory(
+					new LoggerConfiguration()
+						.WriteTo.Console(outputTemplate: "{Message:lj}{NewLine}{Exception}", theme: AnsiConsoleTheme.Literate)
+						.CreateLogger())
+				.CreateLogger(typeof(TestProject));
+			public Task Run(TestSuite testSuite) {
+				var fixture = new ScenarioFixture();
+				var writer = new TestSpecificationLogger(_logger);
+				for (var i = 0; i < testSuite.TestClasses.Count; i++) {
+					var parameters = Array.ConvertAll(
+						testSuite.TestClasses[i].Type.GetConstructors()[0].GetParameters(),
+						pi => fixture.Create(pi.ParameterType, new SpecimenContext(fixture)));
+
+					var spec = testSuite.TestClasses[i].Construct(parameters);
+
+					_logger.LogInformation(testSuite.TestClasses[i].Type.Name.Titleize());
+					switch (spec) {
+						case ExceptionSpecification ex:
+							writer.Write(ex);
+							break;
+						case EventSpecification ev:
+							writer.Write(ev);
+							break;
+					}
+					environment.Console.WriteLine();
+				}
+
+				return Task.CompletedTask;
+			}
+		}
 	}
 
 	private class TestDiscovery : IDiscovery {
 		public IEnumerable<Type> TestClasses(IEnumerable<Type> concreteClasses) => concreteClasses
 			.Where(x => x.Name.EndsWith("Tests") && !x.Name.EndsWith("IntegrationTests"))
-			//.Shuffle()
+		//.Shuffle()
 		;
 
 		public IEnumerable<MethodInfo> TestMethods(IEnumerable<MethodInfo> publicMethods) => publicMethods
 			.Where(x => !LifecycleMethods.Contains(x.Name))
-			//.Shuffle()
+		//.Shuffle()
 		;
 	}
 
@@ -164,31 +209,4 @@ internal class MemberDataAttribute(string name) : DataAttribute {
 		(test.Method.DeclaringType?.GetMethod(Name,
 				BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static)
 			?.Invoke(null, null) as IEnumerable<object[]>)!;
-}
-
-internal class SerilogTextWriter(ILogger logger) : TextWriter {
-	private readonly StringBuilder _builder = new();
-
-	public override Encoding Encoding { get; } = Encoding.UTF8;
-
-	public override void Write(char value) {
-		_builder.Append(value);
-
-		if (!Environment.NewLine.Contains(value) || !EndsWithNewLine()) {
-			return;
-		}
-
-		logger.Information(_builder.ToString().Trim());
-		_builder.Clear();
-	}
-
-	private bool EndsWithNewLine() {
-		for (var i = Environment.NewLine.Length; i > 0; i--) {
-			if (_builder[^i] != Environment.NewLine[^i]) {
-				return false;
-			}
-		}
-
-		return true;
-	}
 }

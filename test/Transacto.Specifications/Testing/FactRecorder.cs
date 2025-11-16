@@ -2,7 +2,7 @@ using Transacto.Framework;
 
 namespace Transacto.Testing;
 
-internal class FactRecorder : IFactRecorder {
+public class FactRecorder : IFactRecorder {
 	private readonly IDictionary<string, IAggregateRoot> _aggregates = new Dictionary<string, IAggregateRoot>();
 	private readonly List<Fact> _recordedFacts = [];
 

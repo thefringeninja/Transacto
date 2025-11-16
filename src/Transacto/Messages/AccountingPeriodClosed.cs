@@ -2,11 +2,11 @@ using System.Collections.Immutable;
 
 namespace Transacto.Messages;
 
-public record AccountingPeriodClosed {
-	public required string Period { get; init; } = default!;
+public record AccountingPeriodClosed : IMessage {
+	public required string Period { get; init; }
 	public required ImmutableArray<Guid> GeneralLedgerEntryIds { get; init; }
 	public required ImmutableArray<BalanceLineItem> Balance { get; init; }
 	public required Guid ClosingGeneralLedgerEntryId { get; init; }
 
-	public override string ToString() => $"Accounting period {Period} has been closed.";
+	public (string template, object[] args) GetMessage() => ("Accounting period {Period} has been closed.", [Period]);
 }
