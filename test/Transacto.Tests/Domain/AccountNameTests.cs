@@ -1,24 +1,6 @@
 namespace Transacto.Domain;
 
-public class AccountNameTests {
-	[AutoFixtureData]
-	public void Equality(AccountName sut) {
-		var copy = new AccountName(sut.ToString());
-		Assert.Equal(sut, copy);
-	}
-
-	[AutoFixtureData]
-	public void EqualityOperator(AccountName sut) {
-		var copy = new AccountName(sut.ToString());
-
-		Assert.True(sut == copy);
-	}
-
-	[AutoFixtureData]
-	public void InequalityOperator(AccountName sut, AccountName other) {
-		Assert.True(sut != other);
-	}
-
+public class AccountNameTests : ValueObjectTests<AccountName> {
 	public static IEnumerable<object[]> InvalidAccountNameCases() {
 		yield return [string.Empty];
 		yield return [new string('a', AccountName.MaxLength + 1)];

@@ -1,26 +1,7 @@
 namespace Transacto.Domain;
 
-public class MoneyTests {
-	[AutoFixtureData]
-	public void Equality(Money sut) {
-		var copy = new Money(sut.ToDecimal());
-		Assert.Equal(sut, copy);
-	}
-
-	[AutoFixtureData]
-	public void EqualityOperator(Money sut) {
-		var copy = new Money(sut.ToDecimal());
-		Assert.True(sut == copy);
-	}
-
-	[AutoFixtureData]
-	public void InequalityOperator(Money left, Money right) {
-		Assert.True(left != right);
-	}
-
-	public void Zero() {
-		Assert.Equal(new Money(0m), Money.Zero);
-	}
+public class MoneyTests : ValueObjectTests<Money> {
+	public void Zero() => Assert.Equal(new Money(0m), Money.Zero);
 
 	public static IEnumerable<object[]> ComparisonCases() {
 		yield return [new Money(0m), new Money(0m), 0];
@@ -29,9 +10,8 @@ public class MoneyTests {
 	}
 
 	[MemberData(nameof(ComparisonCases))]
-	public void ComparisonReturnsExpectedResult(Money left, Money right, int expected) {
+	public void ComparisonReturnsExpectedResult(Money left, Money right, int expected) =>
 		Assert.Equal(left.CompareTo(right), expected);
-	}
 
 	public static IEnumerable<object[]> GreaterThanCases() {
 		yield return [1m, 1m, false];
@@ -40,9 +20,8 @@ public class MoneyTests {
 	}
 
 	[MemberData(nameof(GreaterThanCases))]
-	public void GreaterThanReturnsExpectedResult(decimal left, decimal right, bool gt) {
+	public void GreaterThanReturnsExpectedResult(decimal left, decimal right, bool gt) =>
 		Assert.Equal(new Money(left) > new Money(right), gt);
-	}
 
 	public static IEnumerable<object[]> GreaterThanOrEqualCases() {
 		yield return [1m, 1m, true];
@@ -51,9 +30,8 @@ public class MoneyTests {
 	}
 
 	[MemberData(nameof(GreaterThanOrEqualCases))]
-	public void GreaterThanOrEqualThanReturnsExpectedResult(decimal left, decimal right, bool gte) {
+	public void GreaterThanOrEqualThanReturnsExpectedResult(decimal left, decimal right, bool gte) =>
 		Assert.Equal(new Money(left) >= new Money(right), gte);
-	}
 
 	public static IEnumerable<object[]> LessThanCases() {
 		yield return [1m, 1m, false];
@@ -62,9 +40,8 @@ public class MoneyTests {
 	}
 
 	[MemberData(nameof(LessThanCases))]
-	public void LessThanReturnsExpectedResult(decimal left, decimal right, bool le) {
+	public void LessThanReturnsExpectedResult(decimal left, decimal right, bool le) =>
 		Assert.Equal(new Money(left) < new Money(right), le);
-	}
 
 	public static IEnumerable<object[]> LessThanOrEqualCases() {
 		yield return [1m, 1m, true];
@@ -73,37 +50,28 @@ public class MoneyTests {
 	}
 
 	[MemberData(nameof(LessThanOrEqualCases))]
-	public void LessThanOrEqualThanReturnsExpectedResult(decimal left, decimal right, bool lte) {
+	public void LessThanOrEqualThanReturnsExpectedResult(decimal left, decimal right, bool lte) =>
 		Assert.Equal(new Money(left) <= new Money(right), lte);
-	}
 
 	[AutoFixtureData]
-	public void MoneyAdditionOperator(decimal left, decimal right) {
+	public void MoneyAdditionOperator(decimal left, decimal right) =>
 		Assert.Equal(new Money(left + right), new Money(left) + new Money(right));
-	}
 
 	[AutoFixtureData]
-	public void DecimalAdditionOperator(decimal left, decimal right) {
+	public void DecimalAdditionOperator(decimal left, decimal right) =>
 		Assert.Equal(new Money(left + right), new Money(left) + right);
-	}
 
 	[AutoFixtureData]
-	public void MoneySubtractionOperator(decimal left, decimal right) {
+	public void MoneySubtractionOperator(decimal left, decimal right) =>
 		Assert.Equal(new Money(left - right), new Money(left) - new Money(right));
-	}
 
 	[AutoFixtureData]
-	public void DecimalSubtractionOperator(decimal left, decimal right) {
+	public void DecimalSubtractionOperator(decimal left, decimal right) =>
 		Assert.Equal(new Money(left - right), new Money(left) - right);
-	}
 
 	[AutoFixtureData]
-	public void NegationOperator(decimal value) {
-		Assert.Equal(new Money(-value), -new Money(value));
-	}
+	public void NegationOperator(decimal value) => Assert.Equal(new Money(-value), -new Money(value));
 
 	[AutoFixtureData]
-	public void ToDecimalReturnsExpectedResult(decimal value) {
-		Assert.Equal(value, new Money(value).ToDecimal());
-	}
+	public void ToDecimalReturnsExpectedResult(decimal value) => Assert.Equal(value, new Money(value).ToDecimal());
 }

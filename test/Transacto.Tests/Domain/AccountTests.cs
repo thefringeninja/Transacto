@@ -49,7 +49,7 @@ public class AccountTests {
 	public class ExpenseTests : LeftSideTests<ExpenseAccount> {
 	}
 
-	public abstract class LeftSideTests<TAccount> where TAccount : Account {
+	public abstract class LeftSideTests<TAccount> : ValueObjectTests<TAccount> where TAccount : Account {
 		[AutoFixtureData]
 		public void DebitsIncreaseBalance(TAccount sut, Money amount) =>
 			Assert.Equal(amount, sut.Debit(amount).Balance);
@@ -59,7 +59,7 @@ public class AccountTests {
 			Assert.Equal(-amount, sut.Credit(amount).Balance);
 	}
 
-	public abstract class RightSideTests<TAccount> where TAccount : Account {
+	public abstract class RightSideTests<TAccount> : ValueObjectTests<TAccount> where TAccount : Account {
 		[AutoFixtureData]
 		public void CreditsIncreaseBalance(TAccount sut, Money amount) =>
 			Assert.Equal(amount, sut.Credit(amount).Balance);

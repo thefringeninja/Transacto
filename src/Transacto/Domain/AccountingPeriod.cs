@@ -9,8 +9,7 @@ public readonly struct AccountingPeriod : IEquatable<AccountingPeriod>, ICompara
 
 	private readonly YearMonth _value;
 
-
-	public static bool TryParse(string period, out AccountingPeriod value) {
+	public static bool TryParse(string? period, out AccountingPeriod value) {
 		if (string.IsNullOrEmpty(period) || period.Length != 6 ||
 		    !int.TryParse(period[4..], out var month) ||
 		    !int.TryParse(period[..4], out var year)) {
@@ -22,10 +21,12 @@ public readonly struct AccountingPeriod : IEquatable<AccountingPeriod>, ICompara
 		return true;
 	}
 
-	public static AccountingPeriod Parse(string value) =>
-		TryParse(value, out var period)
+	public static AccountingPeriod Parse(string value) {
+		ArgumentNullException.ThrowIfNull(value);
+		return TryParse(value, out var period)
 			? period
 			: throw new FormatException();
+	}
 
 	public static AccountingPeriod Open(LocalDate value) => new(value.ToYearMonth());
 

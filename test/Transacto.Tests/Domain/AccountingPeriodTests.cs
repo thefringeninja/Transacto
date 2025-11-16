@@ -1,25 +1,12 @@
 using AutoFixture;
+using AutoFixture.Idioms;
 using NodaTime;
 
 namespace Transacto.Domain;
 
-public class AccountingPeriodTests {
-	[AutoFixtureData]
-	public void Equality(AccountingPeriod sut) {
-		var copy = AccountingPeriod.Parse(sut.ToString());
-		Assert.Equal(sut, copy);
-	}
-
-	[AutoFixtureData]
-	public void EqualityOperator(AccountingPeriod sut) {
-		var copy = AccountingPeriod.Parse(sut.ToString());
-		Assert.True(sut == copy);
-	}
-
-	[AutoFixtureData]
-	public void InequalityOperator(AccountingPeriod sut) {
-		Assert.True(sut != sut.Next());
-	}
+public class AccountingPeriodTests : ValueObjectTests<AccountingPeriod> {
+	public void ParseIsGuarded() => Fixture.Create<GuardClauseAssertion>()
+		.Verify(typeof(AccountingPeriod).GetMethod(nameof(AccountingPeriod.Parse)));
 
 	[AutoFixtureData]
 	public void NextReturnsExpectedResult(AccountingPeriod accountingPeriod) {

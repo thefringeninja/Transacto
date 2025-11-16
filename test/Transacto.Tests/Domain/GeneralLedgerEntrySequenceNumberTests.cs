@@ -1,23 +1,6 @@
 namespace Transacto.Domain;
 
-public class GeneralLedgerEntrySequenceNumberTests {
-	[AutoFixtureData]
-	public void Equality(GeneralLedgerEntrySequenceNumber sut) {
-		var copy = sut;
-		Assert.Equal(sut, copy);
-	}
-
-	[AutoFixtureData]
-	public void EqualityOperator(GeneralLedgerEntrySequenceNumber sut) {
-		var copy = sut;
-		Assert.True(sut == copy);
-	}
-
-	[AutoFixtureData]
-	public void InequalityOperator(GeneralLedgerEntrySequenceNumber left, GeneralLedgerEntrySequenceNumber right) {
-		Assert.True(left != right);
-	}
-
+public class GeneralLedgerEntrySequenceNumberTests : ValueObjectTests<GeneralLedgerEntrySequenceNumber> {
 	[AutoFixtureData]
 	public void SequenceNumberLessThanZeroThrows(int value) {
 		var ex = Assert.Throws<ArgumentOutOfRangeException>(() =>

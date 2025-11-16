@@ -1,25 +1,6 @@
 namespace Transacto.Domain;
 
-public class DebitTests {
-	[AutoFixtureData]
-	public void Equality(AccountNumber accountNumber, Money amount) {
-		var sut = new Debit(accountNumber, amount);
-		var copy = new Debit(accountNumber, amount);
-		Assert.Equal(sut, copy);
-	}
-
-	[AutoFixtureData]
-	public void EqualityOperator(AccountNumber accountNumber, Money amount) {
-		var sut = new Debit(accountNumber, amount);
-		var copy = new Debit(accountNumber, amount);
-		Assert.True(sut == copy);
-	}
-
-	[AutoFixtureData]
-	public void InequalityOperator(Debit left, Debit right) {
-		Assert.True(left != right);
-	}
-
+public class DebitTests : ValueObjectTests<Debit> {
 	[AutoFixtureData]
 	public void MoneyLessThanZeroThrows(AccountNumber accountNumber, decimal value) {
 		var amount = new Money(-Math.Abs(value));
