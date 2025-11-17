@@ -9,15 +9,18 @@ public class InMemoryProjectionHost : IHostedService {
 	private readonly EventStoreClient _eventStore;
 	private readonly IMessageTypeMapper _messageTypeMapper;
 	private readonly InMemoryProjectionDatabase _target;
+	private readonly ILogger<InMemoryProjectionHost> _logger;
 	private readonly CancellationTokenSource _stopped;
 
 	private readonly Projector<InMemoryProjectionDatabase> _projector;
 
 	public InMemoryProjectionHost(EventStoreClient eventStore, IMessageTypeMapper messageTypeMapper,
-		InMemoryProjectionDatabase target, params ProjectionHandler<InMemoryProjectionDatabase>[][] projections) {
+		InMemoryProjectionDatabase target, ILogger<InMemoryProjectionHost> logger,
+		params ProjectionHandler<InMemoryProjectionDatabase>[][] projections) {
 		_eventStore = eventStore;
 		_messageTypeMapper = messageTypeMapper;
 		_target = target;
+		_logger = logger;
 		_stopped = new CancellationTokenSource();
 
 		_projector = new Projector<InMemoryProjectionDatabase>(
@@ -34,11 +37,13 @@ public class InMemoryProjectionHost : IHostedService {
 		var checkpoint = FromAll.Start;
 
 		await Policy.Handle<Exception>(ex => ex is not OperationCanceledException)
-			.WaitAndRetryAsync(5, retryCount => TimeSpan.FromMilliseconds(retryCount * retryCount * 100))
+			.WaitAndRetryAsync(5, retryCount => TimeSpan.FromMilliseconds(retryCount * retryCount * 100),
+				(ex, _) => _logger.LogWarning(ex, "Projecton failed"))
 			.ExecuteAsync(Subscribe);
 		return;
 
 		async Task Subscribe() {
+			_target.Clear();
 			await using var subscription = _eventStore.SubscribeToAll(checkpoint,
 				filterOptions: new SubscriptionFilterOptions(EventTypeFilter.ExcludeSystemEvents()));
 

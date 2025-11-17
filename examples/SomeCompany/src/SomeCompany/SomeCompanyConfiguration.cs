@@ -10,10 +10,16 @@ internal class SomeCompanyConfiguration(string[] args, IDictionary environment) 
 			.Add(new EnvironmentVariablesSource(environment))
 			.Build());
 
-	public string ConnectionString => _configuration.ConnectionString ?? "esdb://localhost:2113/?tls=false";
+	public string EventStore => _configuration.EventStore ?? "esdb://localhost:2113/?tls=false";
+
+	public string Postgres => _configuration.Postgres ?? "Host=localhost";
+
+	public string SqlStreamStore => _configuration.SqlStreamStore ?? "http://localhost:5002/";
 
 	private class ConfigurationData(IConfigurationRoot configurationRoot) {
-		public string? ConnectionString => configurationRoot.GetValue<string>(nameof(ConnectionString));
+		public string? EventStore => configurationRoot.GetValue<string>(nameof(EventStore));
+		public string? Postgres => configurationRoot.GetValue<string>(nameof(Postgres));
+		public string? SqlStreamStore => configurationRoot.GetValue<string>(nameof(SqlStreamStore));
 	}
 
 	private class CommandLineSource(IEnumerable<string> args) : IConfigurationSource {

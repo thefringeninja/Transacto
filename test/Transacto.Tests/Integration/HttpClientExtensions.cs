@@ -7,8 +7,7 @@ namespace Transacto.Integration;
 
 internal static class HttpClientExtensions {
 	public static async Task<Checkpoint> SendCommand(this HttpClient client, string requestUri, object command,
-		JsonSerializerOptions options,
-		CancellationToken cancellationToken = default) {
+		JsonSerializerOptions options, CancellationToken cancellationToken = default) {
 		using var response = await client.PostAsync(requestUri, new MultipartFormDataContent {
 			{ new StringContent(command.GetType().Name), nameof(command) }, {
 				new ReadOnlyMemoryContent(

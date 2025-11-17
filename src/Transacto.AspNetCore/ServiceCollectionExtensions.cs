@@ -33,8 +33,7 @@ public static class ServiceCollectionExtensions {
 				plugin.ConfigureServices(pluginServices);
 
 				var pluginProvider = pluginServices
-					.AddSingleton(provider =>
-						new CommandDispatcher(provider.GetServices<CommandHandlerModule>()))
+					.AddSingleton(provider => new CommandDispatcher(provider.GetServices<CommandHandlerModule>()))
 					.AddSingleton(rootProvider.GetRequiredService<ILoggerFactory>())
 					.AddSingleton(rootProvider.GetRequiredService<EventStoreClient>())
 					.AddSingleton(rootProvider.GetRequiredService<IStreamStore>())
@@ -44,6 +43,7 @@ public static class ServiceCollectionExtensions {
 						provider.GetRequiredService<EventStoreClient>(),
 						provider.GetRequiredService<IMessageTypeMapper>(),
 						provider.GetRequiredService<InMemoryProjectionDatabase>(),
+						provider.GetRequiredService<ILoggerFactory>().CreateLogger<InMemoryProjectionHost>(),
 						provider.GetServices<ProjectionHandler<InMemoryProjectionDatabase>[]>().ToArray()))
 					.AddSingleton<Func<NpgsqlConnection>>(_ => () => rootProvider
 						.GetRequiredService<Func<IPlugin, NpgsqlConnection>>()

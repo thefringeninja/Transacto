@@ -1,3 +1,5 @@
+using System.Text.Json.Serialization;
+
 namespace Transacto.Plugins.BalanceSheet;
 
 partial record Decimal {
@@ -5,9 +7,10 @@ partial record Decimal {
 
 	public static Decimal Create(decimal value) => Zero with { DecimalValue = value };
 
+	[JsonIgnore]
 	public decimal DecimalValue {
 		get => decimal.TryParse(Value, out var value) ? value : decimal.Zero;
-		init => Value = value.ToString();
+		init => Value = value.ToString("F");
 	}
 
 	public static explicit operator decimal(Decimal @decimal) => @decimal.DecimalValue;

@@ -33,8 +33,8 @@ internal class GeneralLedger : IPlugin {
 		})
 		.AddInMemoryProjection<DeactivatedAccounts>((readModel, e) => readModel with {
 			AccountNumbers = e switch {
-				AccountDeactivated d => readModel.AccountNumbers.Remove(d.AccountNumber),
-				AccountReactivated r => readModel.AccountNumbers.Add(r.AccountNumber),
+				AccountDeactivated d => readModel.AccountNumbers.Add(d.AccountNumber),
+				AccountReactivated r => readModel.AccountNumbers.Remove(r.AccountNumber),
 				_ => readModel.AccountNumbers
 			}
 		})

@@ -1,19 +1,36 @@
+using System.Dynamic;
 using System.Net;
 using System.Text.Json;
 using Hallo;
 using Hallo.Serialization;
 using Microsoft.AspNetCore.Mvc.Formatters;
 using Microsoft.Net.Http.Headers;
+using RazorLight;
 
 namespace Transacto.Framework.Http;
 
-internal class HalResult<T>(T? resource, Checkpoint checkpoint, IHal hal, HttpStatusCode statusCode = HttpStatusCode.OK)
-	: IResult {
-	private const string HalJsonContentType = "application/hal+json";
-	private const string HalHtmlContentType = "text/html";
-	private static readonly MediaType HalJson = new(HalJsonContentType);
-	private static readonly MediaType Html = new(HalHtmlContentType);
+internal abstract class HalResult {
+	protected const string HalJsonContentType = "application/hal+json";
+	protected const string HalHtmlContentType = "text/html";
+	protected static readonly MediaType HalJson = new(HalJsonContentType);
+	protected static readonly MediaType Html = new(HalHtmlContentType);
 
+	protected static RazorLightEngine RazorLightEngine = new RazorLightEngineBuilder()
+		.UseEmbeddedResourcesProject(typeof(IPlugin).Assembly)
+		.UseMemoryCachingProvider()
+		.Build();
+
+	protected static readonly JsonSerializerOptions HalJsonSerializerOptions = new() {
+		Converters = {
+			new LinksConverter(),
+			new HalRepresentationConverter()
+		},
+		PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+	};
+}
+
+internal class HalResult<T>(T? resource, Checkpoint checkpoint, IHal hal, HttpStatusCode statusCode = HttpStatusCode.OK)
+	: HalResult, IResult {
 	public Task ExecuteAsync(HttpContext context) {
 		context.Response.StatusCode = (int)statusCode;
 
@@ -55,36 +72,46 @@ internal class HalResult<T>(T? resource, Checkpoint checkpoint, IHal hal, HttpSt
 	}
 
 	private class HalJsonResult(T? resource, IHal hal) : IResult {
-		private static readonly JsonSerializerOptions SerializerOptions
-			= new() {
-				Converters = {
-					new LinksConverter(),
-					new HalRepresentationConverter()
-				},
-
-				PropertyNamingPolicy = JsonNamingPolicy.CamelCase
-			};
-
-		private static readonly MediaTypeHeaderValue ContentType = new($"{HalJson.Type}/{HalJson.SubType}");
-
 		public async Task ExecuteAsync(HttpContext context) {
 			context.Response.ContentType = HalJsonContentType;
-			var representation = await hal.RepresentationOfAsync(resource ?? new object());
-			await context.Response.WriteAsJsonAsync(representation, SerializerOptions, context.RequestAborted);
+			var representation = await hal.RepresentationOfAsync(resource);
+			await context.Response.WriteAsJsonAsync(representation, HalJsonSerializerOptions, context.RequestAborted);
 		}
 	}
 
 	private class HalHtmlResult(T? resource, IHal hal) : IResult {
-		private readonly T? _resource = resource;
-		private readonly IHal _hal = hal;
+		// ReSharper disable StaticMemberInGenericType
+		private static readonly string Template = GetTemplate();
+		// ReSharper restore StaticMemberInGenericType
 
-		public HttpStatusCode StatusCode { get; init; }
-
-		public Task ExecuteAsync(HttpContext context) {
-			context.Response.StatusCode = (int)StatusCode;
+		public async Task ExecuteAsync(HttpContext context) {
 			context.Response.ContentType = HalHtmlContentType;
 
-			return Task.CompletedTask;
+			var representation = await hal.RepresentationOfAsync(resource);
+			
+			var html = await RazorLightEngine.CompileRenderStringAsync(typeof(T).ToString(), Template,
+				representation.State, new() {
+					{"_links", representation.Links},
+					{"_embedded", representation.Embedded}
+				});
+
+			await context.Response.WriteAsync(html, context.RequestAborted);
+		}
+
+		private static string GetTemplate() {
+			using var stream = typeof(T).Assembly.GetManifestResourceStream($"{typeof(T).FullName}.cshtml");
+			if (stream is null) throw new Exception($"Embedded resource {typeof(T).FullName} not found. BUG!");
+			using var reader = new StreamReader(stream);
+			return reader.ReadToEnd();
+		}
+	}
+}
+
+internal static class ExpandoObjectExtensions {
+	extension(ExpandoObject e) {
+		public void Add(string key, object? value) {
+			IDictionary<string, object?> i = e;
+			i.Add(key, value);
 		}
 	}
 }

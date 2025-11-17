@@ -20,9 +20,9 @@ Log.Logger = new LoggerConfiguration()
 	.CreateLogger();
 
 var builder = WebApplication.CreateBuilder().AddTransacto(
-	new EventStoreClient(EventStoreClientSettings.Create("esdb://localhost:2113/?tls=false")),
-	new NpgsqlConnectionStringBuilder(configuration.ConnectionString),
-	new HttpClientSqlStreamStore(new() { BaseAddress = new UriBuilder { Port = 5002 }.Uri }));
+	new EventStoreClient(EventStoreClientSettings.Create(configuration.EventStore)),
+	new NpgsqlConnectionStringBuilder(configuration.Postgres),
+	new HttpClientSqlStreamStore(new() { BaseAddress = new Uri(configuration.SqlStreamStore) }));
 
 var app = builder.Build();
 app.UseTransacto();

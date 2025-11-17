@@ -1,4 +1,5 @@
 using System.Globalization;
+using System.Text;
 
 namespace Transacto.Framework;
 
@@ -27,22 +28,14 @@ public readonly struct Checkpoint(ReadOnlyMemory<byte> value) : IEquatable<Check
 		return result;
 	}
 
-	public override string ToString() {
-		Span<char> s = stackalloc char[_value.Length * 2];
-
-		for (var i = 0; i < _value.Length; i++) {
-			_value.Span[i].TryFormat(s[(i * 2)..], out _, "X");
-		}
-
-		return new string(s);
-	}
+	public override string ToString() => Convert.ToHexString(_value.Span);
 
 	public static Checkpoint FromString(ReadOnlySpan<char> value) {
-		var memory = new Memory<byte>(new byte[value.Length / 2]);
-		for (var i = 0; i < memory.Length; i++) {
-			memory.Span[i] = byte.Parse(value.Slice(i * 2, 2), NumberStyles.HexNumber);
+		Span<byte> buf = stackalloc byte[value.Length / 2];
+		for (var i = 0; i < buf.Length; i++) {
+			buf[i] = byte.Parse(value.Slice(i * 2, 2), NumberStyles.HexNumber);
 		}
 
-		return new Checkpoint(memory);
+		return new Checkpoint(buf.ToArray());
 	}
 }

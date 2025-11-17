@@ -10,11 +10,13 @@ public static partial class ServiceCollectionExtensions {
 	public static IServiceCollection AddInMemoryProjection<T>(this IServiceCollection services,
 		Func<T, object, T> handler) where T : MemoryReadModel, new() =>
 		services.AddSingleton<ProjectionHandler<InMemoryProjectionDatabase>[]>(
-			new AnonymousProjectionBuilder<InMemoryProjectionDatabase>().When<Envelope>((target, envelope) => {
-					var model = target.Get<T>();
+			new AnonymousProjectionBuilder<InMemoryProjectionDatabase>()
+				.When<Envelope>((target, envelope) => {
+					var optional = target.Get<T>();
 					var (message, position) = envelope;
 
-					target.Set(handler(model.HasValue ? model.Value : new T(), message) with {
+					var model = optional.HasValue ? optional.Value : new T();
+					target.Set(handler(model, message) with {
 						Checkpoint = position
 					});
 				})

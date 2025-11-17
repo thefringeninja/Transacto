@@ -1,8 +1,9 @@
+@using System.Collections.Generic
 @model SortedDictionary<string, string>
 
 <section>
 	<ul>
-		@foreach (var (key, value) in Model ?? Enumerable.Empty<KeyValuePair<string, string>>())
+		@foreach (var (key, value) in Model)
 		{
 			<li>@key - @value</li>
 		}

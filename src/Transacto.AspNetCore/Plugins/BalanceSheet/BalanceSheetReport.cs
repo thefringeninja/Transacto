@@ -12,9 +12,7 @@ sealed partial record BalanceSheetReport {
 		.Where(x => Account.For(new AccountNumber(x.AccountNumber)) is LiabilityAccount)
 		.Sum(x => x.Balance.DecimalValue);
 
-	public decimal TotalEquity => LineItems
-		.Where(x => Account.For(new AccountNumber(x.AccountNumber)) is EquityAccount)
-		.Sum(x => x.Balance.DecimalValue);
+	public decimal TotalEquity => TotalAssets - TotalLiabilities;
 
 	public bool Equals(BalanceSheetReport? other) => other switch {
 		null => false,
