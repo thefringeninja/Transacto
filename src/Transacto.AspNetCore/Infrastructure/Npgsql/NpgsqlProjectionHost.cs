@@ -24,10 +24,10 @@ public class NpgsqlProjectionHost(
 
 		await CreateSchema(cancellationToken);
 
-		Subscribe();
+		_ = Subscribe();
 	}
 
-	private async void Subscribe() {
+	private async Task Subscribe() {
 		var projectors = await ReadCheckpoints();
 		
 		var checkpoint = projectors.Select(p => p.Checkpoint).Min();

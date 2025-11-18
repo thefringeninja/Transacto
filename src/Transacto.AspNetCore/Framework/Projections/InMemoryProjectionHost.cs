@@ -28,12 +28,12 @@ public class InMemoryProjectionHost : IHostedService {
 	}
 
 	public Task StartAsync(CancellationToken cancellationToken) {
-		Subscribe();
+		_ = Subscribe();
 
 		return Task.CompletedTask;
 	}
 
-	private async void Subscribe() {
+	private async Task Subscribe() {
 		var checkpoint = FromAll.Start;
 
 		await Policy.Handle<Exception>(ex => ex is not OperationCanceledException)

@@ -29,12 +29,12 @@ public class SQLiteProjectionHost(
 	public Task StartAsync(CancellationToken cancellationToken) {
 		CreateSchema();
 
-		Subscribe();
+		_ = Subscribe();
 
 		return Task.CompletedTask;
 	}
 
-	private async void Subscribe() {
+	private async Task Subscribe() {
 		try {
 			await Policy.Handle<Exception>(ex => ex is not OperationCanceledException)
 				.WaitAndRetryAsync(5, retryCount => TimeSpan.FromMilliseconds(retryCount * retryCount * 100))
@@ -178,7 +178,7 @@ internal static class StreamSubscriptionResultExtensions {
 				return;
 			}
 
-			channel.Writer.Complete();
+			channel.Writer.TryComplete();
 		}
 	}
 }

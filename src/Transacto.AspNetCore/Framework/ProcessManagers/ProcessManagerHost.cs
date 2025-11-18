@@ -16,7 +16,7 @@ public class ProcessManagerHost(
 
 	public async Task StartAsync(CancellationToken cancellationToken) {
 		await SetStreamMetadata(cancellationToken);
-		Subscribe();
+		_ = Subscribe();
 	}
 
 	public Task StopAsync(CancellationToken cancellationToken) {
@@ -29,7 +29,7 @@ public class ProcessManagerHost(
 			new StreamMetadata(maxCount: 5), options => options.ThrowOnAppendFailure = false,
 			cancellationToken: cancellationToken);
 
-	private async void Subscribe() {
+	private async Task Subscribe() {
 		var checkpoint = await ReadCheckpoint();
 
 		await Policy.Handle<Exception>(ex => ex is not OperationCanceledException)

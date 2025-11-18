@@ -17,7 +17,7 @@ public class StreamStoreProjectionHost(
 
 	public Task StartAsync(CancellationToken cancellationToken) {
 		if (projections.Length > 0) {
-			Subscribe();
+			_ = Subscribe();
 		}
 
 		return Task.CompletedTask;
@@ -28,7 +28,7 @@ public class StreamStoreProjectionHost(
 		return Task.CompletedTask;
 	}
 
-	private async void Subscribe() {
+	private async Task Subscribe() {
 		var projections1 = await GetProjectors();
 		var checkpoint = projections1.Select(x => x.Checkpoint).Min();
 
