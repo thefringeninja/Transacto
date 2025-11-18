@@ -1,5 +1,7 @@
+using System.Collections.Concurrent;
 using System.Dynamic;
 using System.Net;
+using System.Reflection;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Hallo;
@@ -16,23 +18,31 @@ internal abstract class HalResult {
 	protected static readonly MediaType HalJson = new(HalJsonContentType);
 	protected static readonly MediaType Html = new(HalHtmlContentType);
 
-	protected static RazorLightEngine RazorLightEngine = new RazorLightEngineBuilder()
-		.UseEmbeddedResourcesProject(typeof(IPlugin).Assembly)
-		.UseMemoryCachingProvider()
-		.Build();
+	private static ConcurrentDictionary<Assembly, RazorLightEngine> s_RazorLightEngines = [];
+
+	protected static RazorLightEngine GetRazorEngine<T>() =>
+		s_RazorLightEngines.GetOrAdd(typeof(T).Assembly, assembly => new RazorLightEngineBuilder()
+			.UseEmbeddedResourcesProject(assembly)
+			.UseMemoryCachingProvider()
+			.Build());
 
 	protected static readonly JsonSerializerOptions HalJsonSerializerOptions = new() {
+		PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+		PropertyNameCaseInsensitive = true,
+		IncludeFields = true,
 		Converters = {
 			new LinksConverter(),
 			new HalRepresentationConverter(),
 			new JsonStringEnumConverter(JsonNamingPolicy.CamelCase)
 		},
-		PropertyNamingPolicy = JsonNamingPolicy.CamelCase
 	};
 }
 
 internal class HalResult<T>(T? resource, Checkpoint checkpoint, IHal hal, HttpStatusCode statusCode = HttpStatusCode.OK)
 	: HalResult, IResult {
+
+	private static RazorLightEngine RazorLightEngine => GetRazorEngine<T>();
+
 	public Task ExecuteAsync(HttpContext context) {
 		context.Response.StatusCode = (int)statusCode;
 

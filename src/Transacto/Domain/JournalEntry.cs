@@ -1,9 +1,11 @@
 using System.Collections.Immutable;
+using System.Text.Json.Serialization;
 
 namespace Transacto.Domain;
 
 public partial class JournalEntry : IBusinessTransaction {
-	public GeneralLedgerEntrySequenceNumber SequenceNumber => new(JournalEntryNumber);
+	[JsonIgnore]
+	GeneralLedgerEntrySequenceNumber IBusinessTransaction.SequenceNumber => new(JournalEntryNumber);
 	public int JournalEntryNumber { get; init; }
 	public string? Description { get; init; }
 	public ImmutableArray<Item> Items { get; init; } = ImmutableArray<Item>.Empty;

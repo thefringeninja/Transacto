@@ -1,6 +1,8 @@
+using System.Text.Json.Serialization;
+
 namespace Transacto.Domain;
 
 public interface IBusinessTransaction {
-	public GeneralLedgerEntrySequenceNumber SequenceNumber { get; }
+	[JsonIgnore] public GeneralLedgerEntrySequenceNumber SequenceNumber { get; }
 	public IEnumerable<object> GetTransactionItems();
 }

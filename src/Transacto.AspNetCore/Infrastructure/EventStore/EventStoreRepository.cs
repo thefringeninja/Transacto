@@ -9,11 +9,8 @@ public class EventStoreRepository<TAggregateRoot>(
 	IMessageTypeMapper messageTypeMapper,
 	JsonSerializerOptions? serializerOptions = null)
 	where TAggregateRoot : AggregateRoot, IAggregateRoot<TAggregateRoot> {
-	private static readonly JsonSerializerOptions DefaultOptions = new() {
-		PropertyNamingPolicy = JsonNamingPolicy.CamelCase
-	};
 
-	private readonly JsonSerializerOptions _serializerOptions = serializerOptions ?? DefaultOptions;
+	private readonly JsonSerializerOptions _serializerOptions = serializerOptions ?? TransactoSerializerOptions.Events;
 
 	public async ValueTask<Optional<TAggregateRoot>> GetById(string identifier,
 		CancellationToken cancellationToken = default) {

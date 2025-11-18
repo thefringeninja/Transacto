@@ -83,4 +83,13 @@ public class MoneyTests : ValueObjectTests<Money> {
 	public void MultiplyingByPercentageReturnsExpectedResult(decimal money, decimal percentage) =>
 		Assert.Equal(new Money(money * percentage), new Money(money) * new Percentage(percentage));
 
+	public static IEnumerable<object[]> RoundingCases() => [
+		[new Money(0.0001m), 2, new Money(0.01m)],
+		[new Money(0.1m), 0, new Money(1m)]
+	];
+
+	[MemberData(nameof(RoundingCases))]
+	public void RundReturnsExpectedResult(Money amount, int decimals, Money expected) =>
+		Assert.Equal(expected, amount.Round(decimals));
+
 }

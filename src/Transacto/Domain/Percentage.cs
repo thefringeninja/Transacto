@@ -5,6 +5,8 @@ public readonly struct Percentage(decimal value) : IEquatable<Percentage>,
 	private readonly decimal _value = value >= 0m ? value : throw new ArgumentOutOfRangeException(nameof(value));
 	
 	public static readonly Percentage Zero = new(0m);
+	
+	public static Percentage Of(decimal value) => new(value/100m);
 
 	public decimal ToDecimal() => _value;
 	public bool Equals(Percentage other) => _value == other._value;

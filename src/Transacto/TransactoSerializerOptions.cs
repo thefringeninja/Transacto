@@ -9,7 +9,9 @@ public static class TransactoSerializerOptions {
 		PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
 		PropertyNameCaseInsensitive = true,
 		IncludeFields = true,
-		Converters = { new JsonStringEnumConverter(JsonNamingPolicy.CamelCase) }
+		Converters = {
+			new JsonStringEnumConverter(JsonNamingPolicy.CamelCase)
+		}
 	};
 
 	public static JsonSerializerOptions BusinessTransactions(params Type[] businessTransactionTypes) =>
@@ -29,7 +31,7 @@ public static class TransactoSerializerOptions {
 		IncludeFields = true,
 		Converters = { new JsonStringEnumConverter(JsonNamingPolicy.CamelCase) }
 	};
-
+	
 	private class BusinessTransactionConverter(params Type[] transactionTypes) : JsonConverter<IBusinessTransaction?> {
 		private readonly Dictionary<string, Type> _transactionTypes =
 			transactionTypes.ToDictionary(GetBusinessTransactionPropertyName);

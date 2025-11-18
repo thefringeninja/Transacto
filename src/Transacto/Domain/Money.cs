@@ -28,6 +28,8 @@ public readonly struct Money(decimal value) : IEquatable<Money>,
 
 	[Pure]
 	public string ToString([StringSyntax("NumericFormat")] string? format) => _value.ToString(format);
+	
+	[Pure] public Money Round(int decimals) => new(Math.Round(_value, decimals, MidpointRounding.ToPositiveInfinity));
 
 	public static bool operator ==(Money left, Money right) => left.Equals(right);
 	public static bool operator !=(Money left, Money right) => !left.Equals(right);

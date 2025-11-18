@@ -1,6 +1,7 @@
 using System.Collections.Concurrent;
 using System.Collections.Immutable;
 using System.Data.SQLite;
+using System.Text.Json.Serialization;
 using Hallo;
 using Microsoft.AspNetCore.Mvc;
 using Transacto.Domain;
@@ -9,6 +10,7 @@ using Transacto.Framework.Http;
 using Transacto.Framework.Projections;
 using Transacto.Infrastructure.EventStore;
 using Transacto.Messages;
+
 namespace Transacto.Plugins.GeneralLedger;
 
 internal class GeneralLedger : IPlugin {
@@ -28,7 +30,7 @@ internal class GeneralLedger : IPlugin {
 
 			return Results.Extensions.Hal(results, Checkpoint.None, new LedgerEntryIndex.SearchResultRepresentation());
 		});
-		
+
 		builder.MapGet("/entries/{id:guid}",
 			async (Guid id, [FromServices] IGeneralLedgerEntryRepository repository, CancellationToken ct) => {
 				using (UnitOfWork.Start()) {
@@ -75,7 +77,7 @@ internal class GeneralLedger : IPlugin {
 			return async (prefix, ct) => {
 				var results = new List<LedgerEntryIndex.SearchResult>(13);
 				await using var connection = connectionFactory();
-				connection.Open();
+				await connection.OpenAsync(ct);
 
 				await using var command = new SQLiteCommand(connection) {
 					CommandText = """
@@ -83,17 +85,15 @@ internal class GeneralLedger : IPlugin {
 					              FROM ledger_entry_index 
 					              WHERE reference_number LIKE CONCAT(@prefix, '%')
 					              LIMIT 25
-					              """,
-					Parameters = {
-						new SQLiteParameter(prefix) {
-							ParameterName = "@prefix"
-						}
-					}
+					              """
 				};
-				await using var reader = command.ExecuteReader();
+				command.Parameters.AddWithValue("@prefix", prefix);
+				await using var reader = await command.ExecuteReaderAsync(ct);
 
-				while (reader.Read()) {
-					results.Add(new LedgerEntryIndex.SearchResult(reader.GetString(0), reader.GetGuid(1),
+				while (await reader.ReadAsync(ct)) {
+					results.Add(new LedgerEntryIndex.SearchResult(
+						reader.GetString(0),
+						reader.GetGuid(1),
 						reader.GetDateTime(2)));
 				}
 
@@ -138,8 +138,12 @@ internal class GeneralLedger : IPlugin {
 
 	public record JournalLedgerEntry(
 		string ReferenceNumber,
-		IBusinessTransaction? BusinessTransaction,
+		// ReSharper disable once InconsistentNaming
+		[property: JsonIgnore] IBusinessTransaction? businessTransaction,
 		ImmutableArray<JournalLedgerEntry.Item> Items) {
+		[JsonPropertyName(nameof(businessTransaction))]
+		public object? BusinessTransactionObject => businessTransaction;
+
 		public static JournalLedgerEntry FromGeneralLedgerEntry(GeneralLedgerEntry entry) {
 			var items = entry.Debits.Select(d => new Item(d.AccountNumber.ToInt32(), d.Amount.ToDecimal(), Type.Debit))
 				.Concat(
