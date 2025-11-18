@@ -17,5 +17,10 @@ public class GeneralLedgerEntryEventStoreRepository(
 			_ => throw new GeneralLedgerEntryNotFoundException(identifier)
 		};
 
+	public async ValueTask<Optional<GeneralLedgerEntry>> GetOptional(GeneralLedgerEntryIdentifier identifier,
+		CancellationToken cancellationToken = default) {
+		return await _inner.GetById(GeneralLedgerEntry.FormatStreamIdentifier(identifier), cancellationToken);
+	}
+
 	public void Add(GeneralLedgerEntry generalLedgerEntry) => _inner.Add(generalLedgerEntry);
 }

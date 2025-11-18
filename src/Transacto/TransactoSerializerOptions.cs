@@ -8,7 +8,8 @@ public static class TransactoSerializerOptions {
 	public static readonly JsonSerializerOptions Events = new() {
 		PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
 		PropertyNameCaseInsensitive = true,
-		IncludeFields = true
+		IncludeFields = true,
+		Converters = { new JsonStringEnumConverter(JsonNamingPolicy.CamelCase) }
 	};
 
 	public static JsonSerializerOptions BusinessTransactions(params Type[] businessTransactionTypes) =>
@@ -16,17 +17,22 @@ public static class TransactoSerializerOptions {
 			IncludeFields = true,
 			PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
 			PropertyNameCaseInsensitive = true,
-			Converters = { new BusinessTransactionConverter(businessTransactionTypes) }
+			Converters = {
+				new BusinessTransactionConverter(businessTransactionTypes),
+				new JsonStringEnumConverter(JsonNamingPolicy.CamelCase)
+			},
 		};
 
 	public static readonly JsonSerializerOptions Commands = new() {
 		PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
 		PropertyNameCaseInsensitive = true,
-		IncludeFields = true
+		IncludeFields = true,
+		Converters = { new JsonStringEnumConverter(JsonNamingPolicy.CamelCase) }
 	};
 
 	private class BusinessTransactionConverter(params Type[] transactionTypes) : JsonConverter<IBusinessTransaction?> {
-		private readonly IDictionary<string, Type> _transactionTypes = transactionTypes.ToDictionary(GetBusinessTransactionPropertyName);
+		private readonly Dictionary<string, Type> _transactionTypes =
+			transactionTypes.ToDictionary(GetBusinessTransactionPropertyName);
 
 		private static string GetBusinessTransactionPropertyName(Type type) =>
 			char.ToLower(type.Name[0]) + type.Name[1..];

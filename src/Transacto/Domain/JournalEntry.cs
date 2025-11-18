@@ -9,7 +9,7 @@ public partial class JournalEntry : IBusinessTransaction {
 	public ImmutableArray<Item> Items { get; init; } = ImmutableArray<Item>.Empty;
 
 	public IEnumerable<object> GetTransactionItems() {
-		foreach (var (accountNumber, amount, type) in Items) {
+		foreach (var (accountNumber, amount, type) in Items.OrderBy(item => item.AccountNumber)) {
 			yield return type switch {
 				Type.Credit => new Credit(new AccountNumber(accountNumber), new Money(amount)),
 				Type.Debit => new Debit(new AccountNumber(accountNumber), new Money(amount)),

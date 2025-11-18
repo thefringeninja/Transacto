@@ -1,6 +1,7 @@
 using System.Dynamic;
 using System.Net;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using Hallo;
 using Hallo.Serialization;
 using Microsoft.AspNetCore.Mvc.Formatters;
@@ -23,7 +24,8 @@ internal abstract class HalResult {
 	protected static readonly JsonSerializerOptions HalJsonSerializerOptions = new() {
 		Converters = {
 			new LinksConverter(),
-			new HalRepresentationConverter()
+			new HalRepresentationConverter(),
+			new JsonStringEnumConverter(JsonNamingPolicy.CamelCase)
 		},
 		PropertyNamingPolicy = JsonNamingPolicy.CamelCase
 	};

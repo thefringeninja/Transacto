@@ -4,6 +4,8 @@ public readonly struct GeneralLedgerEntryNumber(
 	GeneralLedgerEntryNumberPrefix prefix,
 	GeneralLedgerEntrySequenceNumber sequenceNumber)
 	: IEquatable<GeneralLedgerEntryNumber> {
+	public static readonly GeneralLedgerEntryNumber Empty = default;
+	
 	public GeneralLedgerEntryNumberPrefix Prefix { get; } = prefix;
 	public GeneralLedgerEntrySequenceNumber SequenceNumber { get; } = sequenceNumber;
 

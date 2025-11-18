@@ -4,6 +4,7 @@
 	</Folder>
 	<Folder Name="/src/">
 		<Project Path="src/Projac/src/Projac.Npgsql/Projac.Npgsql.csproj" />
+		<Project Path="src/Projac/src/Projac.SQLite/Projac.SQLite.csproj" />
 		<Project Path="src/Transacto.AspNetCore/Transacto.AspNetCore.csproj" />
 		<Project Path="src/Transacto.Schemo/Transacto.Schemo.csproj" />
 		<Project Path="src/Transacto/Transacto.csproj" />

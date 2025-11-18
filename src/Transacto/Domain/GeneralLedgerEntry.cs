@@ -19,6 +19,10 @@ public class GeneralLedgerEntry : AggregateRoot, IAggregateRoot<GeneralLedgerEnt
 
 	public GeneralLedgerEntryIdentifier Identifier => _state.Identifier;
 
+	public GeneralLedgerEntryNumber ReferenceNumber => _state.ReferenceNumber ?? default;
+	
+	public IBusinessTransaction? BusinessTransaction => _state.BusinessTransaction; 
+
 	public static string FormatStreamIdentifier(GeneralLedgerEntryIdentifier identifier) =>
 		$"generalLedgerEntry-{identifier}";
 
@@ -61,7 +65,8 @@ public class GeneralLedgerEntry : AggregateRoot, IAggregateRoot<GeneralLedgerEnt
 	protected override void ApplyEvent(object _) => _state = _ switch {
 		GeneralLedgerEntryCreated e => _state with {
 			Identifier = new GeneralLedgerEntryIdentifier(e.GeneralLedgerEntryId),
-			AccountingPeriod = AccountingPeriod.Parse(e.Period)
+			AccountingPeriod = AccountingPeriod.Parse(e.Period),
+			ReferenceNumber = GeneralLedgerEntryNumber.Parse(e.ReferenceNumber)
 		},
 		CreditApplied e => _state with {
 			Credits = _state.Credits.Add(new Credit(new AccountNumber(e.AccountNumber), new Money(e.Amount)))
@@ -71,6 +76,9 @@ public class GeneralLedgerEntry : AggregateRoot, IAggregateRoot<GeneralLedgerEnt
 		},
 		GeneralLedgerEntryPosted => _state with {
 			Posted = true
+		},
+		IBusinessTransaction b => _state with {
+			BusinessTransaction = b
 		},
 		_ => _state
 	};
@@ -136,10 +144,12 @@ public class GeneralLedgerEntry : AggregateRoot, IAggregateRoot<GeneralLedgerEnt
 
 	private record State {
 		public GeneralLedgerEntryIdentifier Identifier { get; init; }
+		public GeneralLedgerEntryNumber? ReferenceNumber { get; init; }
 		public bool Posted { get; init; }
 		public ImmutableList<Debit> Debits { get; init; } = ImmutableList<Debit>.Empty;
 		public ImmutableList<Credit> Credits { get; init; } = ImmutableList<Credit>.Empty;
 		public AccountingPeriod AccountingPeriod { get; init; }
+		public IBusinessTransaction? BusinessTransaction { get; init; }
 
 		public Money Balance => Debits.Sum() - Credits.Sum();
 	}
