@@ -74,4 +74,13 @@ public class MoneyTests : ValueObjectTests<Money> {
 
 	[AutoFixtureData]
 	public void ToDecimalReturnsExpectedResult(decimal value) => Assert.Equal(value, new Money(value).ToDecimal());
+
+	[AutoFixtureData]
+	public void MultiplyingByDecimalReturnsExpectedResult(decimal money, decimal percentage) =>
+		Assert.Equal(new Money(money * percentage), new Money(money) * percentage);
+	
+	[AutoFixtureData]
+	public void MultiplyingByPercentageReturnsExpectedResult(decimal money, decimal percentage) =>
+		Assert.Equal(new Money(money * percentage), new Money(money) * new Percentage(percentage));
+
 }

@@ -11,7 +11,9 @@ public readonly struct Money(decimal value) : IEquatable<Money>,
 	IAdditionOperators<Money, decimal, Money>,
 	ISubtractionOperators<Money, Money, Money>,
 	ISubtractionOperators<Money, decimal, Money>,
-	IUnaryNegationOperators<Money, Money> {
+	IUnaryNegationOperators<Money, Money>,
+	IMultiplyOperators<Money, Percentage, Money>,
+	IMultiplyOperators<Money, decimal, Money> {
 	private readonly decimal _value = value;
 
 	public static readonly Money Zero = new(decimal.Zero);
@@ -38,4 +40,6 @@ public readonly struct Money(decimal value) : IEquatable<Money>,
 	public static Money operator +(Money left, decimal right) => new(left._value + right);
 	public static Money operator -(Money left, decimal right) => new(left._value - right);
 	public static Money operator -(Money value) => new(-value._value);
+	public static Money operator *(Money left, Percentage right) => left * right.ToDecimal();
+	public static Money operator *(Money left, decimal right) => new(left._value * right);
 }
