@@ -38,7 +38,7 @@ public class InMemoryProjectionHost : IHostedService {
 
 		await Policy.Handle<Exception>(ex => ex is not OperationCanceledException)
 			.WaitAndRetryAsync(5, retryCount => TimeSpan.FromMilliseconds(retryCount * retryCount * 100),
-				(ex, _) => _logger.LogWarning(ex, "Projecton failed"))
+				(ex, _) => _logger.LogWarning(ex, "Projection failed"))
 			.ExecuteAsync(Subscribe);
 		return;
 

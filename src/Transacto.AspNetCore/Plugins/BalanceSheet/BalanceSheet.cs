@@ -1,5 +1,4 @@
 using System.Collections.Immutable;
-using System.Diagnostics.CodeAnalysis;
 using Hallo;
 using Microsoft.AspNetCore.Mvc;
 using NodaTime;
@@ -155,15 +154,14 @@ internal class BalanceSheet : IPlugin {
 
 				var a = account.Debit(new Money(e.Amount)).Balance.ToDecimal();
 
+				var unpostedEntry = readModel.UnpostedEntries[e.GeneralLedgerEntryId];
+				var debits = unpostedEntry.Debits;
 				return readModel with {
 					UnpostedEntries = readModel.UnpostedEntries.SetItem(e.GeneralLedgerEntryId,
-						readModel.UnpostedEntries[e.GeneralLedgerEntryId] with {
-							Debits = readModel.UnpostedEntries[e.GeneralLedgerEntryId].Debits
-								.SetItem(e.AccountNumber, readModel
-									.UnpostedEntries[e.GeneralLedgerEntryId].Debits
-									.TryGetValue(e.AccountNumber, out var amount)
-									? amount + a
-									: a)
+						unpostedEntry with {
+							Debits = debits.SetItem(e.AccountNumber, debits.TryGetValue(e.AccountNumber, out var amount)
+								? amount + a
+								: a)
 						})
 				};
 			}
@@ -175,12 +173,14 @@ internal class BalanceSheet : IPlugin {
 
 				var a = account.Credit(new Money(e.Amount)).Balance.ToDecimal();
 
+				var unpostedEntry = readModel.UnpostedEntries[e.GeneralLedgerEntryId];
+
+				var credits = unpostedEntry.Credits;
 				return readModel with {
 					UnpostedEntries = readModel.UnpostedEntries.SetItem(e.GeneralLedgerEntryId,
-						readModel.UnpostedEntries[e.GeneralLedgerEntryId] with {
-							Credits = readModel.UnpostedEntries[e.GeneralLedgerEntryId].Credits
-								.SetItem(e.AccountNumber, readModel.UnpostedEntries[e.GeneralLedgerEntryId].Credits
-									.TryGetValue(e.AccountNumber, out var amount)
+						unpostedEntry with {
+							Credits = credits.SetItem(e.AccountNumber,
+								credits.TryGetValue(e.AccountNumber, out var amount)
 									? amount + a
 									: a)
 						})

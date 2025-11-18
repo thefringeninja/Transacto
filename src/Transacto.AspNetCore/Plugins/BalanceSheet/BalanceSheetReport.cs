@@ -1,4 +1,3 @@
-using System.Collections.Immutable;
 using Transacto.Domain;
 
 namespace Transacto.Plugins.BalanceSheet;

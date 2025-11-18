@@ -4,7 +4,6 @@ using Npgsql;
 using Polly;
 using Projac.Sql;
 using Projac.Sql.Executors;
-using Serilog;
 using Transacto.Framework;
 using Transacto.Framework.Projections;
 

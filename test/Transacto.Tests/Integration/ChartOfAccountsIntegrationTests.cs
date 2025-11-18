@@ -10,7 +10,7 @@ public class ChartOfAccountsIntegrationTests : IntegrationTests {
 	private async Task hal() {
 		var checkpoint = await SetupChartOfAccounts();
 
-		var position = checkpoint.ToEventStorePosition();
+		var position = checkpoint.ToEventStoreCheckpoint();
 
 		using var response = await HttpClient.ConditionalGetAsync("/chart-of-accounts", checkpoint);
 

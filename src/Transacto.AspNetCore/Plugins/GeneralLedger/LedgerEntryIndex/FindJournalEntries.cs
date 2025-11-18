@@ -1,6 +1,5 @@
 using System.Collections.Immutable;
 using Hallo;
-using NodaTime;
 
 namespace Transacto.Plugins.GeneralLedger.LedgerEntryIndex;
 

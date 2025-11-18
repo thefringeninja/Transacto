@@ -10,14 +10,14 @@ public static class LoggingExtensions {
 
 		return builder.Pipe(next => async (m, ct) => {
 			if (log.IsEnabled(LogLevel.Information)) {
-				log.LogInformation(m.ToString());
+				log.LogInformation("{message}", m.ToString());
 			}
 
 			try {
 				return await next(m, ct);
 			} catch (Exception ex) {
 				if (log.IsEnabled(LogLevel.Error)) {
-					log.LogError(ex.ToString());
+					log.LogError(ex, "Error handling message");
 				}
 
 				throw;
