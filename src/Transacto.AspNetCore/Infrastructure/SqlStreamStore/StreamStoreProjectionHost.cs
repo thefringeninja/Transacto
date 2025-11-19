@@ -42,7 +42,7 @@ public class StreamStoreProjectionHost(
 			await using var subscription = eventStore.SubscribeToAll(checkpoint,
 				filterOptions: new SubscriptionFilterOptions(EventTypeFilter.ExcludeSystemEvents()));
 
-			await foreach (var message in subscription.Messages) {
+			await foreach (var message in subscription.Messages.WithCancellation(_stopped.Token)) {
 				if (message is not StreamMessage.Event(var resolvedEvent)) {
 					continue;
 				}

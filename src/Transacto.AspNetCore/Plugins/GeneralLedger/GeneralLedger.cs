@@ -24,6 +24,15 @@ internal class GeneralLedger : IPlugin {
 				typeof(OpenGeneralLedger),
 				typeof(BeginClosingAccountingPeriod));
 
+		builder.MapGet("/period", ([FromServices] InMemoryProjectionDatabase database) => {
+			var optional = database.Get<CurrentPeriod>();
+
+			return optional switch {
+				{ HasValue: true, Value: { } period } => Results.Extensions.Hal(period,
+					optional.Value.Checkpoint.ToCheckpoint(), new CurrentPeriodRepresentation()),
+				_ => Results.NotFound()
+			};
+		});
 		builder.MapGet("/entries/search", async ([FromQuery] string prefix,
 			[FromServices] LedgerEntryIndex.SearchJournalEntriesAsync search, CancellationToken ct) => {
 			var results = await search(prefix, ct);
@@ -97,7 +106,7 @@ internal class GeneralLedger : IPlugin {
 						reader.GetDateTime(2)));
 				}
 
-				return [..results];
+				return new LedgerEntryIndex.SearchResults([..results]);
 			};
 		})
 		.AddInMemoryProjection<UnclosedGeneralLedgerEntries>((readModel, e) => readModel with {
@@ -118,6 +127,13 @@ internal class GeneralLedger : IPlugin {
 				_ => readModel.NotClosed
 			}
 		})
+		.AddInMemoryProjection<CurrentPeriod>((readModel, e) => readModel with {
+			Period = e switch {
+				GeneralLedgerOpened o => o.OpenedOn[..6],
+				AccountingPeriodClosed c => AccountingPeriod.Parse(c.Period).Next().ToString(),
+				_ => readModel.Period
+			}
+		})
 		.AddProcessManager<AccountingPeriodClosingModule>("accountingPeriodClosingCheckpoint");
 
 	private record DeactivatedAccounts : MemoryReadModel {
@@ -131,6 +147,13 @@ internal class GeneralLedger : IPlugin {
 			ImmutableDictionary<string, ImmutableHashSet<Guid>>.Empty;
 	}
 
+	private class CurrentPeriodRepresentation : Hal<CurrentPeriod>, IHalState<CurrentPeriod> {
+		public object StateFor(CurrentPeriod resource) => new { resource.Period };
+	}
+
+	private record CurrentPeriod : MemoryReadModel {
+		public string? Period { get; init; }
+	}
 
 	public class JournalEntryRepresentation : Hal<JournalLedgerEntry>, IHalState<JournalLedgerEntry> {
 		public object StateFor(JournalLedgerEntry resource) => resource;

@@ -8,20 +8,15 @@ public class ProcessManagerHost(
 	EventStoreClient eventStore,
 	IMessageTypeMapper messageTypeMapper,
 	string checkpointStreamName,
-	ProcessManagerEventHandlerModule eventHandlerModule)
-	: IHostedService {
-	private readonly CancellationTokenSource _stopped = new();
-	private readonly ProcessManagerEventDispatcher _dispatcher = new(eventHandlerModule);
+	ProcessManagerEventHandlerModule processManagerModule,
+	ILogger<ProcessManagerHost> logger)
+	: BackgroundService {
+	private readonly ProcessManagerEventDispatcher _dispatcher = new(processManagerModule);
+	private readonly string _name = processManagerModule.GetType().Name;
 
-
-	public async Task StartAsync(CancellationToken cancellationToken) {
-		await SetStreamMetadata(cancellationToken);
-		_ = Subscribe();
-	}
-
-	public Task StopAsync(CancellationToken cancellationToken) {
-		_stopped.Cancel();
-		return Task.CompletedTask;
+	protected override async Task ExecuteAsync(CancellationToken stoppingToken) {
+		await SetStreamMetadata(stoppingToken);
+		await Subscribe(stoppingToken);
 	}
 
 	private Task SetStreamMetadata(CancellationToken cancellationToken) =>
@@ -29,50 +24,72 @@ public class ProcessManagerHost(
 			new StreamMetadata(maxCount: 5), options => options.ThrowOnAppendFailure = false,
 			cancellationToken: cancellationToken);
 
-	private async Task Subscribe() {
-		var checkpoint = await ReadCheckpoint();
-
-		await Policy.Handle<Exception>(ex => ex is not OperationCanceledException)
-			.RetryForeverAsync((_, retryCount) =>
-				Task.Delay(TimeSpan.FromMilliseconds(Math.Max(retryCount * retryCount * 100, 1000))))
-			.ExecuteAsync(Subscribe);
-		return;
-
-		async Task Subscribe() {
-			await using var subscription = eventStore.SubscribeToAll(checkpoint.ToEventStoreCheckpoint(),
-				filterOptions: new SubscriptionFilterOptions(EventTypeFilter.ExcludeSystemEvents()));
-
-			await foreach (var message in subscription.Messages.WithCancellation(_stopped.Token)) {
-				if (message is not StreamMessage.Event (var resolvedEvent)) {
-					continue;
-				}
-
-				if (!messageTypeMapper.TryMap(resolvedEvent.Event.EventType, out var type)) {
-					return;
-				}
-
-				var e = JsonSerializer.Deserialize(resolvedEvent.Event.Data.Span, type,
-					TransactoSerializerOptions.Events)!;
-
-				checkpoint = await _dispatcher.Handle(e, _stopped.Token);
-
-				if (checkpoint == Checkpoint.None) {
-					continue;
-				}
-
-				await eventStore.AppendToStreamAsync(checkpointStreamName, StreamState.Any, [
-					new EventData(Uuid.NewUuid(), "checkpoint", checkpoint.Memory,
-						contentType: "application/octet-stream")
-				], cancellationToken: _stopped.Token);
-			}
+	private async Task Subscribe(CancellationToken ct) {
+		try {
+			await Policy.Handle<Exception>(ex => ex is not OperationCanceledException)
+				.WaitAndRetryAsync(5, attempt => TimeSpan.FromSeconds(Math.Pow(2, attempt)),
+					(ex, delay) => logger.LogInformation(ex,
+						"Process manager {processManager} encountered an issue. Will retry after {delay}", _name,
+						delay))
+				.ExecuteAsync(SubscribeInternal, ct);
+		} catch (OperationCanceledException) {
+			logger.LogTrace("Operation cancelled.");
 		}
 	}
 
-	private ValueTask<Checkpoint> ReadCheckpoint() =>
-		eventStore.ReadStreamAsync(Direction.Backwards, checkpointStreamName,
-				StreamPosition.End, 1, cancellationToken: _stopped.Token)
+	private async Task SubscribeInternal(CancellationToken ct) {
+		var checkpoint = await ReadCheckpoint(ct);
+
+		await using var subscription = eventStore.SubscribeToAll(checkpoint.ToEventStoreCheckpoint(),
+			filterOptions: new SubscriptionFilterOptions(EventTypeFilter.ExcludeSystemEvents()), cancellationToken: ct);
+
+		await foreach (var message in subscription.Messages.WithCancellation(ct)) {
+			logger.LogTrace("Process manager {processManager} saw {message}", _name, message);
+			if (message is not StreamMessage.Event (var resolvedEvent)) {
+				continue;
+			}
+
+			if (!messageTypeMapper.TryMap(resolvedEvent.Event.EventType, out var type)) {
+				logger.LogDebug(
+					"Process manager {processManager} did not understand {messageType} {streamVersion}@{streamName}",
+					_name, resolvedEvent.Event.EventType, resolvedEvent.Event.EventNumber,
+					resolvedEvent.Event.EventStreamId);
+				continue;
+			}
+
+			var e = JsonSerializer.Deserialize(resolvedEvent.Event.Data.Span, type,
+				TransactoSerializerOptions.Events) ?? throw new InvalidOperationException();
+
+			logger.LogDebug(
+				"Process manager {processManager} handling message {messageType} {streamVersion}@{streamName}",
+				_name, resolvedEvent.Event.EventType, resolvedEvent.Event.EventNumber,
+				resolvedEvent.Event.EventStreamId);
+
+			checkpoint = await _dispatcher.Handle(e, ct);
+
+			if (checkpoint == Checkpoint.None) {
+				logger.LogDebug(
+					"Process manager {processManager} did not produce checkpoint when handling message {messageType} {streamVersion}@{streamName}",
+					_name, resolvedEvent.Event.EventType, resolvedEvent.Event.EventNumber,
+					resolvedEvent.Event.EventStreamId);
+				continue;
+			}
+
+			await eventStore.AppendToStreamAsync(checkpointStreamName, StreamState.Any, [
+				new EventData(Uuid.NewUuid(), "checkpoint", checkpoint.Memory,
+					contentType: "application/octet-stream")
+			], cancellationToken: ct);
+
+			logger.LogDebug("Process manager {processManager} persisted checkpoint {checkpoint} to {streamName}",
+				_name, checkpoint, checkpointStreamName);
+		}
+	}
+
+	private ValueTask<Checkpoint> ReadCheckpoint(CancellationToken ct) =>
+		eventStore.ReadStreamAsync(Direction.Backwards, checkpointStreamName, StreamPosition.End, 1,
+				cancellationToken: ct)
 			.Messages
 			.OfType<StreamMessage.Event>()
 			.Select(e => new Checkpoint(e.ResolvedEvent.Event.Data))
-			.SingleOrDefaultAsync(_stopped.Token);
+			.SingleOrDefaultAsync(ct);
 }

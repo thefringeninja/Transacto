@@ -5,6 +5,7 @@ public record LiabilityAccount : Account {
 		: base(accountName, accountNumber, 2000..3000) {
 	}
 
+	public override bool IsFictitious => false;
 	public override LiabilityAccount Credit(Money amount) => this with { Balance = Balance + amount };
 	public override LiabilityAccount Debit(Money amount) => this with { Balance = Balance - amount };
 }

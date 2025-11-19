@@ -5,7 +5,7 @@ namespace Transacto.Framework.Http;
 
 public static class ResultExtensions {
 	public static IResult Hal<T>(this IResultExtensions _, T? resource, Checkpoint checkpoint, IHal hal,
-		HttpStatusCode statusCode = HttpStatusCode.OK) =>
+		HttpStatusCode statusCode = HttpStatusCode.OK) where T : class =>
 		new HalResult<T>(resource, checkpoint, hal, statusCode);
 
 	public static IResult NotAcceptable(this IResultExtensions _) => NotAcceptableResult.Instance;

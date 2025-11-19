@@ -13,8 +13,12 @@ using Transacto.Plugins;
 namespace Transacto;
 
 public static class ServiceCollectionExtensions {
-	public static IServiceCollection AddTransacto(this IServiceCollection services, params IPlugin[] plugins) =>
+	public static IServiceCollection AddTransacto(this IServiceCollection services, EventStoreClient eventStore,
+		NpgsqlConnectionStringBuilder connectionStringBuilder, IStreamStore streamStore, params IPlugin[] plugins) =>
 		plugins.Concat(Standard.Plugins).Aggregate(services
+				.AddSingleton(eventStore)
+				.AddSingleton(connectionStringBuilder)
+				.AddSingleton(streamStore)
 				.AddRouting()
 				.AddSingleton(MessageTypeMapper.Create(Array.ConvertAll(plugins,
 					plugin => new MessageTypeMapper(plugin.MessageTypes))))
@@ -29,7 +33,10 @@ public static class ServiceCollectionExtensions {
 				}),
 			(services, plugin) => {
 				var rootProvider = services.BuildServiceProvider();
-				var pluginServices = new ServiceCollection();
+				var pluginServices = new ServiceCollection()
+					.AddLogging(builder =>
+						rootProvider.GetServices<ILoggerProvider>()
+							.Aggregate(builder.ClearProviders(), (acc, provider) => acc.AddProvider(provider)));
 				plugin.ConfigureServices(pluginServices);
 
 				var pluginProvider = pluginServices
@@ -52,6 +59,7 @@ public static class ServiceCollectionExtensions {
 						provider.GetRequiredService<EventStoreClient>(),
 						provider.GetRequiredService<IMessageTypeMapper>(),
 						provider.GetRequiredService<Func<NpgsqlConnection>>(),
+						provider.GetRequiredService<ILoggerFactory>().CreateLogger<NpgsqlProjectionHost>(),
 						provider.GetServices<NpgsqlProjection>().ToArray()))
 					.AddHostedService(provider => new StreamStoreProjectionHost(
 						provider.GetRequiredService<EventStoreClient>(),

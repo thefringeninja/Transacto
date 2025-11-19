@@ -4,6 +4,9 @@ public abstract record Account {
 	public AccountName AccountName { get; }
 	public AccountNumber AccountNumber { get; }
 	public Money Balance { get; protected init; } = Money.Zero;
+	
+	public abstract bool IsFictitious { get; }
+	public bool IsReal => !IsFictitious;
 
 	public static Account For(AccountNumber accountNumber, AccountName accountName = default) =>
 		accountNumber.ToInt32() switch {

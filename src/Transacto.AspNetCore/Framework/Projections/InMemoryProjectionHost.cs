@@ -5,68 +5,45 @@ using Projac;
 
 namespace Transacto.Framework.Projections;
 
-public class InMemoryProjectionHost : IHostedService {
-	private readonly EventStoreClient _eventStore;
-	private readonly IMessageTypeMapper _messageTypeMapper;
-	private readonly InMemoryProjectionDatabase _target;
-	private readonly ILogger<InMemoryProjectionHost> _logger;
-	private readonly CancellationTokenSource _stopped;
+public class InMemoryProjectionHost(
+	EventStoreClient eventStore,
+	IMessageTypeMapper messageTypeMapper,
+	InMemoryProjectionDatabase target,
+	ILogger<InMemoryProjectionHost> logger,
+	params ProjectionHandler<InMemoryProjectionDatabase>[][] projections)
+	: BackgroundService {
+	private readonly Projector<InMemoryProjectionDatabase> _projector = new(
+		EnvelopeResolve.WhenAssignableToHandlerMessageType(projections.SelectMany(_ => _).ToArray()));
 
-	private readonly Projector<InMemoryProjectionDatabase> _projector;
-
-	public InMemoryProjectionHost(EventStoreClient eventStore, IMessageTypeMapper messageTypeMapper,
-		InMemoryProjectionDatabase target, ILogger<InMemoryProjectionHost> logger,
-		params ProjectionHandler<InMemoryProjectionDatabase>[][] projections) {
-		_eventStore = eventStore;
-		_messageTypeMapper = messageTypeMapper;
-		_target = target;
-		_logger = logger;
-		_stopped = new CancellationTokenSource();
-
-		_projector = new Projector<InMemoryProjectionDatabase>(
-			EnvelopeResolve.WhenAssignableToHandlerMessageType(projections.SelectMany(_ => _).ToArray()));
+	protected override async Task ExecuteAsync(CancellationToken stoppingToken) {
+		try {
+			await Policy.Handle<Exception>(ex => ex is not OperationCanceledException)
+				.WaitAndRetryAsync(5, attempt => TimeSpan.FromSeconds(Math.Pow(2, attempt)),
+					(ex, delay) => logger.LogInformation(ex,
+						"InMemoryProjectionHost encountered an issue. Will retry after {delay}",
+						delay))
+				.ExecuteAsync(SubscribeInternal, stoppingToken);
+		} catch (OperationCanceledException) { }
 	}
 
-	public Task StartAsync(CancellationToken cancellationToken) {
-		_ = Subscribe();
+	private async Task SubscribeInternal(CancellationToken ct) {
+		target.Clear();
+		await using var subscription = eventStore.SubscribeToAll(FromAll.Start,
+			filterOptions: new SubscriptionFilterOptions(EventTypeFilter.ExcludeSystemEvents()), cancellationToken: ct);
 
-		return Task.CompletedTask;
-	}
-
-	private async Task Subscribe() {
-		var checkpoint = FromAll.Start;
-
-		await Policy.Handle<Exception>(ex => ex is not OperationCanceledException)
-			.WaitAndRetryAsync(5, retryCount => TimeSpan.FromMilliseconds(retryCount * retryCount * 100),
-				(ex, _) => _logger.LogWarning(ex, "Projection failed"))
-			.ExecuteAsync(Subscribe);
-		return;
-
-		async Task Subscribe() {
-			_target.Clear();
-			await using var subscription = _eventStore.SubscribeToAll(checkpoint,
-				filterOptions: new SubscriptionFilterOptions(EventTypeFilter.ExcludeSystemEvents()));
-
-			await foreach (var message in subscription.Messages) {
-				if (message is not StreamMessage.Event(var resolvedEvent)) {
-					continue;
-				}
-
-				if (!_messageTypeMapper.TryMap(resolvedEvent.Event.EventType, out var type)) {
-					continue;
-				}
-
-				var e = JsonSerializer.Deserialize(resolvedEvent.Event.Data.Span, type!,
-					TransactoSerializerOptions.Events)!;
-
-				await _projector.ProjectAsync(_target, new Envelope(e, resolvedEvent.OriginalEvent.Position),
-					_stopped.Token);
+		await foreach (var message in subscription.Messages.WithCancellation(ct)) {
+			if (message is not StreamMessage.Event(var resolvedEvent)) {
+				continue;
 			}
-		}
-	}
 
-	public Task StopAsync(CancellationToken cancellationToken) {
-		_stopped.Cancel();
-		return Task.CompletedTask;
+			if (!messageTypeMapper.TryMap(resolvedEvent.Event.EventType, out var type)) {
+				continue;
+			}
+
+			var e = JsonSerializer.Deserialize(resolvedEvent.Event.Data.Span, type!,
+				TransactoSerializerOptions.Events)!;
+
+			await _projector.ProjectAsync(target, new Envelope(e, resolvedEvent.OriginalEvent.Position), ct);
+		}
 	}
 }

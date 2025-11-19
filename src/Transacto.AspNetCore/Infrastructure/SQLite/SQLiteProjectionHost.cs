@@ -20,80 +20,79 @@ public class SQLiteProjectionHost(
 	Func<SQLiteConnection> connectionFactory,
 	SQLiteProjection projection,
 	ILogger<SQLiteProjectionHost> logger)
-	: IHostedService {
-	private readonly CancellationTokenSource _stopped = new();
+	: BackgroundService {
 	private readonly SqlProjectionHandlerResolver _resolver = Resolve.WhenEqualToHandlerMessageType(projection);
 
 	private static readonly SQLiteSyntax Sql = new();
 
-	public Task StartAsync(CancellationToken cancellationToken) {
+	protected override async Task ExecuteAsync(CancellationToken stoppingToken) {
 		CreateSchema();
 
-		_ = Subscribe();
-
-		return Task.CompletedTask;
+		await Subscribe(stoppingToken);
 	}
 
-	private async Task Subscribe() {
+	private async Task Subscribe(CancellationToken ct) {
 		try {
 			await Policy.Handle<Exception>(ex => ex is not OperationCanceledException)
-				.WaitAndRetryAsync(5, retryCount => TimeSpan.FromMilliseconds(retryCount * retryCount * 100))
-				.ExecuteAsync(Subscribe);
+				.WaitAndRetryAsync(5, attempt => TimeSpan.FromSeconds(Math.Pow(2, attempt)),
+					(ex, delay) => logger.LogInformation(ex,
+						"SQLite Projection {name} encountered an issue. Will retry after {delay}",
+						projection.Name, delay))
+				.ExecuteAsync(SubscribeInternal, ct);
 		} catch (OperationCanceledException) { }
+	}
 
-		return;
+	async Task SubscribeInternal(CancellationToken ct) {
+		var checkpoint = ReadCheckpoint();
 
-		async Task Subscribe() {
-			var checkpoint = ReadCheckpoint();
+		var stopwatch = Stopwatch.StartNew();
 
-			var stopwatch = Stopwatch.StartNew();
+		logger.LogInformation("Projection {projection} subscribing from {checkpoint}", projection.Name, checkpoint);
 
-			logger.LogInformation("Projection {projection} subscribing from {checkpoint}", projection.Name,
-				checkpoint);
+		await using var subscription = eventStore.SubscribeToAll(checkpoint,
+			filterOptions: new(EventTypeFilter.ExcludeSystemEvents()), cancellationToken: ct);
 
-			await using var subscription = eventStore.SubscribeToAll(checkpoint,
-				filterOptions: new(EventTypeFilter.ExcludeSystemEvents()));
+		var batch = new List<ResolvedEvent>(110);
 
-			var batch = new List<ResolvedEvent>(110);
+		await foreach (var message in subscription.Batch(100, TimeSpan.FromMilliseconds(20), ct)) {
+			switch (message) {
+				case SubscriptionControlMessage.SubscriptionMessage (var streamMessage):
+					if (streamMessage is StreamMessage.CaughtUp) {
+						stopwatch.Stop();
+						logger.LogInformation("Projection {projection} caught up. Elapsed {elapsed}",
+							projection.Name, stopwatch.Elapsed);
+						continue;
+					}
 
-			await foreach (var message in subscription.Batch(100, TimeSpan.FromMilliseconds(20), _stopped.Token)) {
-				switch (message) {
-					case SubscriptionControlMessage.SubscriptionMessage (var streamMessage):
-						if (streamMessage is StreamMessage.CaughtUp) {
-							stopwatch.Stop();
-							logger.LogInformation("Projection {projection} caught up. Elapsed {elapsed}",
-								projection.Name, stopwatch.Elapsed);
-							continue;
-						}
+					if (streamMessage is not StreamMessage.Event(var resolvedEvent)) {
+						continue;
+					}
 
-						if (streamMessage is not StreamMessage.Event(var resolvedEvent)) {
-							continue;
-						}
+					if (!messageTypeMap.TryMap(resolvedEvent.Event.EventType, out _)) {
+						continue;
+					}
 
-						if (!messageTypeMap.TryMap(resolvedEvent.Event.EventType, out _)) {
-							continue;
-						}
-
-						batch.Add(resolvedEvent);
-						break;
-					case SubscriptionControlMessage.Flush: {
-						if (batch.Count == 0) {
-							break;
-						}
-
-						await using var connection = connectionFactory();
-						connection.Open();
-						await using var transaction = connection.BeginTransaction();
-						var sqlProjector = new SqlProjector(
-							_resolver, new ConnectedTransactionalSqlCommandExecutor(transaction));
-						sqlProjector.Project(batch.Select(re => JsonSerializer.Deserialize(re.Event.Data.Span,
-							messageTypeMap.Map(re.Event.EventType),
-							TransactoSerializerOptions.Events) ?? throw new InvalidOperationException()));
-						WriteCheckpoint(transaction, batch[^1].Event.Position);
-						transaction.Commit();
-						batch.Clear();
+					batch.Add(resolvedEvent);
+					break;
+				case SubscriptionControlMessage.Flush: {
+					if (batch.Count == 0) {
 						break;
 					}
+
+					await using var connection = connectionFactory();
+					connection.Open();
+					await using var transaction = connection.BeginTransaction();
+					var sqlProjector = new SqlProjector(
+						_resolver, new ConnectedTransactionalSqlCommandExecutor(transaction));
+					var messages = batch.Select(re => JsonSerializer.Deserialize(re.Event.Data.Span,
+							messageTypeMap.Map(re.Event.EventType),
+							TransactoSerializerOptions.Events) ?? throw new InvalidOperationException())
+						.ToArray();
+					sqlProjector.Project(messages);
+					WriteCheckpoint(transaction, batch[^1].Event.Position);
+					transaction.Commit();
+					batch.Clear();
+					break;
 				}
 			}
 		}
@@ -107,11 +106,6 @@ public class SQLiteProjectionHost(
 		new SqlProjector(_resolver, executor).Project(new CreateSchema());
 
 		logger.LogInformation("Schema created {projection}", projection);
-	}
-
-	public Task StopAsync(CancellationToken cancellationToken) {
-		_stopped.Cancel();
-		return Task.CompletedTask;
 	}
 
 	private FromAll ReadCheckpoint() {

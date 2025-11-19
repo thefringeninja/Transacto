@@ -10,13 +10,13 @@ namespace Transacto.Plugins.GeneralLedger;
 
 internal class GeneralLedgerEntryModule : CommandHandlerModule {
 	public GeneralLedgerEntryModule(EventStoreClient eventStore, IMessageTypeMapper messageTypeMapper,
-		GetPrefix getPrefix, AccountIsDeactivated accountIsDeactivated) {
+		GetPrefix getPrefix, AccountIsDeactivated accountIsDeactivated, ILogger<GeneralLedgerEntryModule> logger) {
 		var handlers = new GeneralLedgerEntryHandlers(
 			new GeneralLedgerEventStoreRepository(eventStore, messageTypeMapper),
 			new GeneralLedgerEntryEventStoreRepository(eventStore, messageTypeMapper), getPrefix,
 			accountIsDeactivated);
 		Build<PostGeneralLedgerEntry>()
-			.Log()
+			.Log(logger)
 			.UnitOfWork(eventStore, messageTypeMapper)
 			.Handle(async (command, ct) => {
 				await handlers.Handle(command, ct);

@@ -1,14 +1,15 @@
-using System.Collections.Concurrent;
-using System.Dynamic;
 using System.Net;
-using System.Reflection;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Hallo;
 using Hallo.Serialization;
 using Microsoft.AspNetCore.Mvc.Formatters;
 using Microsoft.Net.Http.Headers;
-using RazorLight;
+using NodaTime;
+using NodaTime.Serialization.SystemTextJson;
+using NodaTime.Text;
+using Transacto.Framework.Http.Html;
+using Transacto.Views.Shared;
 
 namespace Transacto.Framework.Http;
 
@@ -18,14 +19,6 @@ internal abstract class HalResult {
 	protected static readonly MediaType HalJson = new(HalJsonContentType);
 	protected static readonly MediaType Html = new(HalHtmlContentType);
 
-	private static ConcurrentDictionary<Assembly, RazorLightEngine> s_RazorLightEngines = [];
-
-	protected static RazorLightEngine GetRazorEngine<T>() =>
-		s_RazorLightEngines.GetOrAdd(typeof(T).Assembly, assembly => new RazorLightEngineBuilder()
-			.UseEmbeddedResourcesProject(assembly)
-			.UseMemoryCachingProvider()
-			.Build());
-
 	protected static readonly JsonSerializerOptions HalJsonSerializerOptions = new() {
 		PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
 		PropertyNameCaseInsensitive = true,
@@ -33,15 +26,15 @@ internal abstract class HalResult {
 		Converters = {
 			new LinksConverter(),
 			new HalRepresentationConverter(),
-			new JsonStringEnumConverter(JsonNamingPolicy.CamelCase)
+			new JsonStringEnumConverter(JsonNamingPolicy.CamelCase),
+			new NodaPatternConverter<LocalDate>(LocalDatePattern.Iso)
 		},
 	};
 }
 
 internal class HalResult<T>(T? resource, Checkpoint checkpoint, IHal hal, HttpStatusCode statusCode = HttpStatusCode.OK)
-	: HalResult, IResult {
-
-	private static RazorLightEngine RazorLightEngine => GetRazorEngine<T>();
+	: HalResult, IResult where T : class {
+	private static TransactoRazorEngine RazorLightEngine => new();
 
 	public Task ExecuteAsync(HttpContext context) {
 		context.Response.StatusCode = (int)statusCode;
@@ -92,38 +85,23 @@ internal class HalResult<T>(T? resource, Checkpoint checkpoint, IHal hal, HttpSt
 	}
 
 	private class HalHtmlResult(T? resource, IHal hal) : IResult {
-		// ReSharper disable StaticMemberInGenericType
-		private static readonly string Template = GetTemplate();
-		// ReSharper restore StaticMemberInGenericType
-
 		public async Task ExecuteAsync(HttpContext context) {
 			context.Response.ContentType = HalHtmlContentType;
 
 			var representation = await hal.RepresentationOfAsync(resource);
-			
-			var html = await RazorLightEngine.CompileRenderStringAsync(typeof(T).ToString(), Template,
-				representation.State, new() {
-					{"_links", representation.Links},
-					{"_embedded", representation.Embedded}
+
+			var viewBag = new {
+				_links = representation.Links.ToArray(),
+				_embedded = representation.Embedded
+			};
+			var compiledView = RazorLightEngine.Compile<T>();
+			var compiledLayout = RazorLightEngine.Compile<Layout, object>();
+			var compiledTemplate = new TransactoRazorEngineCompiledTemplate<T>(compiledView,
+				new() {
+					["Layout.cshtml"] = compiledLayout
 				});
-
+			var html = compiledTemplate.Run((T)representation.State, viewBag);
 			await context.Response.WriteAsync(html, context.RequestAborted);
-		}
-
-		private static string GetTemplate() {
-			using var stream = typeof(T).Assembly.GetManifestResourceStream($"{typeof(T).FullName}.cshtml");
-			if (stream is null) throw new Exception($"Embedded resource {typeof(T).FullName} not found. BUG!");
-			using var reader = new StreamReader(stream);
-			return reader.ReadToEnd();
-		}
-	}
-}
-
-internal static class ExpandoObjectExtensions {
-	extension(ExpandoObject e) {
-		public void Add(string key, object? value) {
-			IDictionary<string, object?> i = e;
-			i.Add(key, value);
 		}
 	}
 }

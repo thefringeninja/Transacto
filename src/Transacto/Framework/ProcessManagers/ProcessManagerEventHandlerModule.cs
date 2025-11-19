@@ -2,12 +2,8 @@ using System.Collections;
 
 namespace Transacto.Framework.ProcessManagers;
 
-public class ProcessManagerEventHandlerModule : IEnumerable<MessageHandler<Checkpoint>> {
-	private readonly List<MessageHandler<Checkpoint>> _handlers;
-
-	protected ProcessManagerEventHandlerModule() {
-		_handlers = [];
-	}
+public abstract class ProcessManagerEventHandlerModule : IEnumerable<MessageHandler<Checkpoint>> {
+	private readonly List<MessageHandler<Checkpoint>> _handlers = [];
 
 	protected IMessageHandlerBuilder<TEvent, Checkpoint> Build<TEvent>() where TEvent : class =>
 		new MessageHandlerBuilder<TEvent, Checkpoint>(handler => _handlers.Add(new MessageHandler<Checkpoint>(

@@ -8,11 +8,12 @@ using Transacto.Messages;
 namespace Transacto.Plugins.ChartOfAccounts;
 
 internal class ChartOfAccountsModule : CommandHandlerModule {
-	public ChartOfAccountsModule(EventStoreClient eventStore, IMessageTypeMapper messageTypeMapper) {
+	public ChartOfAccountsModule(EventStoreClient eventStore, IMessageTypeMapper messageTypeMapper,
+		ILogger<ChartOfAccountsModule> logger) {
 		var handlers =
 			new ChartOfAccountsHandlers(new ChartOfAccountsEventStoreRepository(eventStore, messageTypeMapper));
 		Build<DefineAccount>()
-			.Log()
+			.Log(logger)
 			.UnitOfWork(eventStore, messageTypeMapper)
 			.Handle(async (command, ct) => {
 				await handlers.Handle(command, ct);
@@ -21,7 +22,7 @@ internal class ChartOfAccountsModule : CommandHandlerModule {
 			});
 
 		Build<DeactivateAccount>()
-			.Log()
+			.Log(logger)
 			.UnitOfWork(eventStore, messageTypeMapper)
 			.Handle(async (command, ct) => {
 				await handlers.Handle(command, ct);
@@ -30,7 +31,7 @@ internal class ChartOfAccountsModule : CommandHandlerModule {
 			});
 
 		Build<ReactivateAccount>()
-			.Log()
+			.Log(logger)
 			.UnitOfWork(eventStore, messageTypeMapper)
 			.Handle(async (command, ct) => {
 				await handlers.Handle(command, ct);
@@ -39,7 +40,7 @@ internal class ChartOfAccountsModule : CommandHandlerModule {
 			});
 
 		Build<RenameAccount>()
-			.Log()
+			.Log(logger)
 			.UnitOfWork(eventStore, messageTypeMapper)
 			.Handle(async (command, ct) => {
 				await handlers.Handle(command, ct);

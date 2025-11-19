@@ -1,0 +1,20 @@
+@using Hallo
+<!DOCTYPE html>
+<html>
+<body>
+<header>
+	<section>
+		@{
+			foreach (var link in ViewBag._links)
+			{
+				<a href="@link.Href" rel="@link.Rel" name="@link.Name" hreflang="@link.HrefLang"
+				   title="@link.Title">@link.Title</a>
+			}
+		}
+	</section>
+</header>
+<main>
+	@RenderBody()
+</main>
+</body>
+</html>

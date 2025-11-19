@@ -14,5 +14,6 @@ public static partial class ServiceCollectionExtensions {
 			provider.GetRequiredService<EventStoreClient>(),
 			provider.GetRequiredService<IMessageTypeMapper>(),
 			checkpointStreamName,
-			provider.GetRequiredService<TProcessManager>()));
+			provider.GetRequiredService<TProcessManager>(),
+			provider.GetRequiredService<ILoggerFactory>().CreateLogger<ProcessManagerHost>()));
 }

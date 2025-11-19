@@ -5,6 +5,8 @@ public record AssetAccount : Account {
 		1000..2000) {
 	}
 
+	public override bool IsFictitious => false;
+
 	public override AssetAccount Credit(Money amount) => this with { Balance = Balance - amount };
 	public override AssetAccount Debit(Money amount) => this with { Balance = Balance + amount };
 }

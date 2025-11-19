@@ -10,12 +10,15 @@
 		<PackageReference Include="EventStore.Client.Grpc.Streams" Version="23.3.9"/>
 		<PackageReference Include="Hallo" Version="3.0.2"/>
 		<PackageReference Include="Inflector.NetStandard" Version="1.2.2"/>
+		<PackageReference Include="NodaTime.Serialization.SystemTextJson" Version="1.3.0"/>
 		<PackageReference Include="Polly" Version="8.6.4"/>
+		<PackageReference Include="RazorEngineCore" Version="2024.4.1"/>
 		<PackageReference Include="RazorLight" Version="2.3.1"/>
 		<PackageReference Include="Serilog" Version="4.3.0"/>
 		<PackageReference Include="Serilog.AspNetCore" Version="9.0.0"/>
 		<PackageReference Include="Serilog.Sinks.Console" Version="6.1.1"/>
 		<PackageReference Include="SqlStreamStore" Version="1.2.1-*"/>
+		<PackageReference Include="System.Linq.Async" Version="6.0.3" />
 	</ItemGroup>
 
 	<ItemGroup>
@@ -31,6 +34,8 @@
 	</ItemGroup>
 	<PropertyGroup>
 		<EmitCompilerGeneratedFiles>true</EmitCompilerGeneratedFiles>
+		<PreserveCompilationContext>true</PreserveCompilationContext>
+		<MvcRazorExcludeRefAssembliesFromPublish>false</MvcRazorExcludeRefAssembliesFromPublish>
 	</PropertyGroup>
 	<ItemGroup>
 		<!-- Don't include the output from a previous source generator execution into future runs; the */** trick here ensures that there's

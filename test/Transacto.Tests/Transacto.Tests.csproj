@@ -20,7 +20,7 @@
 		</PackageReference>
 		<PackageReference Include="Ductus.FluentDocker" Version="2.85.0"/>
 		<PackageReference Include="Fixie.TestAdapter" Version="4.1.0"/>
-		<PackageReference Include="Microsoft.AspNetCore.TestHost" Version="9.0.11"/>
+		<PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" Version="9.0.11"/>
 		<PackageReference Include="SqlStreamStore.Http" Version="1.2.1-*"/>
 		<PackageReference Include="xunit.v3.assert" Version="3.2.0"/>
 	</ItemGroup>

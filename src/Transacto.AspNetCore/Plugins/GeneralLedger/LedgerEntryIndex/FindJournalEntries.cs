@@ -3,16 +3,17 @@ using Hallo;
 
 namespace Transacto.Plugins.GeneralLedger.LedgerEntryIndex;
 
-public delegate Task<ImmutableArray<SearchResult>> SearchJournalEntriesAsync(string prefix,
+public delegate Task<SearchResults> SearchJournalEntriesAsync(string prefix,
 	CancellationToken ct);
 
+public record SearchResults(ImmutableArray<SearchResult> Results);
 public record SearchResult(string ReferenceNumber, Guid GeneralLedgerEntryId, DateTime CreatedOn);
 
-public class SearchResultRepresentation : Hal<ImmutableArray<SearchResult>>, IHalState<ImmutableArray<SearchResult>>,
-	IHalLinks<ImmutableArray<SearchResult>> {
-	public object StateFor(ImmutableArray<SearchResult> results) => new { results };
-	public IEnumerable<Link> LinksFor(ImmutableArray<SearchResult> resource) {
-		foreach (var result in resource) {
+public class SearchResultRepresentation : Hal<SearchResults>, IHalState<SearchResults>,
+	IHalLinks<SearchResults> {
+	public object StateFor(SearchResults results) => results;
+	public IEnumerable<Link> LinksFor(SearchResults resource) {
+		foreach (var result in resource.Results) {
 			yield return new Link("t:ledger", $"../{result.GeneralLedgerEntryId}", title: result.ReferenceNumber);
 		}
 	}

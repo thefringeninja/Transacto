@@ -5,6 +5,8 @@ public record EquityAccount : Account {
 		: base(accountName, accountNumber, 3000..4000) {
 	}
 
+	public override bool IsFictitious => false;
+	
 	public override EquityAccount Credit(Money amount) => this with { Balance = Balance + amount };
 	public override EquityAccount Debit(Money amount) => this with { Balance = Balance - amount };
 }

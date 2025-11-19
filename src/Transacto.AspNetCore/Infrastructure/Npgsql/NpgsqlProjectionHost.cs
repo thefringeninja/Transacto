@@ -13,83 +13,79 @@ public class NpgsqlProjectionHost(
 	EventStoreClient eventStore,
 	IMessageTypeMapper messageTypeMap,
 	Func<NpgsqlConnection> connectionFactory,
+	ILogger<NpgsqlProjectionHost> logger,
 	params NpgsqlProjection[] projections)
-	: IHostedService {
-	private readonly CancellationTokenSource _stopped = new();
-
-	public async Task StartAsync(CancellationToken cancellationToken) {
+	: BackgroundService {
+	protected override async Task ExecuteAsync(CancellationToken stoppingToken) {
 		if (projections.Length == 0) {
 			return;
 		}
 
-		await CreateSchema(cancellationToken);
+		await CreateSchema(stoppingToken);
 
-		_ = Subscribe();
+		await Subscribe(stoppingToken);
 	}
 
-	private async Task Subscribe() {
-		var projectors = await ReadCheckpoints();
-		
+	private async Task Subscribe(CancellationToken ct) {
+		try {
+			await Policy.Handle<Exception>(ex => ex is not OperationCanceledException)
+				.WaitAndRetryAsync(5, attempt => TimeSpan.FromSeconds(Math.Pow(2, attempt)),
+					(ex, delay) => logger.LogInformation(ex,
+						"NpgsqlProjectionHost encountered an issue. Will retry after {delay}",
+						delay))
+				.ExecuteAsync(SubscribeInternal, ct);
+		} catch (OperationCanceledException) { }
+	}
+
+	private async Task SubscribeInternal(CancellationToken ct) {
+		var projectors = await ReadCheckpoints(ct);
+
 		var checkpoint = projectors.Select(p => p.Checkpoint).Min();
-		
-		await Policy.Handle<Exception>(ex => ex is not OperationCanceledException)
-			.WaitAndRetryAsync(5, retryCount => TimeSpan.FromMilliseconds(retryCount * retryCount * 100))
-			.ExecuteAsync(Subscribe);
 
-		return;
+		await using var subscription =
+			eventStore.SubscribeToAll(checkpoint, filterOptions: new(EventTypeFilter.ExcludeSystemEvents()),
+				cancellationToken: ct);
 
-		async Task Subscribe() {
-			await using var subscription =
-				eventStore.SubscribeToAll(checkpoint, filterOptions: new(EventTypeFilter.ExcludeSystemEvents()));
-
-			await foreach (var message in subscription.Messages) {
-				if (message is not StreamMessage.Event(var resolvedEvent)) {
-					continue;
-				}
-
-				if (!messageTypeMap.TryMap(resolvedEvent.Event.EventType, out var type)) {
-					continue;
-				}
-
-				var e = JsonSerializer.Deserialize(resolvedEvent.Event.Data.Span, type, TransactoSerializerOptions.Events)!;
-
-				await Task.WhenAll(projectors
-					.Where(projection =>
-						projection.Checkpoint < FromAll.After(resolvedEvent.OriginalPosition ?? Position.Start))
-					.Select(async projector => {
-						await using var connection = connectionFactory();
-						await connection.OpenAsync(_stopped.Token);
-						await using var transaction = await connection.BeginTransactionAsync(_stopped.Token);
-						var (projection, _) = projector;
-						var sqlProjector = new AsyncSqlProjector(projector.Resolver,
-							new ConnectedTransactionalSqlCommandExecutor(transaction));
-						await sqlProjector.ProjectAsync(e, _stopped.Token);
-						await projection.WriteCheckpoint(transaction, resolvedEvent.Event.Position, _stopped.Token);
-						await transaction.CommitAsync(_stopped.Token);
-					}));
-
+		await foreach (var message in subscription.Messages.WithCancellation(ct)) {
+			if (message is not StreamMessage.Event(var resolvedEvent)) {
+				continue;
 			}
 
-		}
-		
-		async ValueTask<Projector[]> ReadCheckpoints() {
-			await using var connection = connectionFactory();
-			await connection.OpenAsync(_stopped.Token);
-			return await Task.WhenAll(Array.ConvertAll(projections,
-				async projection => new Projector(projection,
-					await projection.ReadCheckpoint(connection, _stopped.Token))));
+			if (!messageTypeMap.TryMap(resolvedEvent.Event.EventType, out var type)) {
+				continue;
+			}
+
+			var e = JsonSerializer.Deserialize(resolvedEvent.Event.Data.Span, type, TransactoSerializerOptions.Events)!;
+
+			await Task.WhenAll(projectors
+				.Where(projection =>
+					projection.Checkpoint < FromAll.After(resolvedEvent.OriginalPosition ?? Position.Start))
+				.Select(async projector => {
+					await using var connection = connectionFactory();
+					await connection.OpenAsync(ct);
+					await using var transaction = await connection.BeginTransactionAsync(ct);
+					var (projection, _) = projector;
+					var sqlProjector = new AsyncSqlProjector(projector.Resolver,
+						new ConnectedTransactionalSqlCommandExecutor(transaction));
+					await sqlProjector.ProjectAsync(e, ct);
+					await projection.WriteCheckpoint(transaction, resolvedEvent.Event.Position, ct);
+					await transaction.CommitAsync(ct);
+				}));
 		}
 	}
 
-	private Task CreateSchema(CancellationToken cancellationToken) =>
+	async ValueTask<Projector[]> ReadCheckpoints(CancellationToken ct) {
+		await using var connection = connectionFactory();
+		await connection.OpenAsync(ct);
+		return await Task.WhenAll(Array.ConvertAll(projections,
+			async projection => new Projector(projection,
+				await projection.ReadCheckpoint(connection, ct))));
+	}
+
+	private Task CreateSchema(CancellationToken ct) =>
 		Task.WhenAll(projections.Select(p =>
 			new AsyncSqlProjector(Resolve.WhenEqualToHandlerMessageType(p),
-				new NpgsqlExecutor(connectionFactory)).ProjectAsync(new CreateSchema(), cancellationToken)));
-
-	public Task StopAsync(CancellationToken cancellationToken) {
-		_stopped.Cancel();
-		return Task.CompletedTask;
-	}
+				new NpgsqlExecutor(connectionFactory)).ProjectAsync(new CreateSchema(), ct)));
 
 	private record Projector(NpgsqlProjection Projection, FromAll Checkpoint) {
 		public SqlProjectionHandlerResolver Resolver { get; } = Resolve.WhenEqualToHandlerMessageType(Projection);
