@@ -58,16 +58,16 @@ internal class BalanceSheet : IPlugin {
 			.ToDictionaryAsync(a => a.AccountNumber, a => a.accountName, ct);
 
 		var reports = await thru.ToAsyncEnumerable()
-			.SelectAwait(GetReportAsync)
+			.SelectAwaitWithCancellation(GetReportAsync)
 			.ToArrayAsync(cancellationToken: ct);
 
 		return new BalanceSheetReports(accounts.ToImmutableDictionary(), [..reports]);
 
-		async ValueTask<BalanceSheetReport> GetReportAsync(LocalDate thru) {
-			var result = connection
-				.QueryUnbufferedAsync<(int accountNumber, decimal balance)>(balancesSql, new {
-					thru = thru.ToDateTimeUnspecified()
-				});
+		async ValueTask<BalanceSheetReport> GetReportAsync(LocalDate thru, CancellationToken ct) {
+			var result = connection.QueryUnbufferedAsync<(int accountNumber, decimal balance)>(balancesSql, new {
+				thru = thru.ToDateTimeUnspecified()
+			});
+
 			return await result.AggregateAsync(BalanceSheetReport.For(thru),
 				(report, item) => report with {
 					AccountBalances = report.AccountBalances.Add(new(item.accountNumber, item.balance / 100m))

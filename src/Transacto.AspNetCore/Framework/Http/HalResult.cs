@@ -27,7 +27,8 @@ internal abstract class HalResult {
 			new LinksConverter(),
 			new HalRepresentationConverter(),
 			new JsonStringEnumConverter(JsonNamingPolicy.CamelCase),
-			new NodaPatternConverter<LocalDate>(LocalDatePattern.Iso)
+			new NodaPatternConverter<LocalDate>(LocalDatePattern.Iso),
+			new NodaPatternConverter<Period>(PeriodPattern.NormalizingIso)
 		},
 	};
 }

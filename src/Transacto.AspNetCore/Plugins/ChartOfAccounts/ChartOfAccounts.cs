@@ -21,6 +21,7 @@ internal class ChartOfAccounts : IPlugin {
 			});
 
 		builder.MapCommands(string.Empty,
+			typeof(ConfigureChartOfAccounts),
 			typeof(DefineAccount),
 			typeof(RenameAccount),
 			typeof(DeactivateAccount),

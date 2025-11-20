@@ -5,12 +5,12 @@
 @inherits Transacto.Framework.Http.Html.TransactoRazorEngine.View<BalanceSheetReports>
 @{
 	Layout = "Layout.cshtml";
+
+	var colspan = Model.Reports.Length + 1;
 }
 
 <table>
 	@{
-		var colspan = Model.Reports.Length + 1;
-		
 		<thead>
 		<tr>
 			<th colspan="@colspan">Balance Sheet Report</th>

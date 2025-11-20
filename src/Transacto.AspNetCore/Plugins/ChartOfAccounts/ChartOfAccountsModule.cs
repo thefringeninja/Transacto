@@ -12,6 +12,15 @@ internal class ChartOfAccountsModule : CommandHandlerModule {
 		ILogger<ChartOfAccountsModule> logger) {
 		var handlers =
 			new ChartOfAccountsHandlers(new ChartOfAccountsEventStoreRepository(eventStore, messageTypeMapper));
+		Build<ConfigureChartOfAccounts>()
+			.Log(logger)
+			.UnitOfWork(eventStore, messageTypeMapper)
+			.Handle(async (command, ct) => {
+				await handlers.Handle(command, ct);
+
+				return Checkpoint.None;
+			});
+
 		Build<DefineAccount>()
 			.Log(logger)
 			.UnitOfWork(eventStore, messageTypeMapper)
