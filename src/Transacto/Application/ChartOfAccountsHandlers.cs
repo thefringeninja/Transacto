@@ -4,17 +4,23 @@ using Transacto.Messages;
 namespace Transacto.Application;
 
 public class ChartOfAccountsHandlers(IChartOfAccountsRepository chartOfAccounts) {
-	public async ValueTask Handle(DefineAccount command, CancellationToken cancellationToken = default) {
+	public async ValueTask Handle(ConfigureChartOfAccounts command, CancellationToken cancellationToken = default) {
 		var optionalChart = await chartOfAccounts.GetOptional(cancellationToken);
 
-		var chart = optionalChart.HasValue ? optionalChart.Value : ChartOfAccounts.Factory();
+		if (optionalChart.HasValue)
+			throw new ChartOfAccountsAlreadyConfiguredException();
+		
+		var chart = ChartOfAccounts.Configure(new ChartOfAccountsSettings(command.AccountNumberWidth));
+
+		chartOfAccounts.Add(chart);
+	}
+	
+	public async ValueTask Handle(DefineAccount command, CancellationToken cancellationToken = default) {
+		var chart = await chartOfAccounts.Get(cancellationToken);
 
 		chart.DefineAccount(new AccountName(command.AccountName), new AccountNumber(command.AccountNumber));
-
-		if (!optionalChart.HasValue) {
-			chartOfAccounts.Add(chart);
-		}
 	}
+
 
 	public async ValueTask Handle(RenameAccount command, CancellationToken cancellationToken = default) {
 		var chart = await chartOfAccounts.Get(cancellationToken);

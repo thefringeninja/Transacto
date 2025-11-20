@@ -4,39 +4,71 @@ public abstract record Account {
 	public AccountName AccountName { get; }
 	public AccountNumber AccountNumber { get; }
 	public Money Balance { get; protected init; } = Money.Zero;
-	
+
 	public abstract bool IsFictitious { get; }
 	public bool IsReal => !IsFictitious;
 
-	public static Account For(AccountNumber accountNumber, AccountName accountName = default) =>
-		accountNumber.ToInt32() switch {
-			>= 1000 and < 2000 => new AssetAccount(accountName, accountNumber),
-			>= 2000 and < 3000 => new LiabilityAccount(accountName, accountNumber),
-			>= 3000 and < 4000 => new EquityAccount(accountName, accountNumber),
-			>= 4000 and < 5000 => new IncomeAccount(accountName, accountNumber),
-			>= 5000 and < 6000 or >= 6000 and < 7000 => new ExpenseAccount(accountName, accountNumber),
-			>= 7000 and < 8000 => new IncomeAccount(accountName, accountNumber),
-			>= 8000 and < 9000 => new ExpenseAccount(accountName, accountNumber),
+	public static Account For(AccountNumber accountNumber, AccountName accountName = default,
+		ChartOfAccountsSettings? settings = null) {
+		var accountNumberString = accountNumber.ToString();
+
+		if (settings is not null && accountNumberString.Length != settings.AccountNumberWidth) {
+			throw new AccountNumberLengthOutOfRangeException(accountNumber, settings.AccountNumberWidth,
+				nameof(accountNumber));
+		}
+
+		var accountType = int.Parse([accountNumberString[0]]);
+		
+		var accountNumberWidth = settings?.AccountNumberWidth ?? accountNumberString.Length;
+
+		return accountType switch {
+			1 => new AssetAccount(accountName, accountNumber, accountNumberWidth),
+			2 => new LiabilityAccount(accountName, accountNumber, accountNumberWidth),
+			3 => new EquityAccount(accountName, accountNumber, accountNumberWidth),
+			4 => new IncomeAccount(accountName, accountNumber, accountNumberWidth),
+			5 => new CostOfRevenueExpenseAccount(accountName, accountNumber, accountNumberWidth),
+			6 => new OperatingExpenseAccount(accountName, accountNumber, accountNumberWidth),
+			7 => new OtherIncomeAccount(accountName, accountNumber, accountNumberWidth),
+			8 => new OtherExpenseAccount(accountName, accountNumber, accountNumberWidth),
 			_ => throw new ArgumentOutOfRangeException(nameof(accountNumber))
 		};
+	}
 
 	// ReSharper disable once ParameterOnlyUsedForPreconditionCheck.Local
-	protected Account(AccountName accountName, AccountNumber accountNumber,
-		params Range[] accountNumberRanges) {
-		if (accountNumberRanges.Length == 0) {
+	protected Account(AccountName accountName, AccountNumber accountNumber, params Span<Range> accountNumberSpaces) {
+		if (accountNumberSpaces.Length == 0) {
 			throw new ArgumentException("No valid account number range was specified.",
-				nameof(accountNumberRanges));
+				nameof(accountNumberSpaces));
 		}
 
-		if (!accountNumberRanges.Any(range => accountNumber.Value >= range.Start.Value &&
-		                                      accountNumber.Value < range.End.Value)) {
-			throw new ArgumentOutOfRangeException(nameof(accountNumber));
+		foreach (var space in accountNumberSpaces) {
+			if (accountNumber.Value < space.Start.Value || accountNumber.Value >= space.End.Value) {
+				continue;
+			}
+			AccountName = accountName;
+			AccountNumber = accountNumber;
+			return;
 		}
 
-		AccountName = accountName;
-		AccountNumber = accountNumber;
+		throw new ArgumentOutOfRangeException(nameof(accountNumber));
 	}
 
 	public abstract Account Credit(Money amount);
 	public abstract Account Debit(Money amount);
+
+	protected static Range CreateAccountNumberSpace(int accountType, int accountNumberWidth) {
+		return new Range(
+			Create(accountType, accountNumberWidth),
+			Create(accountType + 1, accountNumberWidth));
+
+		int Create(int startDigit, int accountNumberWidth) {
+			int zeroCount = accountNumberWidth - 1;
+			int powerOfTen = 1;
+			for (int i = 0; i < zeroCount; i++) {
+				powerOfTen *= 10;
+			}
+
+			return startDigit * powerOfTen;
+		}
+	}
 }

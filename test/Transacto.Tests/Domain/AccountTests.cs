@@ -22,10 +22,10 @@ public class AccountTests {
 				>= 2000 and < 3000 => typeof(LiabilityAccount),
 				>= 3000 and < 4000 => typeof(EquityAccount),
 				>= 4000 and < 5000 => typeof(IncomeAccount),
-				>= 5000 and < 6000 => typeof(ExpenseAccount),
-				>= 6000 and < 7000 => typeof(ExpenseAccount),
-				>= 7000 and < 8000 => typeof(IncomeAccount),
-				>= 8000 and < 9000 => typeof(ExpenseAccount),
+				>= 5000 and < 6000 => typeof(CostOfRevenueExpenseAccount),
+				>= 6000 and < 7000 => typeof(OperatingExpenseAccount),
+				>= 7000 and < 8000 => typeof(OtherIncomeAccount),
+				>= 8000 and < 9000 => typeof(OtherExpenseAccount),
 				_ => throw new ArgumentOutOfRangeException()
 			}
 		});

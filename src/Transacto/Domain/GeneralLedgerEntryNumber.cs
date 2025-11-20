@@ -9,11 +9,10 @@ public readonly struct GeneralLedgerEntryNumber(
 	public GeneralLedgerEntryNumberPrefix Prefix { get; } = prefix;
 	public GeneralLedgerEntrySequenceNumber SequenceNumber { get; } = sequenceNumber;
 
-	public static GeneralLedgerEntryNumber Parse(string value) {
-		return TryParse(value, out var result)
+	public static GeneralLedgerEntryNumber Parse(string value) =>
+		TryParse(value, out var result)
 			? result
 			: throw new FormatException();
-	}
 
 	public static bool TryParse(string? value, out GeneralLedgerEntryNumber generalLedgerEntryNumber) {
 		generalLedgerEntryNumber = default;

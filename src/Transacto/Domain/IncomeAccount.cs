@@ -1,8 +1,12 @@
 namespace Transacto.Domain;
 
 public record IncomeAccount : Account {
-	public IncomeAccount(AccountName accountName, AccountNumber accountNumber) : base(accountName, accountNumber,
-		4000..5000, 7000..8000) {
+	public IncomeAccount(AccountName accountName, AccountNumber accountNumber, int accountNumberWidth)
+		: this(accountName, accountNumber, CreateAccountNumberSpace(4, accountNumberWidth)) {
+	}
+
+	protected IncomeAccount(AccountName accountName, AccountNumber accountNumber, Range accountNumberSpace)
+		: base(accountName, accountNumber, accountNumberSpace) {
 	}
 
 	public override bool IsFictitious => true;

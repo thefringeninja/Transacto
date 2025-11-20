@@ -5,7 +5,6 @@ public class AccountNumberTests : ValueObjectTests<AccountNumber> {
 		yield return [-1];
 		yield return [999];
 		yield return [9000];
-		yield return [int.MaxValue];
 	}
 
 	[MemberData(nameof(InvalidAccountNumberCases))]

@@ -1,0 +1,17 @@
+{
+	"$schema": "https://json-schema.org/draft/2019-09/hyper-schema",
+	"type": "object",
+	"title": "Configure Chart of Accounts",
+	"additionalProperties": false,
+	"required": [
+		"accountNumberWidth"
+	],
+	"properties": {
+		"accountNumberWidth": {
+			"title": "Account Number Width",
+			"type": "integer",
+			"minimum": 4,
+			"maximum": 8
+		}
+	}
+}

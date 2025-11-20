@@ -33,7 +33,7 @@ public class GeneralLedger : AggregateRoot, IAggregateRoot<GeneralLedger> {
 		},
 		AccountingPeriodClosed e => _state with {
 			PeriodClosing = false,
-			AccountingPeriod = AccountingPeriod.Parse(e.Period)
+			AccountingPeriod = AccountingPeriod.Parse(e.Period).Next()
 		},
 		_ => _state
 	};

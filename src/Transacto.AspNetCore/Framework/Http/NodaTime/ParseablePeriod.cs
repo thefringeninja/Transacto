@@ -1,6 +1,7 @@
 using System.Diagnostics.CodeAnalysis;
 using NodaTime.Text;
 
+// ReSharper disable once CheckNamespace
 namespace NodaTime;
 
 internal struct ParseablePeriod(Period value) : IParsable<ParseablePeriod> {

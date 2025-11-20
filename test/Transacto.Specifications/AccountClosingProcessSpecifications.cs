@@ -69,7 +69,7 @@ public static class AccountClosingProcessSpecifications {
 					Array.ConvertAll(
 						new object[] {
 							new GeneralLedgerEntryCreated {
-								ReferenceNumber = $"sale-{index}",
+								ReferenceNumber = $"sale-{index+1}",
 								Period = AccountingPeriod.Open(openedOn).ToString(),
 								CreatedOn = Time.Format.LocalDate(openedOn),
 								GeneralLedgerEntryId = identifier.ToGuid()

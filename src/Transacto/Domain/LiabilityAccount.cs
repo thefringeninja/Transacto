@@ -1,8 +1,8 @@
 namespace Transacto.Domain;
 
 public record LiabilityAccount : Account {
-	public LiabilityAccount(AccountName accountName, AccountNumber accountNumber)
-		: base(accountName, accountNumber, 2000..3000) {
+	public LiabilityAccount(AccountName accountName, AccountNumber accountNumber, int accountNumberWidth)
+		: base(accountName, accountNumber, CreateAccountNumberSpace(2, accountNumberWidth)) {
 	}
 
 	public override bool IsFictitious => false;

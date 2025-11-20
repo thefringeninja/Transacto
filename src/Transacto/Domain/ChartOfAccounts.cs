@@ -12,6 +12,16 @@ public class ChartOfAccounts : AggregateRoot, IAggregateRoot<ChartOfAccounts> {
 
 	private State _state;
 
+	public static ChartOfAccounts Configure(ChartOfAccountsSettings settings) {
+		var chartOfAccounts = Factory();
+
+		chartOfAccounts.Apply(new ChartOfAccountsConfigured {
+			AccountNumberWidth = settings.AccountNumberWidth
+		});
+		
+		return chartOfAccounts;
+	}
+
 	public Account this[AccountNumber accountNumber] =>
 		_state.Accounts.TryGetValue(accountNumber, out var info)
 			? info.Account
@@ -25,6 +35,9 @@ public class ChartOfAccounts : AggregateRoot, IAggregateRoot<ChartOfAccounts> {
 		this[accountNumber] as TAccount ?? throw new AccountNotFoundException(accountNumber);
 
 	protected override void ApplyEvent(object _) => _state = _ switch {
+		ChartOfAccountsConfigured e => _state with {
+			Settings = new ChartOfAccountsSettings(e.AccountNumberWidth)
+		},
 		AccountDefined e => _state with {
 			Accounts = _state.Accounts.Add(new AccountNumber(e.AccountNumber),
 				new(Account.For(new AccountNumber(e.AccountNumber), new AccountName(e.AccountName))))
@@ -51,11 +64,13 @@ public class ChartOfAccounts : AggregateRoot, IAggregateRoot<ChartOfAccounts> {
 	};
 
 	public void DefineAccount(AccountName accountName, AccountNumber accountNumber) {
-		MustNotContainAccountNumber(accountNumber);
+		var account = Account.For(accountNumber, accountName, _state.Settings);
 
+		MustNotContainAccountNumber(account.AccountNumber);
+		
 		Apply(new AccountDefined {
-			AccountName = accountName.ToString(),
-			AccountNumber = accountNumber.ToInt32()
+			AccountName = account.AccountName.ToString(),
+			AccountNumber = account.AccountNumber.ToInt32()
 		});
 	}
 
@@ -117,5 +132,7 @@ public class ChartOfAccounts : AggregateRoot, IAggregateRoot<ChartOfAccounts> {
 			= ImmutableDictionary<AccountNumber, AccountInfo>.Empty;
 
 		public record AccountInfo(Account Account, bool IsActive = true);
+
+		public ChartOfAccountsSettings Settings { get; init; } = ChartOfAccountsSettings.Default;
 	}
 }

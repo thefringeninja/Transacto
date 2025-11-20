@@ -1,8 +1,8 @@
 namespace Transacto.Domain;
 
 public record EquityAccount : Account {
-	public EquityAccount(AccountName accountName, AccountNumber accountNumber)
-		: base(accountName, accountNumber, 3000..4000) {
+	public EquityAccount(AccountName accountName, AccountNumber accountNumber, int accountNumberWidth)
+		: base(accountName, accountNumber, CreateAccountNumberSpace(3, accountNumberWidth)) {
 	}
 
 	public override bool IsFictitious => false;

@@ -21,7 +21,9 @@ public static class GeneralLedgerSpecifications {
 		EquityAccount retainedEarnings,
 		GeneralLedgerEntryIdentifier[] generalLedgerEntryIdentifiers,
 		GeneralLedgerEntryIdentifier closingGeneralLedgerEntryIdentifier) : EventSpecification(new Scenario()
-		.Given(ChartOfAccounts.Identifier, new AccountDefined {
+		.Given(ChartOfAccounts.Identifier, new ChartOfAccountsConfigured {
+			AccountNumberWidth = ChartOfAccountsSettings.MinAccountNumberWidth
+		}, new AccountDefined {
 			AccountNumber = retainedEarnings.AccountNumber.ToInt32(),
 			AccountName = retainedEarnings.AccountName.ToString()
 		})
@@ -49,7 +51,9 @@ public static class GeneralLedgerSpecifications {
 		YearMonth openedOn,
 		EquityAccount retainedEarnings,
 		GeneralLedgerEntryIdentifier closingGeneralLedgerEntryIdentifier) : ExceptionSpecification(new Scenario()
-		.Given(ChartOfAccounts.Identifier, new AccountDefined {
+		.Given(ChartOfAccounts.Identifier, new ChartOfAccountsConfigured {
+			AccountNumberWidth = ChartOfAccountsSettings.MinAccountNumberWidth
+		}, new AccountDefined {
 			AccountNumber = retainedEarnings.AccountNumber.ToInt32(),
 			AccountName = retainedEarnings.AccountName.ToString()
 		})
@@ -75,7 +79,9 @@ public static class GeneralLedgerSpecifications {
 		LocalDate openedOn,
 		EquityAccount retainedEarnings,
 		GeneralLedgerEntryIdentifier closingGeneralLedgerEntryIdentifier) : ExceptionSpecification(new Scenario()
-		.Given(ChartOfAccounts.Identifier, new AccountDefined {
+		.Given(ChartOfAccounts.Identifier, new ChartOfAccountsConfigured {
+			AccountNumberWidth = ChartOfAccountsSettings.MinAccountNumberWidth
+		}, new AccountDefined {
 			AccountNumber = retainedEarnings.AccountNumber.ToInt32(),
 			AccountName = retainedEarnings.AccountName.ToString()
 		})
