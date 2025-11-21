@@ -28,7 +28,9 @@ public static class ChartOfAccountsSpecifications {
 		.GivenNone()
 		.When(new DefineAccount {
 			AccountName = account.AccountName.ToString(),
-			AccountNumber = account.AccountNumber.ToInt32()
+			AccountNumber = account.AccountNumber.ToInt32(),
+			CashFlowCategory = account.CashFlowCategory.ToEnum(),
+			AffectsCash = account.AffectsCash
 		})
 		.Throws(new ChartOfAccountsNotFoundException()));
 
@@ -38,11 +40,15 @@ public static class ChartOfAccountsSpecifications {
 		})
 		.When(new DefineAccount {
 			AccountName = account.AccountName.ToString(),
-			AccountNumber = account.AccountNumber.ToInt32()
+			AccountNumber = account.AccountNumber.ToInt32(),
+			CashFlowCategory = account.CashFlowCategory.ToEnum(),
+			AffectsCash = account.AffectsCash
 		})
 		.Then(ChartOfAccounts.Identifier, new AccountDefined {
 			AccountName = account.AccountName.ToString(),
-			AccountNumber = account.AccountNumber.ToInt32()
+			AccountNumber = account.AccountNumber.ToInt32(),
+			CashFlowCategory = account.CashFlowCategory.ToEnum(),
+			AffectsCash = account.AffectsCash
 		}));
 
 	public class DefiningAnAccountWhenAccountNumberWrongLengthThrows(Account account, string paramName)
@@ -53,7 +59,9 @@ public static class ChartOfAccountsSpecifications {
 			.When(new DefineAccount {
 				AccountName = account.AccountName.ToString(),
 				AccountNumber = AccountNumberWithWrongLength(account)
-					.ToInt32()
+					.ToInt32(),
+				CashFlowCategory = account.CashFlowCategory.ToEnum(),
+				AffectsCash = account.AffectsCash
 			})
 			.Throws(new AccountNumberLengthOutOfRangeException(
 				AccountNumberWithWrongLength(account),
@@ -67,37 +75,49 @@ public static class ChartOfAccountsSpecifications {
 			AccountNumberWidth = ChartOfAccountsSettings.MinAccountNumberWidth
 		}, new AccountDefined {
 			AccountName = account.AccountName.ToString(),
-			AccountNumber = account.AccountNumber.ToInt32()
+			AccountNumber = account.AccountNumber.ToInt32(),
+			CashFlowCategory = account.CashFlowCategory.ToEnum(),
+			AffectsCash = account.AffectsCash
 		})
 		.When(new DefineAccount {
 			AccountName = secondAccount.AccountName.ToString(),
-			AccountNumber = secondAccount.AccountNumber.ToInt32()
+			AccountNumber = secondAccount.AccountNumber.ToInt32(),
+			CashFlowCategory = secondAccount.CashFlowCategory.ToEnum(),
+			AffectsCash = secondAccount.AffectsCash
 		})
 		.Then(ChartOfAccounts.Identifier, new AccountDefined {
 			AccountName = secondAccount.AccountName.ToString(),
-			AccountNumber = secondAccount.AccountNumber.ToInt32()
+			AccountNumber = secondAccount.AccountNumber.ToInt32(),
+			CashFlowCategory = secondAccount.CashFlowCategory.ToEnum(),
+			AffectsCash = secondAccount.AffectsCash
 		}));
 
-	public class DefiningTheSameAccountThrows(AccountName accountName, AccountNumber accountNumber)
+	public class DefiningTheSameAccountThrows(Account account)
 		: ExceptionSpecification(new Scenario()
 			.Given(ChartOfAccounts.Identifier, new ChartOfAccountsConfigured {
 				AccountNumberWidth = ChartOfAccountsSettings.MinAccountNumberWidth
 			}, new AccountDefined {
-				AccountName = accountName.ToString(),
-				AccountNumber = accountNumber.ToInt32()
+				AccountName = account.AccountName.ToString(),
+				AccountNumber = account.AccountNumber.ToInt32(),
+				CashFlowCategory = account.CashFlowCategory.ToEnum(),
+				AffectsCash = account.AffectsCash
 			})
 			.When(new DefineAccount {
-				AccountName = accountName.ToString(),
-				AccountNumber = accountNumber.ToInt32()
+				AccountName = account.AccountName.ToString(),
+				AccountNumber = account.AccountNumber.ToInt32(),
+				CashFlowCategory = account.CashFlowCategory.ToEnum(),
+				AffectsCash = account.AffectsCash
 			})
-			.Throws(new AccountExistsException(accountNumber)));
+			.Throws(new AccountExistsException(account.AccountNumber)));
 
 	public class RenamingAnAccount(Account account, AccountName secondAccountName) : EventSpecification(new Scenario()
 		.Given(ChartOfAccounts.Identifier, new ChartOfAccountsConfigured {
 			AccountNumberWidth = ChartOfAccountsSettings.MinAccountNumberWidth
 		}, new AccountDefined {
 			AccountName = account.AccountName.ToString(),
-			AccountNumber = account.AccountNumber.ToInt32()
+			AccountNumber = account.AccountNumber.ToInt32(),
+			CashFlowCategory = account.CashFlowCategory.ToEnum(),
+			AffectsCash = account.AffectsCash
 		})
 		.When(new RenameAccount {
 			NewAccountName = secondAccountName.ToString(),
@@ -113,7 +133,9 @@ public static class ChartOfAccountsSpecifications {
 			AccountNumberWidth = ChartOfAccountsSettings.MinAccountNumberWidth
 		}, new AccountDefined {
 			AccountName = account.AccountName.ToString(),
-			AccountNumber = account.AccountNumber.ToInt32()
+			AccountNumber = account.AccountNumber.ToInt32(),
+			CashFlowCategory = account.CashFlowCategory.ToEnum(),
+			AffectsCash = account.AffectsCash
 		})
 		.When(new DeactivateAccount {
 			AccountNumber = account.AccountNumber.ToInt32()
@@ -127,7 +149,9 @@ public static class ChartOfAccountsSpecifications {
 			AccountNumberWidth = ChartOfAccountsSettings.MinAccountNumberWidth
 		}, new AccountDefined {
 			AccountName = account.AccountName.ToString(),
-			AccountNumber = account.AccountNumber.ToInt32()
+			AccountNumber = account.AccountNumber.ToInt32(),
+			CashFlowCategory = account.CashFlowCategory.ToEnum(),
+			AffectsCash = account.AffectsCash
 		}, new AccountDeactivated {
 			AccountNumber = account.AccountNumber.ToInt32()
 		})
@@ -143,7 +167,9 @@ public static class ChartOfAccountsSpecifications {
 			AccountNumberWidth = ChartOfAccountsSettings.MinAccountNumberWidth
 		}, new AccountDefined {
 			AccountName = account.AccountName.ToString(),
-			AccountNumber = account.AccountNumber.ToInt32()
+			AccountNumber = account.AccountNumber.ToInt32(),
+			CashFlowCategory = account.CashFlowCategory.ToEnum(),
+			AffectsCash = account.AffectsCash
 		})
 		.When(new ReactivateAccount {
 			AccountNumber = account.AccountNumber.ToInt32()
@@ -155,7 +181,9 @@ public static class ChartOfAccountsSpecifications {
 			AccountNumberWidth = ChartOfAccountsSettings.MinAccountNumberWidth
 		}, new AccountDefined {
 			AccountName = account.AccountName.ToString(),
-			AccountNumber = account.AccountNumber.ToInt32()
+			AccountNumber = account.AccountNumber.ToInt32(),
+			CashFlowCategory = account.CashFlowCategory.ToEnum(),
+			AffectsCash = account.AffectsCash
 		}, new AccountDeactivated {
 			AccountNumber = account.AccountNumber.ToInt32()
 		})
@@ -188,7 +216,9 @@ public static class ChartOfAccountsSpecifications {
 				AccountNumberWidth = ChartOfAccountsSettings.MinAccountNumberWidth
 			}, new AccountDefined {
 				AccountName = account.AccountName.ToString(),
-				AccountNumber = account.AccountNumber.ToInt32()
+				AccountNumber = account.AccountNumber.ToInt32(),
+				CashFlowCategory = account.CashFlowCategory.ToEnum(),
+				AffectsCash = account.AffectsCash
 			})
 			.When(new RenameAccount {
 				NewAccountName = secondAccount.AccountName.ToString(),
@@ -211,7 +241,9 @@ public static class ChartOfAccountsSpecifications {
 			AccountNumberWidth = ChartOfAccountsSettings.MinAccountNumberWidth
 		}, new AccountDefined {
 			AccountName = account.AccountName.ToString(),
-			AccountNumber = account.AccountNumber.ToInt32()
+			AccountNumber = account.AccountNumber.ToInt32(),
+			CashFlowCategory = account.CashFlowCategory.ToEnum(),
+			AffectsCash = account.AffectsCash
 		})
 		.When(new DeactivateAccount {
 			AccountNumber = secondAccountNumber.ToInt32()
@@ -233,7 +265,9 @@ public static class ChartOfAccountsSpecifications {
 			AccountNumberWidth = ChartOfAccountsSettings.MinAccountNumberWidth
 		}, new AccountDefined {
 			AccountName = account.AccountName.ToString(),
-			AccountNumber = account.AccountNumber.ToInt32()
+			AccountNumber = account.AccountNumber.ToInt32(),
+			CashFlowCategory = account.CashFlowCategory.ToEnum(),
+			AffectsCash = account.AffectsCash
 		})
 		.When(new ReactivateAccount {
 			AccountNumber = secondAccountNumber.ToInt32()

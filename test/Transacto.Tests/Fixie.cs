@@ -82,6 +82,7 @@ public class TestProject : ITestProject {
 		;
 
 		public IEnumerable<MethodInfo> TestMethods(IEnumerable<MethodInfo> publicMethods) => publicMethods
+			.Where(x => !x.IsStatic)
 			.Where(x => !LifecycleMethods.Contains(x.Name))
 		//.Shuffle()
 		;
@@ -92,6 +93,7 @@ public class TestProject : ITestProject {
 			.Where(x => x.Name.EndsWith("IntegrationTests"));
 
 		public IEnumerable<MethodInfo> TestMethods(IEnumerable<MethodInfo> publicMethods) => publicMethods
+			.Where(x => !x.IsStatic)
 			.Where(x => !LifecycleMethods.Contains(x.Name));
 	}
 

@@ -1,7 +1,6 @@
-@using NodaTime
 @using NodaTime.Text
 @using Transacto.Framework.Http.Html
-@using Transacto.Plugins.BalanceSheet
+@using Transacto.Plugins.FinancialStatements.BalanceSheet
 @inherits Transacto.Framework.Http.Html.TransactoRazorEngine.View<BalanceSheetReports>
 @{
 	Layout = "Layout.cshtml";
@@ -13,7 +12,7 @@
 	@{
 		<thead>
 		<tr>
-			<th colspan="@colspan">Balance Sheet Report</th>
+			<th colspan="@colspan"><h1>Balance Sheet Report</h1></th>
 		</tr>
 		<tr>
 			<th></th>

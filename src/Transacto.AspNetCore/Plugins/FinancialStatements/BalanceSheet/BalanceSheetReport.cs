@@ -3,7 +3,7 @@ using System.Text.Json.Serialization;
 using NodaTime;
 using Transacto.Domain;
 
-namespace Transacto.Plugins.BalanceSheet;
+namespace Transacto.Plugins.FinancialStatements.BalanceSheet;
 
 public sealed record BalanceSheetReport(
 	LocalDate Thru,

@@ -52,7 +52,7 @@ public class ChartOfAccountsTests {
 
 	[AutoFixtureData]
 	public Task defining_the_same_account_throws(AccountName accountName, AccountNumber accountNumber) =>
-		new DefiningTheSameAccountThrows(accountName, accountNumber).Assert(_handler, _facts);
+		new DefiningTheSameAccountThrows(Account.For(accountNumber, accountName)).Assert(_handler, _facts);
 
 	[AutoFixtureData]
 	public Task renaming_an_account(AccountName accountName, AccountNumber accountNumber,

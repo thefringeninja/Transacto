@@ -2,7 +2,7 @@ using Hallo;
 using NodaTime;
 using NodaTime.Text;
 
-namespace Transacto.Plugins.BalanceSheet;
+namespace Transacto.Plugins.FinancialStatements.BalanceSheet;
 
 internal class BalanceSheetReportsRepresentation : Hal<BalanceSheetReports>, IHalLinks<BalanceSheetReports>,
 	IHalState<BalanceSheetReports> {

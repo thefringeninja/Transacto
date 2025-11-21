@@ -1,8 +1,9 @@
 namespace Transacto.Domain;
 
 public abstract record ExpenseAccount : Account {
-	protected ExpenseAccount(AccountName accountName, AccountNumber accountNumber, Range accountNumberSpace) :
-		base(accountName, accountNumber, accountNumberSpace) {
+	protected ExpenseAccount(AccountName accountName, AccountNumber accountNumber, CashFlowCategory cashFlowCategory,
+		Range accountNumberSpace) : base(accountName, accountNumber, cashFlowCategory,
+		accountNumberSpaces: accountNumberSpace) {
 	}
 
 	public override bool IsFictitious => true;

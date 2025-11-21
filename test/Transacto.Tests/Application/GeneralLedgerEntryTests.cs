@@ -55,7 +55,7 @@ public class GeneralLedgerEntryTests {
 	public Task entry_not_in_balance_throws(GeneralLedgerEntryIdentifier generalLedgerEntryIdentifier,
 		GeneralLedgerEntrySequenceNumber sequenceNumber, LocalDate openedOn, AccountName accountName,
 		AccountNumber accountNumber) =>
-		new EntryNotInBalanceThrows(generalLedgerEntryIdentifier, sequenceNumber, openedOn, accountName, accountNumber)
+		new EntryNotInBalanceThrows(generalLedgerEntryIdentifier, sequenceNumber, openedOn, Account.For(accountNumber, accountName))
 			.Assert(
 				new GeneralLedgerEntryHandlers(new GeneralLedgerTestRepository(_facts),
 					new GeneralLedgerEntryTestRepository(_facts), _getPrefix, _ => false), _facts);

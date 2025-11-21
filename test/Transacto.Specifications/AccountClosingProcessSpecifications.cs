@@ -27,7 +27,9 @@ public static class AccountClosingProcessSpecifications {
 		.Given(ChartOfAccounts.Identifier,
 			new AccountDefined {
 				AccountName = retainedEarnings.AccountName.ToString(),
-				AccountNumber = retainedEarnings.AccountNumber.ToInt32()
+				AccountNumber = retainedEarnings.AccountNumber.ToInt32(),
+				CashFlowCategory = retainedEarnings.CashFlowCategory.ToEnum(),
+				AffectsCash = retainedEarnings.AffectsCash
 			})
 		.Given(GeneralLedgerEntry.FormatStreamIdentifier(generalLedgerEntryIdentifier),
 			new GeneralLedgerEntryCreated {
@@ -105,19 +107,27 @@ public static class AccountClosingProcessSpecifications {
 				.Given(ChartOfAccounts.Identifier,
 					new AccountDefined {
 						AccountName = cashAccount.AccountName.ToString(),
-						AccountNumber = cashAccount.AccountNumber.ToInt32()
+						AccountNumber = cashAccount.AccountNumber.ToInt32(),
+						CashFlowCategory = cashAccount.CashFlowCategory.ToEnum(),
+						AffectsCash = cashAccount.AffectsCash
 					},
 					new AccountDefined {
 						AccountName = incomeAccount.AccountName.ToString(),
-						AccountNumber = incomeAccount.AccountNumber.ToInt32()
+						AccountNumber = incomeAccount.AccountNumber.ToInt32(),
+						CashFlowCategory = incomeAccount.CashFlowCategory.ToEnum(),
+						AffectsCash = incomeAccount.AffectsCash
 					},
 					new AccountDefined {
 						AccountName = expenseAccount.AccountName.ToString(),
-						AccountNumber = expenseAccount.AccountNumber.ToInt32()
+						AccountNumber = expenseAccount.AccountNumber.ToInt32(),
+						CashFlowCategory = expenseAccount.CashFlowCategory.ToEnum(),
+						AffectsCash = expenseAccount.AffectsCash
 					},
 					new AccountDefined {
 						AccountName = retainedEarnings.AccountName.ToString(),
-						AccountNumber = retainedEarnings.AccountNumber.ToInt32()
+						AccountNumber = retainedEarnings.AccountNumber.ToInt32(),
+						CashFlowCategory = retainedEarnings.CashFlowCategory.ToEnum(),
+						AffectsCash = retainedEarnings.AffectsCash
 					})
 				.Given(GeneralLedger.Identifier,
 					new GeneralLedgerOpened {

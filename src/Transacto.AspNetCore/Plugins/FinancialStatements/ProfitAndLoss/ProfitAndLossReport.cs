@@ -3,7 +3,7 @@ using System.Text.Json.Serialization;
 using NodaTime;
 using Transacto.Domain;
 
-namespace Transacto.Plugins.ProfitAndLoss;
+namespace Transacto.Plugins.FinancialStatements.ProfitAndLoss;
 
 public record ProfitAndLossReport(
 	ReportRange ReportRange, 

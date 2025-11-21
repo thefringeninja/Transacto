@@ -6,30 +6,51 @@ using Transacto.Domain;
 namespace Transacto;
 
 internal static class FixtureExtensions {
-	public static void CustomizeAccountName(this IFixture fixture) {
-		int number = 0;
-		fixture.Customize<AccountName>(composer =>
-			composer.FromFactory(() => new AccountName(new string('a', number++ % AccountName.MaxLength + 1))));
-	}
+	public static void CustomizeAccountName(this IFixture fixture) => fixture.Customize<AccountName>(composer =>
+		composer.FromFactory<int>(number => new AccountName(new string('a', number % AccountName.MaxLength + 1))));
 
-	public static void CustomizeAccountNumber(this IFixture fixture) {
-		int number = 0;
-		fixture.Customize<AccountNumber>(composer =>
-			composer.FromFactory(() => new AccountNumber(number++ % 7000 + 1000)));
-	}
+	public static void CustomizeAccountNumber(this IFixture fixture) => fixture.Customize<AccountNumber>(composer =>
+		composer.FromFactory<int>(number => new AccountNumber(number % 7000 + 1000)));
+
+	public static void CustomizeCashFlowCategory(this IFixture fixture) =>
+		fixture.Customize<CashFlowCategory>(composer =>
+			composer.FromFactory<int>(number => CashFlowCategory.All[number % CashFlowCategory.All.Length]));
 
 	public static void CustomizeAccount(this IFixture fixture) {
-		fixture.CustomizeAccount<AssetAccount>(1000);
-		fixture.CustomizeAccount<LiabilityAccount>(2000);
-		fixture.CustomizeAccount<EquityAccount>(3000);
-		fixture.CustomizeAccount<IncomeAccount>(4000);
-		fixture.CustomizeAccount<ExpenseAccount>(5000);
+		fixture.CustomizeAssetAccount(1000);
+		fixture.CustomizeAccount<LiabilityAccount>(2000, CashFlowCategory.Operations, CashFlowCategory.Finance);
+		fixture.CustomizeAccount<EquityAccount>(3000, CashFlowCategory.Finance);
+		fixture.CustomizeAccount<IncomeAccount>(4000, CashFlowCategory.Operations);
+		fixture.CustomizeAccount<CostOfRevenueExpenseAccount>(5000, CashFlowCategory.Operations);
+		fixture.CustomizeAccount<OperatingExpenseAccount>(6000, CashFlowCategory.Operations);
+		fixture.CustomizeAccount<OtherIncomeAccount>(7000, CashFlowCategory.Operations, CashFlowCategory.Investment,
+			CashFlowCategory.Finance);
+		fixture.CustomizeAccount<OtherExpenseAccount>(8000, CashFlowCategory.Operations, CashFlowCategory.Investment,
+			CashFlowCategory.Finance);
+		fixture.Customizations.Add(new TypeRelay(typeof(ExpenseAccount), typeof(CostOfRevenueExpenseAccount)));
 	}
 
-	private static void CustomizeAccount<TAccount>(this IFixture fixture, int lowestAccountNumber)
-		where TAccount : Account => fixture.Customize<TAccount>(composer => composer.FromFactory<AccountName, int>(
-		(name, value) => (TAccount)Account.For(new AccountNumber(lowestAccountNumber + value % 1000), name)));
+	private static void CustomizeAssetAccount(this IFixture fixture, int lowestAccountNumber) =>
+		fixture.Customize<AssetAccount>(composer =>
+			composer.FromFactory<AccountName, int, bool, bool>((name, number, shortTerm, cash) => {
+				var accountNumber = new AccountNumber(lowestAccountNumber + number % 1000);
+				return (shortTerm, cash) switch {
+					(true, true) => (AssetAccount)Account.For(accountNumber, name, CashFlowCategory.Operations, true), // bank account
+					(true, false) => (AssetAccount)Account.For(accountNumber, name, CashFlowCategory.Operations), // inventory, AR
+					_ => (AssetAccount)Account.For(accountNumber, name, CashFlowCategory.Investment) // long term asset
+				};
+			}));
 
+	private static void CustomizeAccount<TAccount>(this IFixture fixture, int lowestAccountNumber,
+		CashFlowCategory cashFlowCategory, params CashFlowCategory[] cashFlowCategories)
+		where TAccount : Account => fixture.Customize<TAccount>(composer =>
+		composer.FromFactory<AccountName, int, int>((name, number, category) =>
+			(TAccount)Account.For(
+				new AccountNumber(lowestAccountNumber + number % 1000),
+				name,
+				((CashFlowCategory[])[cashFlowCategory, ..cashFlowCategories])
+				[category % (cashFlowCategories.Length + 1)]
+			)));
 
 	public static void CustomizeAccountingPeriod(this IFixture fixture) =>
 		fixture.Customize<AccountingPeriod>(composer => composer.FromFactory<LocalDate>(AccountingPeriod.Open));
@@ -45,11 +66,9 @@ internal static class FixtureExtensions {
 		fixture.Customize<Debit>(composer =>
 			composer.FromFactory<AccountNumber, Money>((n, m) => new Debit(n, m)));
 
-	public static void CustomizeGeneralLedgerEntryNumberPrefix(this IFixture fixture) {
-		int number = 0;
+	public static void CustomizeGeneralLedgerEntryNumberPrefix(this IFixture fixture) =>
 		fixture.Customize<GeneralLedgerEntryNumberPrefix>(composer =>
-			composer.FromFactory(() => new GeneralLedgerEntryNumberPrefix(new string('a', number++ % 5 + 1))));
-	}
+			composer.FromFactory<int>(number => new GeneralLedgerEntryNumberPrefix(new string('a', number % 5 + 1))));
 
 	public static void CustomizeNodaTime(this IFixture fixture) {
 		fixture.Customize<DateTimeOffset>(_ => new IncreasingDateTimeOffsetGenerator(DateTimeOffset.Now));

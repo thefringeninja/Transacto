@@ -1,41 +1,12 @@
 using System.Collections.Immutable;
 using System.Data.SQLite;
-using System.Linq;
 using Dapper;
-using Microsoft.AspNetCore.Mvc;
 using NodaTime;
-using NodaTime.Text;
-using Transacto.Domain;
-using Transacto.Framework;
-using Transacto.Framework.Http;
 
-namespace Transacto.Plugins.BalanceSheet;
+namespace Transacto.Plugins.FinancialStatements.BalanceSheet;
 
-internal class BalanceSheet : IPlugin {
-	public string Name { get; } = nameof(BalanceSheet);
-
-	public void Configure(IEndpointRouteBuilder builder) {
-		builder.MapGet("", async (
-			[FromQuery] ParseableLocalDate?[] thru,
-			[FromServices] GetBalanceSheetReportsAsync getBalanceSheetReportsAsync,
-			CancellationToken ct) => {
-			var resource =
-				await getBalanceSheetReportsAsync([..Array.ConvertAll(thru, t => t ?? LocalDate.MaxIsoValue)], ct);
-
-			return Results.Extensions.Hal(resource, Checkpoint.None, new BalanceSheetReportsRepresentation());
-		});
-	}
-
-	public void ConfigureServices(IServiceCollection services) => services
-		.AddSQLiteProjection<BalanceSheetProjection>()
-		.AddSingleton<GetBalanceSheetReportsAsync>(provider => {
-			var connectionFactory =
-				provider.GetRequiredKeyedService<Func<SQLiteConnection>>(typeof(BalanceSheetProjection));
-
-			return async (thru, ct) => await GetBalanceSheetReportsAsync(connectionFactory, thru, ct);
-		});
-
-	private static async Task<BalanceSheetReports> GetBalanceSheetReportsAsync(Func<SQLiteConnection> connectionFactory,
+internal static class Services {
+	public static async Task<BalanceSheetReports> GetBalanceSheetReportsAsync(Func<SQLiteConnection> connectionFactory,
 		ImmutableArray<LocalDate> thru, CancellationToken ct) {
 		const string balancesSql =
 			"""
@@ -74,6 +45,4 @@ internal class BalanceSheet : IPlugin {
 				}, cancellationToken: ct);
 		}
 	}
-
-	public IEnumerable<Type> MessageTypes => [];
 }

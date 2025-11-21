@@ -1,7 +1,7 @@
 using System.Collections.Immutable;
 using Transacto.Domain;
 
-namespace Transacto.Plugins.BalanceSheet;
+namespace Transacto.Plugins.FinancialStatements.BalanceSheet;
 
 public sealed record BalanceSheetReports(
 	ImmutableDictionary<int, string> Accounts,

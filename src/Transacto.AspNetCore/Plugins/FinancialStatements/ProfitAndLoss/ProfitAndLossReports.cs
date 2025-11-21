@@ -1,7 +1,7 @@
 using System.Collections.Immutable;
 using Transacto.Domain;
 
-namespace Transacto.Plugins.ProfitAndLoss;
+namespace Transacto.Plugins.FinancialStatements.ProfitAndLoss;
 
 public sealed record ProfitAndLossReports(
 	ImmutableDictionary<int, string> Accounts,

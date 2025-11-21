@@ -4,9 +4,9 @@ using Transacto.Framework.Projections;
 using Transacto.Infrastructure.SQLite;
 using Transacto.Messages;
 
-namespace Transacto.Plugins.BalanceSheet;
+namespace Transacto.Plugins.FinancialStatements.BalanceSheet;
 
-public class BalanceSheetProjection : SQLiteProjection {
+internal class BalanceSheetProjection : SQLiteProjection {
 	public BalanceSheetProjection() : base(new Scripts()) {
 		When<CreateSchema>();
 		When<AccountDefined>(e => [

@@ -34,22 +34,64 @@ public class AccountTests {
 	public void CreatesExpectedAccount(AccountNumber accountNumber, Type expected) =>
 		Assert.IsType(expected, Account.For(accountNumber, _fixture.Create<AccountName>()));
 
-	public class AssetTests : LeftSideTests<AssetAccount> {
+	// ReSharper disable once UnusedType.Global
+	public class ShortTermCashAssetAccountTests()
+		: LeftSideTests<AssetAccount>(true, CashFlowCategory.Investment, CashFlowCategory.Finance);
+
+	// ReSharper disable once UnusedType.Global
+	public class NonCashAssetAccountTests()
+		: LeftSideTests<AssetAccount>();
+
+	// ReSharper disable once UnusedType.Global
+	public class LiabilityAccountTests()
+		: RightSideTests<LiabilityAccount>(false, CashFlowCategory.Investment);
+
+	// ReSharper disable once UnusedType.Global
+	public class EquityAccountTests()
+		: RightSideTests<EquityAccount>(false, CashFlowCategory.Operations, CashFlowCategory.Investment);
+
+	// ReSharper disable once UnusedType.Global
+	public class IncomeAccountTests()
+		: RightSideTests<IncomeAccount>(false, CashFlowCategory.Investment, CashFlowCategory.Finance);
+
+	// ReSharper disable once UnusedType.Global
+	public class CostOfRevenueExpenseAccountTests()
+		: LeftSideTests<CostOfRevenueExpenseAccount>(false, CashFlowCategory.Investment, CashFlowCategory.Finance);
+
+	// ReSharper disable once UnusedType.Global
+	public class OperatingExpenseAccountTests()
+		: LeftSideTests<OperatingExpenseAccount>(false, CashFlowCategory.Investment, CashFlowCategory.Finance);
+
+	// ReSharper disable once UnusedType.Global
+	public class OtherIncomeAccountTests : RightSideTests<OtherIncomeAccount>;
+
+	// ReSharper disable once UnusedType.Global
+	public class OtherExpenseAccountTests : LeftSideTests<OtherExpenseAccount>;
+
+	public abstract class AccountTestsBase<TAccount>(
+		bool acceptsCash = false,
+		params CashFlowCategory[] invalidCashFlowCategories)
+		: ValueObjectTests<TAccount> where TAccount : Account {
+		[AutoFixtureData]
+		public void InvalidConfigurationsThrow(TAccount account) =>
+			Assert.Multiple(Array.ConvertAll<CashFlowCategory, Action>(invalidCashFlowCategories, cashFlowCategory =>
+				() => {
+					var ex = Assert.ThrowsAny<ArgumentException>(() =>
+						Account.For(account.AccountNumber, account.AccountName, cashFlowCategory, acceptsCash));
+					Assert.Equal(nameof(cashFlowCategory), ex.ParamName);
+				}));
+
+		[AutoFixtureData]
+		public void ValidConfigurationsDoNotThrow(TAccount account) =>
+			Assert.Multiple(Array.ConvertAll<CashFlowCategory, Action>(
+				CashFlowCategory.All.Except(invalidCashFlowCategories).ToArray(), cashFlowCategory =>
+					() => _ = Account.For(account.AccountNumber, account.AccountName, cashFlowCategory, acceptsCash)));
 	}
 
-	public class LiabilityTests : RightSideTests<LiabilityAccount> {
-	}
-
-	public class EquityTests : RightSideTests<LiabilityAccount> {
-	}
-
-	public class IncomeTests : RightSideTests<LiabilityAccount> {
-	}
-
-	public class ExpenseTests : LeftSideTests<ExpenseAccount> {
-	}
-
-	public abstract class LeftSideTests<TAccount> : ValueObjectTests<TAccount> where TAccount : Account {
+	public abstract class LeftSideTests<TAccount>(
+		bool acceptsCash = false,
+		params CashFlowCategory[] invalidCashFlowCategories)
+		: AccountTestsBase<TAccount>(acceptsCash, invalidCashFlowCategories) where TAccount : Account {
 		[AutoFixtureData]
 		public void DebitsIncreaseBalance(TAccount sut, Money amount) =>
 			Assert.Equal(amount, sut.Debit(amount).Balance);
@@ -59,7 +101,10 @@ public class AccountTests {
 			Assert.Equal(-amount, sut.Credit(amount).Balance);
 	}
 
-	public abstract class RightSideTests<TAccount> : ValueObjectTests<TAccount> where TAccount : Account {
+	public abstract class RightSideTests<TAccount>(
+		bool acceptsCash = false,
+		params CashFlowCategory[] invalidCashFlowCategories)
+		: AccountTestsBase<TAccount>(acceptsCash, invalidCashFlowCategories) where TAccount : Account {
 		[AutoFixtureData]
 		public void CreditsIncreaseBalance(TAccount sut, Money amount) =>
 			Assert.Equal(amount, sut.Credit(amount).Balance);

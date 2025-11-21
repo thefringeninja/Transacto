@@ -18,7 +18,7 @@ public class ChartOfAccounts : AggregateRoot, IAggregateRoot<ChartOfAccounts> {
 		chartOfAccounts.Apply(new ChartOfAccountsConfigured {
 			AccountNumberWidth = settings.AccountNumberWidth
 		});
-		
+
 		return chartOfAccounts;
 	}
 
@@ -40,7 +40,8 @@ public class ChartOfAccounts : AggregateRoot, IAggregateRoot<ChartOfAccounts> {
 		},
 		AccountDefined e => _state with {
 			Accounts = _state.Accounts.Add(new AccountNumber(e.AccountNumber),
-				new(Account.For(new AccountNumber(e.AccountNumber), new AccountName(e.AccountName))))
+				new(Account.For(new AccountNumber(e.AccountNumber), new AccountName(e.AccountName),
+					CashFlowCategory.FromCashFlowCategory(e.CashFlowCategory), e.AffectsCash)))
 		},
 		AccountDeactivated e => _state with {
 			Accounts = _state.Accounts.SetItem(new AccountNumber(e.AccountNumber),
@@ -63,14 +64,17 @@ public class ChartOfAccounts : AggregateRoot, IAggregateRoot<ChartOfAccounts> {
 		_ => _state
 	};
 
-	public void DefineAccount(AccountName accountName, AccountNumber accountNumber) {
-		var account = Account.For(accountNumber, accountName, _state.Settings);
+	public void DefineAccount(AccountName accountName, AccountNumber accountNumber, CashFlowCategory cashFlowCategory,
+		bool affectsCash) {
+		var account = Account.For(accountNumber, accountName, cashFlowCategory, affectsCash, _state.Settings);
 
 		MustNotContainAccountNumber(account.AccountNumber);
-		
+
 		Apply(new AccountDefined {
 			AccountName = account.AccountName.ToString(),
-			AccountNumber = account.AccountNumber.ToInt32()
+			AccountNumber = account.AccountNumber.ToInt32(),
+			CashFlowCategory = account.CashFlowCategory.ToEnum(),
+			AffectsCash = account.AffectsCash
 		});
 	}
 

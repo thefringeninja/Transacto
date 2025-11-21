@@ -5,7 +5,8 @@
 	"additionalProperties": false,
 	"required": [
 		"accountName",
-		"accountNumber"
+		"accountNumber",
+		"cashFlowCategory"
 	],
 	"properties": {
 		"accountName": {
@@ -15,6 +16,16 @@
 		"accountNumber": {
 			"title": "Account Number",
 			"type": "integer"
+		},
+		"cashFlowCategory": {
+			"title": "Cash Flow Category",
+			"type": "string",
+			"enum": ["operations", "investment", "finance"]
+		},
+		"affectsCash" : {
+			"title": "Affects Cash",
+			"type": "boolean",
+			"default": "false"
 		}
 	}
 }

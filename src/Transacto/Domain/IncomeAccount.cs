@@ -1,12 +1,15 @@
 namespace Transacto.Domain;
 
 public record IncomeAccount : Account {
-	public IncomeAccount(AccountName accountName, AccountNumber accountNumber, int accountNumberWidth)
-		: this(accountName, accountNumber, CreateAccountNumberSpace(4, accountNumberWidth)) {
+	public IncomeAccount(AccountName accountName, AccountNumber accountNumber, int accountNumberWidth,
+		CashFlowCategory cashFlowCategory)
+		: this(accountName, accountNumber, cashFlowCategory, CreateAccountNumberSpace(4, accountNumberWidth)) {
+		CashFlowCategoryMustBe(accountNumber, cashFlowCategory, CashFlowCategory.Operations);
 	}
 
-	protected IncomeAccount(AccountName accountName, AccountNumber accountNumber, Range accountNumberSpace)
-		: base(accountName, accountNumber, accountNumberSpace) {
+	protected IncomeAccount(AccountName accountName, AccountNumber accountNumber, CashFlowCategory cashFlowCategory,
+		Range accountNumberSpace) : base(accountName, accountNumber, cashFlowCategory,
+		accountNumberSpaces: accountNumberSpace) {
 	}
 
 	public override bool IsFictitious => true;

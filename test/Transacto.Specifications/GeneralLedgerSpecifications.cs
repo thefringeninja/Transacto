@@ -25,7 +25,9 @@ public static class GeneralLedgerSpecifications {
 			AccountNumberWidth = ChartOfAccountsSettings.MinAccountNumberWidth
 		}, new AccountDefined {
 			AccountNumber = retainedEarnings.AccountNumber.ToInt32(),
-			AccountName = retainedEarnings.AccountName.ToString()
+			AccountName = retainedEarnings.AccountName.ToString(),
+			CashFlowCategory = retainedEarnings.CashFlowCategory.ToEnum(),
+			AffectsCash = retainedEarnings.AffectsCash
 		})
 		.Given(GeneralLedger.Identifier, new GeneralLedgerOpened {
 			OpenedOn = Time.Format.LocalDate(openedOn.OnDayOfMonth(1))
@@ -55,7 +57,9 @@ public static class GeneralLedgerSpecifications {
 			AccountNumberWidth = ChartOfAccountsSettings.MinAccountNumberWidth
 		}, new AccountDefined {
 			AccountNumber = retainedEarnings.AccountNumber.ToInt32(),
-			AccountName = retainedEarnings.AccountName.ToString()
+			AccountName = retainedEarnings.AccountName.ToString(),
+			CashFlowCategory = retainedEarnings.CashFlowCategory.ToEnum(),
+			AffectsCash = retainedEarnings.AffectsCash
 		})
 		.Given(GeneralLedger.Identifier, new GeneralLedgerOpened {
 				OpenedOn = Time.Format.LocalDate(openedOn.OnDayOfMonth(1))
@@ -83,7 +87,9 @@ public static class GeneralLedgerSpecifications {
 			AccountNumberWidth = ChartOfAccountsSettings.MinAccountNumberWidth
 		}, new AccountDefined {
 			AccountNumber = retainedEarnings.AccountNumber.ToInt32(),
-			AccountName = retainedEarnings.AccountName.ToString()
+			AccountName = retainedEarnings.AccountName.ToString(),
+			CashFlowCategory = retainedEarnings.CashFlowCategory.ToEnum(),
+			AffectsCash = retainedEarnings.AffectsCash
 		})
 		.Given(GeneralLedger.Identifier, new GeneralLedgerOpened {
 			OpenedOn = Time.Format.LocalDate(openedOn)

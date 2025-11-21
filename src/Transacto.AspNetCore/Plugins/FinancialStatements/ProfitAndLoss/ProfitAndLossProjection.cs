@@ -4,7 +4,7 @@ using Transacto.Framework.Projections;
 using Transacto.Infrastructure.SQLite;
 using Transacto.Messages;
 
-namespace Transacto.Plugins.ProfitAndLoss;
+namespace Transacto.Plugins.FinancialStatements.ProfitAndLoss;
 
 public class ProfitAndLossProjection : SQLiteProjection {
 	public ProfitAndLossProjection() : base(new Scripts()) {

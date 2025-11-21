@@ -1,7 +1,8 @@
 namespace Transacto.Domain;
 
 public record OtherIncomeAccount : IncomeAccount {
-	public OtherIncomeAccount(AccountName accountName, AccountNumber accountNumber, int accountNumberWidth)
-		: base(accountName, accountNumber, CreateAccountNumberSpace(7, accountNumberWidth)) {
+	public OtherIncomeAccount(AccountName accountName, AccountNumber accountNumber, int accountNumberWidth,
+		CashFlowCategory cashFlowCategory) : base(accountName, accountNumber, cashFlowCategory,
+		CreateAccountNumberSpace(7, accountNumberWidth)) {
 	}
 }

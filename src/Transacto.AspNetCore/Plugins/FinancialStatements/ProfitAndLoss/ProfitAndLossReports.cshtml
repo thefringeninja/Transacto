@@ -1,7 +1,6 @@
-@using NodaTime
 @using NodaTime.Text
 @using Transacto.Framework.Http.Html
-@using Transacto.Plugins.ProfitAndLoss
+@using Transacto.Plugins.FinancialStatements.ProfitAndLoss
 @inherits Transacto.Framework.Http.Html.TransactoRazorEngine.View<ProfitAndLossReports>
 @{
 	Layout = "Layout.cshtml";
@@ -13,7 +12,7 @@
 	@{
 		<thead>
 		<tr>
-			<th colspan="@colspan">Profit and Loss</th>
+			<th colspan="@colspan"><h1>Profit and Loss</h1></th>
 		</tr>
 		<tr>
 			<th></th>
@@ -85,6 +84,5 @@
 			}
 		</tr>
 		</tbody>
-		
 	}
 }

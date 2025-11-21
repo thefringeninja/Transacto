@@ -110,21 +110,22 @@ public static class GeneralLedgerEntrySpecifications {
 		GeneralLedgerEntryIdentifier generalLedgerEntryIdentifier,
 		GeneralLedgerEntrySequenceNumber sequenceNumber,
 		LocalDate openedOn,
-		AccountName accountName,
-		AccountNumber accountNumber) : ExceptionSpecification(new Scenario()
+		Account account) : ExceptionSpecification(new Scenario()
 		.Given(GeneralLedger.Identifier,
 			new GeneralLedgerOpened {
 				OpenedOn = Time.Format.LocalDate(openedOn)
 			})
 		.Given(ChartOfAccounts.Identifier,
 			new AccountDefined {
-				AccountName = accountName.ToString(),
-				AccountNumber = accountNumber.ToInt32()
+				AccountName = account.AccountName.ToString(),
+				AccountNumber = account.AccountNumber.ToInt32(),
+				CashFlowCategory = account.CashFlowCategory.ToEnum(),
+				AffectsCash = account.AffectsCash
 			})
 		.When(new PostGeneralLedgerEntry {
 			Period = AccountingPeriod.Open(openedOn).ToString(),
 			BusinessTransaction = new BadTransaction {
-				Account = accountNumber,
+				Account = account.AccountNumber,
 				ReferenceNumber = sequenceNumber.ToInt32()
 			},
 			CreatedOn = openedOn.ToDateTimeUnspecified(),

@@ -9,16 +9,17 @@ public class ChartOfAccountsHandlers(IChartOfAccountsRepository chartOfAccounts)
 
 		if (optionalChart.HasValue)
 			throw new ChartOfAccountsAlreadyConfiguredException();
-		
+
 		var chart = ChartOfAccounts.Configure(new ChartOfAccountsSettings(command.AccountNumberWidth));
 
 		chartOfAccounts.Add(chart);
 	}
-	
+
 	public async ValueTask Handle(DefineAccount command, CancellationToken cancellationToken = default) {
 		var chart = await chartOfAccounts.Get(cancellationToken);
 
-		chart.DefineAccount(new AccountName(command.AccountName), new AccountNumber(command.AccountNumber));
+		chart.DefineAccount(new AccountName(command.AccountName), new AccountNumber(command.AccountNumber),
+			CashFlowCategory.FromCashFlowCategory(command.CashFlowCategory), command.AffectsCash);
 	}
 
 

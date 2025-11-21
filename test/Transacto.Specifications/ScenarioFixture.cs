@@ -21,5 +21,7 @@ internal class ScenarioFixture : Fixture {
 		this.CustomizeCredit();
 
 		this.CustomizeDebit();
+		
+		this.CustomizeCashFlowCategory();
 	}
 }

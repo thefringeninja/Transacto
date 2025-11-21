@@ -1,0 +1,83 @@
+@using NodaTime.Text
+@using Transacto.Framework.Http.Html
+@using Transacto.Plugins.FinancialStatements.CashFlow
+@inherits Transacto.Framework.Http.Html.TransactoRazorEngine.View<CashFlowReports>
+@{
+	Layout = "Layout.cshtml";
+
+	var colspan = Model.Reports.Length + 1;
+}
+
+<table>
+	@{
+		<thead>
+		<tr>
+			<th colspan="@colspan"><h1>Cash Flow</h1></th>
+		</tr>
+		<tr>
+			<th></th>
+			@foreach (var report in Model.Reports)
+			{
+				<th>@LocalDatePattern.Iso.Format(report.ReportRange.StartingOn)</th>
+			}
+		</tr>
+		</thead>
+		RenderReportSummary("Cash, Start of Period", report => report.StartingCash);
+		RenderReportSection(nameof(Model.Operations), Model.Operations, report => report.NetCashFromOperations);
+		RenderReportSection(nameof(Model.Investment), Model.Investment, report => report.NetCashFromInvestment);
+		RenderReportSection(nameof(Model.Finance), Model.Finance, report => report.NetCashFromFinancing);
+		RenderReportSummary("Cash, End of Period", report => report.EndingCash);
+
+		<tfoot>
+		<tr>
+		</tr>
+		</tfoot>}
+</table>
+
+@{
+	void RenderReportSection(
+		string category,
+		IEnumerable<int> accountNumbers,
+		Func<CashFlowReport, decimal> getSubtotal)
+	{
+		<thead>
+		<tr>
+			<th colspan="@colspan">Cash Flow from @category</th>
+		</tr>
+		</thead>
+		<tbody>
+		@foreach (var accountNumber in accountNumbers)
+		{
+			<tr>
+				<td>@accountNumber - @Model.Accounts[accountNumber].AccountName</td>
+				@foreach (var report in Model.Reports)
+				{
+					<td style="text-align: right">@Tags.FormatAmount(report.GetBalance(accountNumber))</td>
+				}
+			</tr>
+		}
+		<tr>
+			<td>Net Cash from @category</td>
+			@foreach (var report in Model.Reports)
+			{
+				<td style="text-align: right">@Tags.FormatAmount(getSubtotal(report))</td>
+			}
+		</tr>
+		</tbody>
+	}
+
+	void RenderReportSummary(
+		string name,
+		Func<CashFlowReport, decimal> getSubtotal)
+	{
+		<tbody>
+		<tr>
+			<td>@name</td>
+			@foreach (var report in Model.Reports)
+			{
+				<td style="text-align: right">@Tags.FormatAmount(getSubtotal(report))</td>
+			}
+		</tr>
+		</tbody>
+	}
+}
