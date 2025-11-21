@@ -69,7 +69,7 @@ public static class ServiceCollectionExtensions {
 					.BuildServiceProvider();
 				return pluginProvider
 					.GetServices<IHostedService>()
-					.Aggregate(services.AddSingleton(Tuple.Create(plugin, (IServiceProvider)pluginProvider)),
+					.Aggregate(services.AddKeyedSingleton<IServiceProvider>(plugin, pluginProvider),
 						(services, service) => services.AddSingleton(service));
 			});
 }
