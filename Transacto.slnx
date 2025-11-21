@@ -10,6 +10,7 @@
 		<Project Path="src/Transacto/Transacto.csproj" />
 	</Folder>
 	<Folder Name="/test/">
+		<Project Path="test/Transacto.IntegrationTests/Transacto.IntegrationTests.csproj" />
 		<Project Path="test/Transacto.Specifications/Transacto.Specifications.csproj" />
 		<Project Path="test/Transacto.Tests/Transacto.Tests.csproj" />
 	</Folder>

@@ -1,0 +1,19 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+	<ItemGroup>
+		<PackageReference Include="Ductus.FluentDocker" Version="2.85.0"/>
+		<PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" Version="9.0.11"/>
+		<PackageReference Include="SqlStreamStore.Http" Version="1.2.1-*"/>
+	</ItemGroup>
+
+	<ItemGroup>
+	  <EmbeddedResource Include="Integration\ChartOfAccounts.json" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<ProjectReference Include="..\Transacto.Specifications\Transacto.Specifications.csproj"/>
+	  <ProjectReference Include="..\..\src\Transacto.AspNetCore\Transacto.AspNetCore.csproj" />
+	  <ProjectReference Include="..\..\src\Transacto\Transacto.csproj" />
+	</ItemGroup>
+	
+</Project>

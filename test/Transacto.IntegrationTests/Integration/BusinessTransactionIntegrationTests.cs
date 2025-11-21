@@ -8,7 +8,7 @@ using Transacto.Messages;
 namespace Transacto.Integration;
 
 public class BusinessTransactionIntegrationTests : IntegrationTests {
-	private async Task Somewthing() {
+	public async Task creating_an_arbitrary_business_transaction() {
 		var now = DateTime.UtcNow;
 		var period = AccountingPeriod.Open(LocalDate.FromDateTime(now));
 		var transactionId = Guid.NewGuid();

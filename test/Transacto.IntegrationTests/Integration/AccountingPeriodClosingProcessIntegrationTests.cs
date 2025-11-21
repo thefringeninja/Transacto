@@ -20,7 +20,7 @@ public class AccountingPeriodClosingProcessIntegrationTests : IntegrationTests {
 		var command = new BeginClosingAccountingPeriod {
 			ClosingOn = createdOn.ToDateTimeUnspecified(),
 			ClosingGeneralLedgerEntryId = closingEntryIdentifier.ToGuid(),
-			RetainedEarningsAccountNumber = 3900,
+			RetainedEarningsAccountNumber = 3030,
 			GeneralLedgerEntryIds = ImmutableArray<Guid>.Empty
 		};
 

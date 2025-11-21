@@ -16,7 +16,7 @@ internal static class HttpClientExtensions {
 			}
 		}, cancellationToken);
 
-		var value = (await response.Content.ReadAsStringAsync(cancellationToken)).Trim();
+		var value = (await response.EnsureSuccessStatusCode().Content.ReadAsStringAsync(cancellationToken)).Trim();
 
 		return Checkpoint.FromString(value);
 	}
@@ -27,7 +27,13 @@ internal static class HttpClientExtensions {
 			.WaitAndRetryAsync(5, count => TimeSpan.FromMilliseconds(count * 2 * 100))
 			.ExecuteAsync(async ct => {
 				using var request = new HttpRequestMessage(HttpMethod.Get, requestUri) {
-					Headers = { IfMatch = { new EntityTagHeaderValue($@"""{checkpoint}""") } }
+					Headers = {
+						IfMatch = {
+							new EntityTagHeaderValue($"""
+							                          "{checkpoint}"
+							                          """)
+						}
+					}
 				};
 				var response = await client.SendAsync(request, ct);
 				try {

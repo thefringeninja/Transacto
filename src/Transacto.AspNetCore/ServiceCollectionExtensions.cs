@@ -6,6 +6,7 @@ using SqlStreamStore;
 using Transacto.Framework;
 using Transacto.Framework.CommandHandling;
 using Transacto.Framework.Projections;
+using Transacto.Infrastructure.EventStore;
 using Transacto.Infrastructure.Npgsql;
 using Transacto.Infrastructure.SqlStreamStore;
 using Transacto.Plugins;
@@ -19,17 +20,18 @@ public static class ServiceCollectionExtensions {
 				.AddSingleton(eventStore)
 				.AddSingleton(connectionStringBuilder)
 				.AddSingleton(streamStore)
+				.AddHostedService<EventLogging>()
 				.AddRouting()
 				.AddSingleton(MessageTypeMapper.Create(Array.ConvertAll(plugins,
 					plugin => new MessageTypeMapper(plugin.MessageTypes))))
 				// projections
 				.AddSingleton<Func<IPlugin, NpgsqlConnection>>(provider => {
 					var cache = new ConcurrentDictionary<string, NpgsqlConnectionStringBuilder>();
-					return plugin => new NpgsqlConnection(cache.GetOrAdd(plugin.Name, username =>
+					return plugin => new NpgsqlConnection(cache.GetOrAdd(plugin.Name, static (username, provider) =>
 						new NpgsqlConnectionStringBuilder(
 							provider.GetRequiredService<NpgsqlConnectionStringBuilder>().ConnectionString) {
 							Username = username
-						}).ConnectionString);
+						}, provider).ConnectionString);
 				}),
 			(services, plugin) => {
 				var rootProvider = services.BuildServiceProvider();
