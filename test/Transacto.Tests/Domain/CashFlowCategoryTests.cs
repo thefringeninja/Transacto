@@ -1,6 +1,5 @@
-using Transacto.Messages;
-
 namespace Transacto.Domain;
+using Transacto.Messages;
 
 public class CashFlowCategoryTests : ValueObjectTests<CashFlowCategory> {
 	private static IEnumerable<object[]> ToStringCases() {

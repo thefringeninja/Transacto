@@ -1,9 +1,9 @@
 using System.Text.Json;
-using EventStore.Client;
+using KurrentDB.Client;
 using Projac;
 using SqlStreamStore;
 using SqlStreamStore.Streams;
-using Position = EventStore.Client.Position;
+using Position = KurrentDB.Client.Position;
 
 namespace Transacto.Infrastructure.SqlStreamStore;
 

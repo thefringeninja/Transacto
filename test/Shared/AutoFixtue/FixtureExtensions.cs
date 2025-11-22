@@ -28,6 +28,7 @@ internal static class FixtureExtensions {
 		fixture.CustomizeAccount<OtherExpenseAccount>(8000, CashFlowCategory.Operations, CashFlowCategory.Investment,
 			CashFlowCategory.Finance);
 		fixture.Customizations.Add(new TypeRelay(typeof(ExpenseAccount), typeof(CostOfRevenueExpenseAccount)));
+		fixture.Customizations.Add(new TypeRelay(typeof(Account), typeof(AssetAccount)));
 	}
 
 	private static void CustomizeAssetAccount(this IFixture fixture, int lowestAccountNumber) =>

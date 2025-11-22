@@ -1,4 +1,4 @@
-using EventStore.Client;
+using KurrentDB.Client;
 using Transacto.Application;
 using Transacto.Domain;
 using Transacto.Framework;
@@ -9,7 +9,7 @@ using Transacto.Messages;
 namespace Transacto.Plugins.GeneralLedger;
 
 internal class GeneralLedgerEntryModule : CommandHandlerModule {
-	public GeneralLedgerEntryModule(EventStoreClient eventStore, IMessageTypeMapper messageTypeMapper,
+	public GeneralLedgerEntryModule(KurrentDBClient eventStore, IMessageTypeMapper messageTypeMapper,
 		GetPrefix getPrefix, AccountIsDeactivated accountIsDeactivated, ILogger<GeneralLedgerEntryModule> logger) {
 		var handlers = new GeneralLedgerEntryHandlers(
 			new GeneralLedgerEventStoreRepository(eventStore, messageTypeMapper),

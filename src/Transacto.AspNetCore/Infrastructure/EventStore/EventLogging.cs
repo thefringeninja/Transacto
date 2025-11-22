@@ -1,11 +1,11 @@
 using System.Text.Json;
-using EventStore.Client;
+using KurrentDB.Client;
 using Transacto.Framework;
 
 namespace Transacto.Infrastructure.EventStore;
 
 public class EventLogging(
-	EventStoreClient eventStore,
+	KurrentDBClient eventStore,
 	IMessageTypeMapper messageTypeMapper,
 	ILogger<EventLogging> logger) : BackgroundService {
 	protected override async Task ExecuteAsync(CancellationToken cancellationToken) {

@@ -1,5 +1,5 @@
 using System.Data.Common;
-using EventStore.Client;
+using KurrentDB.Client;
 using Npgsql;
 using Projac.Npgsql;
 using Projac.Sql;

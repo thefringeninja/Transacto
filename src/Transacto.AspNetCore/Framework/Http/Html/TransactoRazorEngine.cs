@@ -40,7 +40,7 @@ public class TransactoRazorEngine {
 				builder.AddAssemblyReference(typeof(IHtmlContent).Assembly);
 
 				builder.AddUsing(typeof(object).Namespace!);
-				builder.AddUsing(typeof(AsyncEnumerator).Namespace!);
+				builder.AddUsing(typeof(AsyncEnumerable).Namespace!);
 				builder.AddUsing(typeof(Enumerable).Namespace!);
 				builder.AddUsing(typeof(Link).Namespace!);
 				builder.AddUsing(typeof(RazorEngine).Namespace!

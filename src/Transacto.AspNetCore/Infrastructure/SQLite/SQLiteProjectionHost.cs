@@ -2,20 +2,20 @@ using System.Data.SQLite;
 using System.Diagnostics;
 using System.Text.Json;
 using System.Threading.Channels;
-using EventStore.Client;
+using KurrentDB.Client;
 using Polly;
 using Projac.Sql;
 using Projac.Sql.Executors;
 using Projac.SQLite;
 using Transacto.Framework;
 using Transacto.Framework.Projections;
-using EventTypeFilter = EventStore.Client.EventTypeFilter;
+using EventTypeFilter = KurrentDB.Client.EventTypeFilter;
 using Timer = System.Threading.Timer;
 
 namespace Transacto.Infrastructure.SQLite;
 
 public class SQLiteProjectionHost(
-	EventStoreClient eventStore,
+	KurrentDBClient eventStore,
 	IMessageTypeMapper messageTypeMap,
 	Func<SQLiteConnection> connectionFactory,
 	SQLiteProjection projection,
@@ -138,7 +138,7 @@ public class SQLiteProjectionHost(
 
 internal static class StreamSubscriptionResultExtensions {
 	public static IAsyncEnumerable<SubscriptionControlMessage> Batch(
-		this EventStoreClient.StreamSubscriptionResult subscription,
+		this KurrentDBClient.StreamSubscriptionResult subscription,
 		int batchSize, TimeSpan period, CancellationToken cancellationToken) {
 		var channel = Channel.CreateBounded<SubscriptionControlMessage>(new BoundedChannelOptions(batchSize) {
 			FullMode = BoundedChannelFullMode.Wait,

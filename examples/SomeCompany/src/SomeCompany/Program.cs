@@ -1,6 +1,6 @@
 using System.Globalization;
 using Dapper;
-using EventStore.Client;
+using KurrentDB.Client;
 using Npgsql;
 using Serilog;
 using Serilog.Events;
@@ -16,7 +16,7 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Logging
 	.ClearProviders()
 	.AddSerilog(new LoggerConfiguration()
-		.MinimumLevel.Debug()
+		.MinimumLevel.Verbose()
 		.MinimumLevel.Override("Microsoft.AspNetCore", LogEventLevel.Warning)
 		.Enrich.FromLogContext()
 		.WriteTo.Console(
@@ -24,7 +24,7 @@ builder.Logging
 			"[{Timestamp:HH:mm:ss} {Level:u3}] [{SourceContext}] {Message:lj}{NewLine}{Exception}")
 		.CreateLogger());
 builder.Services.AddTransacto(
-	new EventStoreClient(EventStoreClientSettings.Create(configuration.EventStore)),
+	new KurrentDBClient(KurrentDBClientSettings.Create(configuration.EventStore)),
 	new NpgsqlConnectionStringBuilder(configuration.Postgres),
 	new HttpClientSqlStreamStore(new() { BaseAddress = new Uri(configuration.SqlStreamStore) }));
 

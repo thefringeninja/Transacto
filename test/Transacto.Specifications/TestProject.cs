@@ -1,13 +1,10 @@
 using System.Globalization;
+using AutoFixture;
 using AutoFixture.Kernel;
 using Fixie;
 using Inflector;
-using Microsoft.Extensions.Logging;
-using Serilog;
-using Serilog.Extensions.Logging;
-using Serilog.Sinks.SystemConsole.Themes;
+using Transacto.Domain;
 using Transacto.Testing;
-using ILogger = Microsoft.Extensions.Logging.ILogger;
 
 namespace Transacto;
 
@@ -23,44 +20,48 @@ partial class TestProject {
 			foreach (var type in concreteClasses) {
 				if (typeof(EventSpecification).IsAssignableFrom(type) ||
 				    typeof(ExceptionSpecification).IsAssignableFrom(type)) {
-					yield return type;
+					yield return typeof(Lol<>).MakeGenericType(type);
 				}
 			}
 		}
 	}
 
-	partial class Execution {
-		private readonly ILogger _logger = new SerilogLoggerFactory(
-				new LoggerConfiguration()
-					.WriteTo.Console(outputTemplate: "{Message:lj}{NewLine}{Exception}",
-						theme: AnsiConsoleTheme.Literate)
-					.CreateLogger())
-			.CreateLogger<TestProject>();
+	private class Lol<T> {
+		public void Specification(){}
+	}
 
-		public Task Run(TestSuite testSuite) {
+	partial class Execution {
+		private readonly TestSpecificationTextWriter _writer = new(environment.Console);
+		public async Task Run(TestSuite testSuite) {
 			var fixture = new ScenarioFixture();
-			var writer = new TestSpecificationLogger(_logger);
+			fixture.Customize<ChartOfAccountsSettings>(composer =>
+				composer.FromFactory(() => ChartOfAccountsSettings.Default));
 			for (var i = 0; i < testSuite.TestClasses.Count; i++) {
+				var testClass = testSuite.TestClasses[i];
+				var specificationType = testClass.Type.GenericTypeArguments[0];
+				var constructorInfo = specificationType.GetConstructors()[0];
 				var parameters = Array.ConvertAll(
-					testSuite.TestClasses[i].Type.GetConstructors()[0].GetParameters(),
+					constructorInfo.GetParameters(),
 					pi => fixture.Create(pi.ParameterType, new SpecimenContext(fixture)));
 
-				var spec = testSuite.TestClasses[i].Construct(parameters);
+				var spec = constructorInfo.Invoke(parameters);
 
-				_logger.LogInformation(testSuite.TestClasses[i].Type.Name.Titleize());
+				await Task.WhenAll(testClass.Tests.Select(test => test.Pass()));
+
+				await environment.Console.WriteLineAsync(specificationType.Name.Underscore().Titleize());
+				
 				switch (spec) {
 					case ExceptionSpecification ex:
-						writer.Write(ex);
+						_writer.Write(ex);
 						break;
 					case EventSpecification ev:
-						writer.Write(ev);
+						_writer.Write(ev);
 						break;
 				}
 
-				environment.Console.WriteLine();
+				await environment.Console.WriteLineAsync();
 			}
 
-			return Task.CompletedTask;
 		}
 	}
 }

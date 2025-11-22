@@ -1,7 +1,8 @@
 using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
 
-namespace Transacto;
+// ReSharper disable once CheckNamespace
+namespace System;
 
 internal static class ArgumentExceptionExtensions {
 	extension(ArgumentException) {

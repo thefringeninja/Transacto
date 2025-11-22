@@ -1,11 +1,11 @@
-using EventStore.Client;
+using KurrentDB.Client;
 using Transacto;
 using Transacto.Framework;
 using Transacto.Infrastructure.EventStore;
 
 namespace SomeCompany.Inventory;
 
-public class InventoryItemRepository(EventStoreClient eventStore, IMessageTypeMapper messageTypeMapper) {
+public class InventoryItemRepository(KurrentDBClient eventStore, IMessageTypeMapper messageTypeMapper) {
 	private readonly EventStoreRepository<InventoryItem> _inner = new(eventStore, messageTypeMapper,
 		TransactoSerializerOptions.Events);
 

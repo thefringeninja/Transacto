@@ -1,4 +1,4 @@
-using EventStore.Client;
+using KurrentDB.Client;
 using Transacto;
 using Transacto.Framework;
 using Transacto.Framework.CommandHandling;
@@ -13,7 +13,7 @@ public class Inventory : IPlugin {
 
 	public void ConfigureServices(IServiceCollection services) => services
 		.AddSingleton<CommandHandlerModule>(provider => new InventoryItemModule(
-			provider.GetRequiredService<EventStoreClient>(),
+			provider.GetRequiredService<KurrentDBClient>(),
 			provider.GetRequiredService<IMessageTypeMapper>()))
 		.AddNpgSqlProjection<InventoryLedgerProjection>();
 

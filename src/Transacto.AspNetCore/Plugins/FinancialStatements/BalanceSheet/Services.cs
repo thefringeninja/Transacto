@@ -26,10 +26,10 @@ internal static class Services {
 
 		var accounts = await connection
 			.QueryUnbufferedAsync<(int AccountNumber, string accountName)>(accountsSql)
-			.ToDictionaryAsync(a => a.AccountNumber, a => a.accountName, ct);
+			.ToDictionaryAsync(a => a.AccountNumber, a => a.accountName, cancellationToken: ct);
 
 		var reports = await thru.ToAsyncEnumerable()
-			.SelectAwaitWithCancellation(GetReportAsync)
+			.Select(GetReportAsync)
 			.ToArrayAsync(cancellationToken: ct);
 
 		return new BalanceSheetReports(accounts.ToImmutableDictionary(), [..reports]);

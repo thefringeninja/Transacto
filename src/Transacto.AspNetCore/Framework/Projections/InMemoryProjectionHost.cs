@@ -1,12 +1,12 @@
 using System.Text.Json;
-using EventStore.Client;
+using KurrentDB.Client;
 using Polly;
 using Projac;
 
 namespace Transacto.Framework.Projections;
 
 public class InMemoryProjectionHost(
-	EventStoreClient eventStore,
+	KurrentDBClient eventStore,
 	IMessageTypeMapper messageTypeMapper,
 	InMemoryProjectionDatabase target,
 	ILogger<InMemoryProjectionHost> logger,

@@ -25,7 +25,7 @@ internal static class Services {
 			.ToArrayAsync(ct);
 
 		var reports = await reportRanges.ToAsyncEnumerable()
-			.SelectAwaitWithCancellation(GetReportAsync)
+			.Select(GetReportAsync)
 			.ToArrayAsync(cancellationToken: ct);
 
 		return new CashFlowReports(

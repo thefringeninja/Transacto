@@ -1,11 +1,11 @@
-using EventStore.Client;
+using KurrentDB.Client;
 using Transacto.Domain;
 using Transacto.Framework;
 
 namespace Transacto.Infrastructure.EventStore;
 
 public class GeneralLedgerEntryEventStoreRepository(
-	EventStoreClient eventStore,
+	KurrentDBClient eventStore,
 	IMessageTypeMapper messageTypeMapper)
 	: IGeneralLedgerEntryRepository {
 	private readonly EventStoreRepository<GeneralLedgerEntry> _inner = new(eventStore, messageTypeMapper);

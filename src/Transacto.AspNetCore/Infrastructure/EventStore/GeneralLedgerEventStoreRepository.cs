@@ -1,12 +1,12 @@
 using System.Text.Json;
-using EventStore.Client;
+using KurrentDB.Client;
 using Transacto.Domain;
 using Transacto.Framework;
 using Transacto.Messages;
 
 namespace Transacto.Infrastructure.EventStore;
 
-public class GeneralLedgerEventStoreRepository(EventStoreClient eventStore, IMessageTypeMapper messageTypeMapper)
+public class GeneralLedgerEventStoreRepository(KurrentDBClient eventStore, IMessageTypeMapper messageTypeMapper)
 	: IGeneralLedgerRepository {
 	private readonly EventStoreRepository<GeneralLedger> _inner = new(eventStore, messageTypeMapper);
 
@@ -43,9 +43,9 @@ public class GeneralLedgerEventStoreRepository(EventStoreClient eventStore, IMes
 		foreach (var e in stack) {
 			generalLedger.ReadFromHistory(e);
 		}
-
+		
 		UnitOfWork.Current.Attach(new(GeneralLedger.Identifier, generalLedger,
-			new Expected.Revision(StreamRevision.FromStreamPosition(streamPosition))));
+			StreamState.StreamRevision(streamPosition)));
 
 		return generalLedger;
 	}

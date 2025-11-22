@@ -1,4 +1,4 @@
-using Transacto.Infrastructure.EventStore;
+using KurrentDB.Client;
 
 namespace Transacto.Framework;
 
@@ -16,23 +16,23 @@ public class UnitOfWorkTests {
 		var aggregate = new TestAggregate();
 
 		using var _ = UnitOfWork.Start();
-		UnitOfWork.Current.Attach(new("stream", aggregate, Expected.NoStream));
+		UnitOfWork.Current.Attach(new("stream", aggregate, StreamState.NoStream));
 		Assert.True(UnitOfWork.Current.TryGet("stream", out var result));
 		Assert.Same(aggregate, result);
 	}
 
 	public void AttachingAnAggregateWhenStreamNameExistsThrows() {
 		using var _ = UnitOfWork.Start();
-		UnitOfWork.Current.Attach(new("stream", new TestAggregate(), Expected.NoStream));
+		UnitOfWork.Current.Attach(new("stream", new TestAggregate(), StreamState.NoStream));
 		Assert.Throws<ArgumentException>(() =>
-			UnitOfWork.Current.Attach(new("stream", new TestAggregate(), Expected.NoStream)));
+			UnitOfWork.Current.Attach(new("stream", new TestAggregate(), StreamState.NoStream)));
 	}
 
 	public void GettingChanges() {
 		var aggregate = new TestAggregate();
 
 		using var _ = UnitOfWork.Start();
-		UnitOfWork.Current.Attach(new("stream", aggregate, Expected.NoStream));
+		UnitOfWork.Current.Attach(new("stream", aggregate, StreamState.NoStream));
 		aggregate.DoSomething();
 		Assert.True(UnitOfWork.Current.HasChanges);
 		Assert.Single(UnitOfWork.Current.GetChanges());

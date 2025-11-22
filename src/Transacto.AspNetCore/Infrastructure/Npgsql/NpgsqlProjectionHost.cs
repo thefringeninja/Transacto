@@ -1,5 +1,5 @@
 using System.Text.Json;
-using EventStore.Client;
+using KurrentDB.Client;
 using Npgsql;
 using Polly;
 using Projac.Sql;
@@ -10,7 +10,7 @@ using Transacto.Framework.Projections;
 namespace Transacto.Infrastructure.Npgsql;
 
 public class NpgsqlProjectionHost(
-	EventStoreClient eventStore,
+	KurrentDBClient eventStore,
 	IMessageTypeMapper messageTypeMap,
 	Func<NpgsqlConnection> connectionFactory,
 	ILogger<NpgsqlProjectionHost> logger,

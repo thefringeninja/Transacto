@@ -1,4 +1,4 @@
-using EventStore.Client;
+using KurrentDB.Client;
 using Transacto.Application;
 using Transacto.Framework;
 using Transacto.Framework.CommandHandling;
@@ -8,7 +8,7 @@ using Transacto.Messages;
 namespace Transacto.Plugins.ChartOfAccounts;
 
 internal class ChartOfAccountsModule : CommandHandlerModule {
-	public ChartOfAccountsModule(EventStoreClient eventStore, IMessageTypeMapper messageTypeMapper,
+	public ChartOfAccountsModule(KurrentDBClient eventStore, IMessageTypeMapper messageTypeMapper,
 		ILogger<ChartOfAccountsModule> logger) {
 		var handlers =
 			new ChartOfAccountsHandlers(new ChartOfAccountsEventStoreRepository(eventStore, messageTypeMapper));

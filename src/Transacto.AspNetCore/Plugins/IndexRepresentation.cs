@@ -1,5 +1,4 @@
 using Hallo;
-using Inflector;
 
 namespace Transacto.Plugins;
 

@@ -1,11 +1,11 @@
 using System.Text.Json;
-using EventStore.Client;
+using KurrentDB.Client;
 using Polly;
 
 namespace Transacto.Framework.ProcessManagers;
 
 public class ProcessManagerHost(
-	EventStoreClient eventStore,
+	KurrentDBClient eventStore,
 	IMessageTypeMapper messageTypeMapper,
 	string checkpointStreamName,
 	ProcessManagerEventHandlerModule processManagerModule,

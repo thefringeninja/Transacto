@@ -1,5 +1,5 @@
 using System.Data.SQLite;
-using EventStore.Client;
+using KurrentDB.Client;
 using Transacto.Framework;
 using Transacto.Infrastructure.SQLite;
 
@@ -13,16 +13,17 @@ public static partial class ServiceCollectionExtensions {
 
 	public static IServiceCollection AddSQLiteProjection(
 		this IServiceCollection services, SQLiteProjection projection) {
-		var connectionStringBuilder = new SQLiteConnectionStringBuilder {
-			DataSource = $"{projection.GetType().FullName}.db",
-			JournalMode = SQLiteJournalModeEnum.Wal,
-			SyncMode = SynchronizationModes.Off
-		};
 		return services
 			.AddKeyedSingleton<Func<SQLiteConnection>>(projection.GetType(),
-				() => new SQLiteConnection(connectionStringBuilder.ConnectionString))
+				(provider, _) => {
+					var connectionString =
+						provider.GetRequiredService<Func<Type, SQLiteConnectionStringBuilder>>()(projection.GetType())
+							.ConnectionString;
+
+					return () => new SQLiteConnection(connectionString);
+				})
 			.AddSingleton<IHostedService, SQLiteProjectionHost>(provider => new SQLiteProjectionHost(
-				provider.GetRequiredService<EventStoreClient>(),
+				provider.GetRequiredService<KurrentDBClient>(),
 				provider.GetRequiredService<IMessageTypeMapper>(),
 				provider.GetRequiredKeyedService<Func<SQLiteConnection>>(projection.GetType()), projection,
 				provider.GetRequiredService<ILoggerFactory>().CreateLogger<SQLiteProjectionHost>()));

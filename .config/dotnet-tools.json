@@ -6,13 +6,22 @@
       "version": "0.1.273",
       "commands": [
         "gpr"
-      ]
+      ],
+      "rollForward": false
     },
     "fixie.console": {
       "version": "3.4.0",
       "commands": [
         "fixie"
-      ]
+      ],
+      "rollForward": false
+    },
+    "dotnet-reportgenerator-globaltool": {
+      "version": "5.5.0",
+      "commands": [
+        "reportgenerator"
+      ],
+      "rollForward": false
     }
   }
 }

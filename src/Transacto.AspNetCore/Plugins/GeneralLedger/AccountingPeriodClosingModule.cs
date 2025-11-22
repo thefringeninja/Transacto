@@ -1,4 +1,4 @@
-using EventStore.Client;
+using KurrentDB.Client;
 using Transacto.Application;
 using Transacto.Domain;
 using Transacto.Framework;
@@ -9,7 +9,7 @@ using Transacto.Messages;
 namespace Transacto.Plugins.GeneralLedger;
 
 public class AccountingPeriodClosingModule : ProcessManagerEventHandlerModule {
-	public AccountingPeriodClosingModule(EventStoreClient eventStore, IMessageTypeMapper messageTypeMapper,
+	public AccountingPeriodClosingModule(KurrentDBClient eventStore, IMessageTypeMapper messageTypeMapper,
 		AccountIsDeactivated accountIsDeactivated, ILogger<AccountingPeriodClosingModule> logger) {
 		var handlers = new AccountingPeriodClosingHandlers(
 			new GeneralLedgerEventStoreRepository(eventStore, messageTypeMapper),

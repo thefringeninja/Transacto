@@ -1,4 +1,4 @@
-using EventStore.Client;
+using KurrentDB.Client;
 using Transacto.Framework;
 using Transacto.Framework.ProcessManagers;
 
@@ -11,7 +11,7 @@ public static partial class ServiceCollectionExtensions {
 		string checkpointStreamName) where TProcessManager : ProcessManagerEventHandlerModule => services
 		.AddSingleton<TProcessManager>()
 		.AddHostedService(provider => new ProcessManagerHost(
-			provider.GetRequiredService<EventStoreClient>(),
+			provider.GetRequiredService<KurrentDBClient>(),
 			provider.GetRequiredService<IMessageTypeMapper>(),
 			checkpointStreamName,
 			provider.GetRequiredService<TProcessManager>(),

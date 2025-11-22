@@ -16,10 +16,10 @@ internal static class Services {
 				SELECT account_number, account_name
 				FROM account_names
 				""")
-			.ToDictionaryAsync(a => a.AccountNumber, a => a.accountName, ct);
+			.ToDictionaryAsync(a => a.AccountNumber, a => a.accountName, cancellationToken:ct);
 
 		var reports = await reportRanges.ToAsyncEnumerable()
-			.SelectAwaitWithCancellation(GetReportAsync)
+			.Select(GetReportAsync)
 			.ToArrayAsync(ct);
 
 		return new ProfitAndLossReports(accounts.ToImmutableDictionary(), [..reports]);

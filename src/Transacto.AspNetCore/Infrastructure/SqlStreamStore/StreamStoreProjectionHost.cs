@@ -1,5 +1,5 @@
 using System.Text.Json;
-using EventStore.Client;
+using KurrentDB.Client;
 using Polly;
 using Projac;
 using SqlStreamStore;
@@ -8,7 +8,7 @@ using Transacto.Framework;
 namespace Transacto.Infrastructure.SqlStreamStore;
 
 public class StreamStoreProjectionHost(
-	EventStoreClient eventStore,
+	KurrentDBClient eventStore,
 	IMessageTypeMapper messageTypeMap,
 	IStreamStore streamStore,
 	params StreamStoreProjection[] projections)

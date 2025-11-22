@@ -1,15 +1,14 @@
 using System.Text.Json;
-using EventStore.Client;
+using KurrentDB.Client;
 using Transacto.Framework;
 
 namespace Transacto.Infrastructure.EventStore;
 
 public class EventStoreRepository<TAggregateRoot>(
-	EventStoreClient eventStore,
+	KurrentDBClient eventStore,
 	IMessageTypeMapper messageTypeMapper,
 	JsonSerializerOptions? serializerOptions = null)
 	where TAggregateRoot : AggregateRoot, IAggregateRoot<TAggregateRoot> {
-
 	private readonly JsonSerializerOptions _serializerOptions = serializerOptions ?? TransactoSerializerOptions.Events;
 
 	public async ValueTask<Optional<TAggregateRoot>> GetById(string identifier,
@@ -18,7 +17,7 @@ public class EventStoreRepository<TAggregateRoot>(
 			return new(aggregate);
 		}
 
-		var version = Optional<StreamRevision>.Empty;
+		var version = Optional<StreamState>.Empty;
 
 		aggregate = TAggregateRoot.Factory();
 
@@ -33,14 +32,16 @@ public class EventStoreRepository<TAggregateRoot>(
 					aggregate.ReadFromHistory(JsonSerializer.Deserialize(e.OriginalEvent.Data.Span,
 						messageTypeMapper.Map(e.OriginalEvent.EventType),
 						_serializerOptions) ?? throw new InvalidOperationException());
-					version = version == Optional<StreamRevision>.Empty ? 0 : version.Value.Next();
+					version = version == Optional<StreamState>.Empty
+						? StreamState.StreamRevision(0)
+						: version.Value.Next();
 					break;
 			}
 		}
 
 		var expected = version switch {
-			{ HasValue: true } => new Expected.Revision(version.Value),
-			_ => Expected.NoStream
+			{ HasValue: true } => StreamState.StreamRevision((ulong)version.Value.ToInt64()),
+			_ => StreamState.NoStream
 		};
 
 		UnitOfWork.Current.Attach(new(identifier, aggregate, expected));
@@ -49,5 +50,5 @@ public class EventStoreRepository<TAggregateRoot>(
 	}
 
 	public void Add(TAggregateRoot aggregateRoot) =>
-		UnitOfWork.Current.Attach(new(aggregateRoot.Id, aggregateRoot, Expected.NoStream));
+		UnitOfWork.Current.Attach(new(aggregateRoot.Id, aggregateRoot, StreamState.NoStream));
 }

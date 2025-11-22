@@ -2,11 +2,11 @@ using System.Collections.Immutable;
 using System.Diagnostics;
 using System.Text;
 using System.Text.Json;
-using EventStore.Client;
+using KurrentDB.Client;
 using NodaTime;
 using Transacto.Domain;
 using Transacto.Messages;
-using EventTypeFilter = EventStore.Client.EventTypeFilter;
+using EventTypeFilter = KurrentDB.Client.EventTypeFilter;
 
 namespace Transacto.Integration;
 
@@ -37,7 +37,7 @@ public class AccountingPeriodClosingProcessIntegrationTests : IntegrationTests {
 
 		async ValueTask<(AccountingPeriodClosed accountingPeriodClosed, Position accountingPeriodClosedPosition,
 			Position checkpointPosition)> ReadData() {
-			await using var subscription = EventStoreClient.SubscribeToAll(FromAll.Start,
+			await using var subscription = KurrentDBClient.SubscribeToAll(FromAll.Start,
 				filterOptions: new SubscriptionFilterOptions(EventTypeFilter.ExcludeSystemEvents()));
 
 			AccountingPeriodClosed? accountingPeriodClosed = null;

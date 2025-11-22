@@ -5,6 +5,7 @@
 		<RootNamespace>SomeCompany</RootNamespace>
 	</PropertyGroup>
 	<ItemGroup>
+		<PackageReference Include="Newtonsoft.Json" Version="13.0.4" GeneratePathProperty="true" PrivateAssets="all"/>
 		<PackageReference Include="SqlStreamStore.Http" Version="1.2.1-*"/>
 	</ItemGroup>
 

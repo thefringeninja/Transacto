@@ -1,12 +1,14 @@
+using System.Data.SQLite;
 using System.Globalization;
 using System.Text.Json;
 using Ductus.FluentDocker.Builders;
 using Ductus.FluentDocker.Model.Common;
 using Ductus.FluentDocker.Services;
 using Ductus.FluentDocker.Services.Extensions;
-using EventStore.Client;
+using KurrentDB.Client;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.TestHost;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using NodaTime;
@@ -15,6 +17,7 @@ using Serilog;
 using Serilog.Events;
 using SqlStreamStore;
 using Transacto.Domain;
+using Transacto.Infrastructure.SQLite;
 using Transacto.Messages;
 
 namespace Transacto.Integration;
@@ -34,8 +37,9 @@ public abstract class IntegrationTests : IAsyncDisposable {
 	//private readonly IContainerService _streamStore;
 	//private readonly IntegrationTestFactory _webApplicationFactory;
 
+	private readonly List<FileInfo> _sqliteDatabases = [];
 	protected HttpClient HttpClient { get; }
-	protected EventStoreClient EventStoreClient { get; }
+	protected KurrentDBClient KurrentDBClient { get; }
 
 	static IntegrationTests() {
 		Inflector.Inflector.SetDefaultCultureFunc = () => new CultureInfo("en-US");
@@ -67,7 +71,7 @@ public abstract class IntegrationTests : IAsyncDisposable {
 
 		//_webApplicationFactory = new IntegrationTestFactory();
 
-		EventStoreClient = new EventStoreClient(new EventStoreClientSettings {
+		KurrentDBClient = new KurrentDBClient(new KurrentDBClientSettings {
 			ConnectivitySettings = {
 				Address = new UriBuilder {
 					Port = _eventStorePort
@@ -104,7 +108,16 @@ public abstract class IntegrationTests : IAsyncDisposable {
 				outputTemplate:
 				"[{Timestamp:HH:mm:ss} {Level:u3}] [{SourceContext}] {Message:lj}{NewLine}{Exception}")
 			.CreateLogger());
-		builder.Services.AddTransacto(EventStoreClient, new NpgsqlConnectionStringBuilder(), _streamStoreClient);
+		builder.Services.AddSingleton<Func<Type, SQLiteConnectionStringBuilder>>(projectionType => {
+				var dataSource = Path.Combine(Path.GetTempPath(), $"{projectionType.FullName}-{_runId}.db");
+				_sqliteDatabases.Add(new FileInfo(dataSource));
+				return new SQLiteConnectionStringBuilder {
+					JournalMode = SQLiteJournalModeEnum.Wal,
+					SyncMode = SynchronizationModes.Off,
+					DataSource = dataSource
+				};
+			})
+			.AddTransacto(KurrentDBClient, new NpgsqlConnectionStringBuilder(), _streamStoreClient);
 		builder.WebHost.UseTestServer();
 		_app = builder.Build();
 		_app.UseTransacto();
@@ -162,12 +175,11 @@ public abstract class IntegrationTests : IAsyncDisposable {
 	public async ValueTask DisposeAsync() {
 		await _app.StopAsync();
 		await _app.DisposeAsync();
-		await EventStoreClient.DisposeAsync();
+		await KurrentDBClient.DisposeAsync();
 		_streamStoreClient.Dispose();
 
-		Array.ForEach(Directory.GetFiles(".", "*.db"), File.Delete);
-
-		//_streamStore.Dispose();	_eventStore.d
+		_sqliteDatabases.ForEach(fileInfo => fileInfo.Delete());
+		//_streamStore.Dispose();
 		_eventStore.Dispose();
 	}
 }

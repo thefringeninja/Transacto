@@ -75,11 +75,8 @@ public class AccountTests {
 		[AutoFixtureData]
 		public void InvalidConfigurationsThrow(TAccount account) =>
 			Assert.Multiple(Array.ConvertAll<CashFlowCategory, Action>(invalidCashFlowCategories, cashFlowCategory =>
-				() => {
-					var ex = Assert.ThrowsAny<ArgumentException>(() =>
-						Account.For(account.AccountNumber, account.AccountName, cashFlowCategory, acceptsCash));
-					Assert.Equal(nameof(cashFlowCategory), ex.ParamName);
-				}));
+				() => Assert.Throws<AccountExpectedCashFlowCategoryException>(() =>
+					Account.For(account.AccountNumber, account.AccountName, cashFlowCategory, acceptsCash))));
 
 		[AutoFixtureData]
 		public void ValidConfigurationsDoNotThrow(TAccount account) =>
