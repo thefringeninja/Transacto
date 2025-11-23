@@ -10,7 +10,7 @@ public class InMemoryProjectionHost(
 	IMessageTypeMapper messageTypeMapper,
 	InMemoryProjectionDatabase target,
 	ILogger<InMemoryProjectionHost> logger,
-	params ProjectionHandler<InMemoryProjectionDatabase>[][] projections)
+	params IEnumerable<ProjectionHandler<InMemoryProjectionDatabase>[]> projections)
 	: BackgroundService {
 	private readonly Projector<InMemoryProjectionDatabase> _projector = new(
 		EnvelopeResolve.WhenAssignableToHandlerMessageType(projections.SelectMany(_ => _).ToArray()));
@@ -23,7 +23,9 @@ public class InMemoryProjectionHost(
 						"InMemoryProjectionHost encountered an issue. Will retry after {delay}",
 						delay))
 				.ExecuteAsync(SubscribeInternal, stoppingToken);
-		} catch (OperationCanceledException) { }
+		} catch (OperationCanceledException) {
+			
+		}
 	}
 
 	private async Task SubscribeInternal(CancellationToken ct) {

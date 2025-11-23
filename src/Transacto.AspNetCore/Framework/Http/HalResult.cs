@@ -1,13 +1,7 @@
 using System.Net;
-using System.Text.Json;
-using System.Text.Json.Serialization;
 using Hallo;
-using Hallo.Serialization;
 using Microsoft.AspNetCore.Mvc.Formatters;
 using Microsoft.Net.Http.Headers;
-using NodaTime;
-using NodaTime.Serialization.SystemTextJson;
-using NodaTime.Text;
 using Transacto.Framework.Http.Html;
 using Transacto.Views.Shared;
 
@@ -18,19 +12,6 @@ internal abstract class HalResult {
 	protected const string HalHtmlContentType = "text/html";
 	protected static readonly MediaType HalJson = new(HalJsonContentType);
 	protected static readonly MediaType Html = new(HalHtmlContentType);
-
-	protected static readonly JsonSerializerOptions HalJsonSerializerOptions = new() {
-		PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-		PropertyNameCaseInsensitive = true,
-		IncludeFields = true,
-		Converters = {
-			new LinksConverter(),
-			new HalRepresentationConverter(),
-			new JsonStringEnumConverter(JsonNamingPolicy.CamelCase),
-			new NodaPatternConverter<LocalDate>(LocalDatePattern.Iso),
-			new NodaPatternConverter<Period>(PeriodPattern.NormalizingIso)
-		},
-	};
 }
 
 internal class HalResult<T>(T? resource, Checkpoint checkpoint, IHal hal, HttpStatusCode statusCode = HttpStatusCode.OK)
@@ -81,7 +62,7 @@ internal class HalResult<T>(T? resource, Checkpoint checkpoint, IHal hal, HttpSt
 		public async Task ExecuteAsync(HttpContext context) {
 			context.Response.ContentType = HalJsonContentType;
 			var representation = await hal.RepresentationOfAsync(resource);
-			await context.Response.WriteAsJsonAsync(representation, HalJsonSerializerOptions, context.RequestAborted);
+			await context.Response.WriteAsJsonAsync(representation, TransactoHttpSerializerOptions.HalJsonSerializerOptions, context.RequestAborted);
 		}
 	}
 

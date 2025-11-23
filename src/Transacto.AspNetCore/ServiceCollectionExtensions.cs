@@ -1,89 +1,80 @@
 using System.Collections.Concurrent;
 using System.Data.SQLite;
 using KurrentDB.Client;
-using Microsoft.Extensions.DependencyInjection.Extensions;
 using Npgsql;
-using Projac;
 using SqlStreamStore;
 using Transacto.Framework;
 using Transacto.Framework.CommandHandling;
 using Transacto.Framework.Projections;
 using Transacto.Infrastructure.EventStore;
 using Transacto.Infrastructure.Npgsql;
-using Transacto.Infrastructure.SQLite;
 using Transacto.Infrastructure.SqlStreamStore;
 using Transacto.Plugins;
 
 namespace Transacto;
 
 public static class ServiceCollectionExtensions {
-	public static IServiceCollection AddTransacto(this IServiceCollection services, KurrentDBClient eventStore,
-		NpgsqlConnectionStringBuilder connectionStringBuilder, IStreamStore streamStore, params IPlugin[] plugins) {
-		services.TryAddSingleton<Func<Type, SQLiteConnectionStringBuilder>>(projectionType =>
-			new SQLiteConnectionStringBuilder {
-				JournalMode = SQLiteJournalModeEnum.Wal,
-				SyncMode = SynchronizationModes.Off,
-				DataSource = $"{projectionType.FullName}.db"
-			});
+	public static IServiceCollection AddTransacto(this IServiceCollection services, 
+		KurrentDBClient eventStore,
+		NpgsqlConnectionStringBuilder npgsqlConnectionStringBuilder, 
+		Func<Type, SQLiteConnectionStringBuilder> sqliteConnectionStringBuilderFactory,
+		IStreamStore streamStore,
+		Func<ILoggerProvider> getLoggerProvider, params IPlugin[] plugins) {
+		var npgsqlConnectionStringBuilderCache = new ConcurrentDictionary<string, NpgsqlConnectionStringBuilder>();
+
+		var messageTypeMapper = MessageTypeMapper.Create(Array.ConvertAll(plugins,
+			plugin => new MessageTypeMapper(plugin.MessageTypes)));
 
 		return plugins.Concat(Standard.Plugins).Aggregate(services
 				.AddSingleton(eventStore)
-				.AddSingleton(connectionStringBuilder)
+				.AddSingleton(npgsqlConnectionStringBuilder)
 				.AddSingleton(streamStore)
 				.AddHostedService<EventLogging>()
 				.AddRouting()
-				.AddSingleton(MessageTypeMapper.Create(Array.ConvertAll(plugins,
-					plugin => new MessageTypeMapper(plugin.MessageTypes))))
+				.AddSingleton(messageTypeMapper)
 				// projections
-				.AddSingleton<Func<IPlugin, NpgsqlConnection>>(provider => {
-					var cache = new ConcurrentDictionary<string, NpgsqlConnectionStringBuilder>();
-					return plugin => new NpgsqlConnection(cache.GetOrAdd(plugin.Name, static (username, provider) =>
-						new NpgsqlConnectionStringBuilder(
-							provider.GetRequiredService<NpgsqlConnectionStringBuilder>().ConnectionString) {
-							Username = username
-						}, provider).ConnectionString);
-				}),
+				.AddSingleton<Func<IPlugin, NpgsqlConnection>>(NpqsqlConnectonFactory),
 			(services, plugin) => {
-				var rootProvider = services.BuildServiceProvider();
-				var pluginServices = new ServiceCollection()
-					.AddLogging(builder =>
-						rootProvider.GetServices<ILoggerProvider>()
-							.Aggregate(builder.ClearProviders(), (acc, provider) => acc.AddProvider(provider)));
+				var pluginServices = new ServiceCollection();
+
 				plugin.ConfigureServices(pluginServices);
 
 				var pluginProvider = pluginServices
-					.AddSingleton(provider => new CommandDispatcher(provider.GetServices<CommandHandlerModule>()))
-					.AddSingleton(rootProvider.GetRequiredService<ILoggerFactory>())
-					.AddSingleton(rootProvider.GetRequiredService<KurrentDBClient>())
-					.AddSingleton(rootProvider.GetRequiredService<IStreamStore>())
-					.AddSingleton(rootProvider.GetRequiredService<IMessageTypeMapper>())
+					.AddLogging(builder => builder.ClearProviders().AddProvider(getLoggerProvider()))
+					.AddSingleton<CommandDispatcher>()
+					.AddSingleton(eventStore)
+					.AddSingleton(streamStore)
+					.AddSingleton(messageTypeMapper)
 					.AddSingleton<InMemoryProjectionDatabase>()
-					.AddHostedService(provider => new InMemoryProjectionHost(
-						provider.GetRequiredService<KurrentDBClient>(),
-						provider.GetRequiredService<IMessageTypeMapper>(),
-						provider.GetRequiredService<InMemoryProjectionDatabase>(),
-						provider.GetRequiredService<ILoggerFactory>().CreateLogger<InMemoryProjectionHost>(),
-						provider.GetServices<ProjectionHandler<InMemoryProjectionDatabase>[]>().ToArray()))
-					.AddSingleton(provider => provider.GetRequiredService<Func<Type, SQLiteConnectionStringBuilder>>())
-					.AddSingleton<Func<NpgsqlConnection>>(_ => () => rootProvider
-						.GetRequiredService<Func<IPlugin, NpgsqlConnection>>()
-						.Invoke(plugin))
-					.AddHostedService(provider => new NpgsqlProjectionHost(
-						provider.GetRequiredService<KurrentDBClient>(),
-						provider.GetRequiredService<IMessageTypeMapper>(),
-						provider.GetRequiredService<Func<NpgsqlConnection>>(),
-						provider.GetRequiredService<ILoggerFactory>().CreateLogger<NpgsqlProjectionHost>(),
-						provider.GetServices<NpgsqlProjection>().ToArray()))
-					.AddHostedService(provider => new StreamStoreProjectionHost(
-						provider.GetRequiredService<KurrentDBClient>(),
-						provider.GetRequiredService<IMessageTypeMapper>(),
-						provider.GetRequiredService<IStreamStore>(),
-						provider.GetServices<StreamStoreProjection>().ToArray()))
+					.AddHostedService<InMemoryProjectionHost>()
+					.AddHostedService<NpgsqlProjectionHost>()
+					.AddHostedService<StreamStoreProjectionHost>()
+					.AddSingleton(sqliteConnectionStringBuilderFactory)
+					.AddSingleton<Func<NpgsqlConnection>>(() => NpqsqlConnectonFactory(plugin))
 					.BuildServiceProvider();
-				return pluginProvider
-					.GetServices<IHostedService>()
-					.Aggregate(services.AddKeyedSingleton<IServiceProvider>(plugin, pluginProvider),
-						(services, service) => services.AddSingleton(service));
+
+				return services
+					.AddKeyedSingleton<IServiceProvider>(plugin, pluginProvider)
+					.AddSingleton<IHostedService>(_ => new HostedServicesBackgroundService(plugin, pluginProvider));
 			});
+
+		NpgsqlConnection NpqsqlConnectonFactory(IPlugin plugin) =>
+			new(npgsqlConnectionStringBuilderCache.GetOrAdd(plugin.Name, username =>
+				new NpgsqlConnectionStringBuilder(
+					npgsqlConnectionStringBuilder.ConnectionString) {
+					Username = username
+				}).ConnectionString);
+	}
+
+	private class HostedServicesBackgroundService(IPlugin plugin, IServiceProvider serviceProvider) : IHostedService {
+		public string Name => plugin.Name;
+		public Task StartAsync(CancellationToken cancellationToken) =>
+			Task.WhenAll(serviceProvider.GetServices<IHostedService>()
+				.Select(service => service.StartAsync(cancellationToken)));
+
+
+		public Task StopAsync(CancellationToken cancellationToken) =>
+			Task.WhenAll(serviceProvider.GetServices<IHostedService>()
+				.Select(service => service.StopAsync(cancellationToken)));
 	}
 }

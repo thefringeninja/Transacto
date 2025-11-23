@@ -105,7 +105,7 @@ public class SQLiteProjectionHost(
 
 		new SqlProjector(_resolver, executor).Project(new CreateSchema());
 
-		logger.LogInformation("Schema created {projection}", projection);
+		logger.LogInformation("Schema created {projection}", projection.Name);
 	}
 
 	private FromAll ReadCheckpoint() {

@@ -3,8 +3,10 @@
 		<OutputType>exe</OutputType>
 		<PreserveCompilationContext>true</PreserveCompilationContext>
 		<RootNamespace>SomeCompany</RootNamespace>
+		<NoWarn>NU1903</NoWarn>
 	</PropertyGroup>
 	<ItemGroup>
+		<PackageReference Include="Ductus.FluentDocker" Version="2.85.0" />
 		<PackageReference Include="Newtonsoft.Json" Version="13.0.4" GeneratePathProperty="true" PrivateAssets="all"/>
 		<PackageReference Include="SqlStreamStore.Http" Version="1.2.1-*"/>
 	</ItemGroup>

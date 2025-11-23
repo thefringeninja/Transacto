@@ -16,42 +16,45 @@ internal partial class TestProject : ITestProject {
 	private partial class TestDiscovery(
 		Func<IEnumerable<Type>, IEnumerable<Type>> getTestClasses,
 		Func<IEnumerable<MethodInfo>, IEnumerable<MethodInfo>> getTestMethods) : IDiscovery {
-
 		public IEnumerable<Type> TestClasses(IEnumerable<Type> concreteClasses) => getTestClasses(concreteClasses);
-			//.Shuffle()
 
 		public IEnumerable<MethodInfo> TestMethods(IEnumerable<MethodInfo> publicMethods) =>
 			getTestMethods(publicMethods);
 	}
 
 #pragma warning disable CS9113 // Parameter is unread.
-	private partial class Execution(TestEnvironment environment) : IExecution;
-#pragma warning restore CS9113 // Parameter is unread.
-
-	private class ParallelExecution : IExecution {
-		public Task Run(TestSuite testSuite) => Task.WhenAll(
+	private partial class Execution(TestEnvironment environment) : IExecution {
+		private IEnumerable<Task> AllTests(TestSuite testSuite)  => 
 			from testClass in testSuite.TestClasses
 			from test in testClass.Tests
 			from result in RunTest(testClass, test)
-			select result);
-	}
+			select result;
+		
+		private IEnumerable<Task> RunTest(TestClass testClass, Test test) =>
+			from parameters in UsingInputAttributes(test)
+			let instance = testClass.Construct(GetConstructorParameters(testClass))
+			select RunSingleTest(testClass, test, instance, parameters);
+		
+		private object?[] GetConstructorParameters(TestClass testClass) {
+			var fixtureTypes = testClass.Type.GetInterfaces()
+				.Where(i => i.IsGenericType && i.GetGenericTypeDefinition() == typeof(IClassFixture<>))
+				.Select(@interface => @interface.GetGenericArguments()[0]);
 
-	private class SerialExecution : IExecution {
-		public async Task Run(TestSuite testSuite) {
-			foreach (var testClass in testSuite.TestClasses) {
-				foreach (var test in testClass.Tests) {
-					foreach (var result in RunTest(testClass, test)) {
-						await result;
-					}
+			return Array.ConvertAll(testClass.Type.GetConstructors().Single()
+				.GetParameters(), parameter => {
+				if (fixtureTypes.Contains(parameter.ParameterType)) {
+					return Activator.CreateInstance(parameter.ParameterType);
 				}
-			}
-		}
-	}
 
-	private static IEnumerable<Task> RunTest(TestClass testClass, Test test) =>
-		from parameters in UsingInputAttributes(test)
-		let instance = testClass.Construct(GetConstructorParameters(testClass))
-		select RunSingleTest(testClass, test, instance, parameters);
+				if (parameter.ParameterType == typeof(TextWriter)) {
+					return environment.Console;
+				}
+
+				return null;
+			});
+		}
+
+	}
 
 	private static async Task RunSingleTest(TestClass testClass, Test test, object instance,
 		object[] parameters) {
@@ -70,11 +73,6 @@ internal partial class TestProject : ITestProject {
 			await TryLifecycleMethod(testClass, instance, "DisposeAsync");
 		}
 	}
-
-	private static object[] GetConstructorParameters(TestClass testClass) => testClass.Type.GetInterfaces()
-		.Where(i => i.IsGenericType && i.GetGenericTypeDefinition() == typeof(IClassFixture<>))
-		.Select(@interface => Activator.CreateInstance(@interface.GetGenericArguments()[0])!)
-		.ToArray();
 
 
 	private static Task TryLifecycleMethod(TestClass testClass, object instance, string name) =>

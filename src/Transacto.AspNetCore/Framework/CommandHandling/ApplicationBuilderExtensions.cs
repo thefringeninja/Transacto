@@ -16,10 +16,10 @@ namespace Microsoft.AspNetCore.Builder;
 
 public static partial class ApplicationBuilderExtensions {
 	public static IEndpointRouteBuilder MapCommands(this IEndpointRouteBuilder builder, string route, params Type[] commandTypes) =>
-		builder.MapCommandsInternal(route, TransactoSerializerOptions.Commands, commandTypes);
+		builder.MapCommandsInternal(route, TransactoHttpSerializerOptions.Commands, commandTypes);
 
 	public static IEndpointRouteBuilder MapBusinessTransaction<T>(this IEndpointRouteBuilder builder, string route) where T : IBusinessTransaction =>
-		builder.MapCommandsInternal(route, TransactoSerializerOptions.BusinessTransactions(typeof(T)),
+		builder.MapCommandsInternal(route, TransactoHttpSerializerOptions.BusinessTransactions(typeof(T)),
 			typeof(PostGeneralLedgerEntry));
 
 	private static IEndpointRouteBuilder MapCommandsInternal(this IEndpointRouteBuilder builder, string route,

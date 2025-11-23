@@ -4,7 +4,7 @@ using NodaTime.Text;
 
 namespace Transacto.Plugins.FinancialStatements.BalanceSheet;
 
-internal class BalanceSheetReportsRepresentation : Hal<BalanceSheetReports>, IHalLinks<BalanceSheetReports>,
+public class BalanceSheetReportsRepresentation : Hal<BalanceSheetReports>, IHalLinks<BalanceSheetReports>,
 	IHalState<BalanceSheetReports> {
 	public IEnumerable<Link> LinksFor(BalanceSheetReports resource) {
 		if (resource.Reports.Length == 0) {

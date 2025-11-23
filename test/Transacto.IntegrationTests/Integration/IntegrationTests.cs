@@ -2,6 +2,7 @@ using System.Data.SQLite;
 using System.Globalization;
 using System.Text.Json;
 using Ductus.FluentDocker.Builders;
+using Ductus.FluentDocker.Common;
 using Ductus.FluentDocker.Model.Common;
 using Ductus.FluentDocker.Services;
 using Ductus.FluentDocker.Services.Extensions;
@@ -13,11 +14,13 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using NodaTime;
 using Npgsql;
+using Polly;
 using Serilog;
 using Serilog.Events;
+using Serilog.Extensions.Logging;
 using SqlStreamStore;
 using Transacto.Domain;
-using Transacto.Infrastructure.SQLite;
+using Transacto.Framework.Http;
 using Transacto.Messages;
 
 namespace Transacto.Integration;
@@ -45,20 +48,21 @@ public abstract class IntegrationTests : IAsyncDisposable {
 		Inflector.Inflector.SetDefaultCultureFunc = () => new CultureInfo("en-US");
 	}
 
-	protected IntegrationTests() {
+	protected IntegrationTests(TextWriter logOutput) {
 		var dockerHost = new DockerUri(Environment.GetEnvironmentVariable("DOCKER_HOST") ??
 		                               "unix:///run/user/1000/docker.sock");
-		_eventStore = new Builder()
+
+		var hostBuilder = new Builder()
 			.UseHost()
-			.FromUri(dockerHost)
-			.UseContainer()
-			.WithName($"transacto-kurrent-test-{_runId}")
-			.UseImage("ghcr.io/kurrent-io/eventstore:23.10.8-alpine")
-			.DeleteIfExists()
-			.ExposePort(_eventStorePort, 2113)
-			.WithEnvironment("EVENTSTORE_ENABLE_ATOM_PUB_OVER_HTTP=true", "EVENTSTORE_INSECURE=true")
-			.Build()
-			.Start()
+			.FromUri(dockerHost);
+
+		var host = hostBuilder.Build();
+
+		_eventStore = BuildAndStartContainer(
+				$"transacto-kurrent-test-{_runId}",
+				"ghcr.io/kurrent-io/eventstore:23.10.8-alpine",
+				_eventStorePort, 2113,
+				("EVENTSTORE_ENABLE_ATOM_PUB_OVER_HTTP", true), ("EVENTSTORE_INSECURE", true))
 			.WaitForMessageInLogs("IS LEADER... SPARTA!", 10000);
 		// _streamStore = new Builder()
 		// 	.UseContainer()
@@ -99,25 +103,22 @@ public abstract class IntegrationTests : IAsyncDisposable {
 			}, true)
 		});
 
-		var builder = WebApplication.CreateBuilder();
-		builder.Logging.ClearProviders().AddSerilog(new LoggerConfiguration()
-			.MinimumLevel.Information()
+		var serilogLoggerProvider = new SerilogLoggerProvider(new LoggerConfiguration()
+			.MinimumLevel.Verbose()
 			.MinimumLevel.Override("Microsoft.AspNetCore", LogEventLevel.Warning)
 			.Enrich.FromLogContext()
-			.WriteTo.Console(
-				outputTemplate:
-				"[{Timestamp:HH:mm:ss} {Level:u3}] [{SourceContext}] {Message:lj}{NewLine}{Exception}")
+			.WriteTo.Sink(new FixieSink(logOutput))
 			.CreateLogger());
-		builder.Services.AddSingleton<Func<Type, SQLiteConnectionStringBuilder>>(projectionType => {
-				var dataSource = Path.Combine(Path.GetTempPath(), $"{projectionType.FullName}-{_runId}.db");
-				_sqliteDatabases.Add(new FileInfo(dataSource));
-				return new SQLiteConnectionStringBuilder {
-					JournalMode = SQLiteJournalModeEnum.Wal,
-					SyncMode = SynchronizationModes.Off,
-					DataSource = dataSource
-				};
-			})
-			.AddTransacto(KurrentDBClient, new NpgsqlConnectionStringBuilder(), _streamStoreClient);
+
+		var builder = WebApplication.CreateBuilder();
+		builder.Logging.ClearProviders().AddProvider(serilogLoggerProvider);
+
+		builder.Services.AddTransacto(
+			KurrentDBClient, 
+			new NpgsqlConnectionStringBuilder(),
+			SQLiteInTempFolder,
+			_streamStoreClient,
+			() => serilogLoggerProvider);
 		builder.WebHost.UseTestServer();
 		_app = builder.Build();
 		_app.UseTransacto();
@@ -126,26 +127,58 @@ public abstract class IntegrationTests : IAsyncDisposable {
 		_testServer = _app.GetTestServer();
 
 		HttpClient = _testServer.CreateClient();
+		return;
+
+		IContainerService BuildAndStartContainer(string name, string image, int hostPort, int containerPort,
+			params (string key, object value)[] environment) {
+			return Policy.Handle<FluentDockerException>(ex =>
+					ex.Message.Contains("You have to remove (or rename) that container to be able to reuse that name"))
+				.Retry(5, StopContainer)
+				.Execute(() => hostBuilder
+					.UseContainer()
+					.WithName(name)
+					.UseImage(image)
+					.DeleteIfExists()
+					.ExposePort(hostPort, containerPort)
+					.WithEnvironment(Array.ConvertAll(environment, input => $"{input.key}={input.value}"))
+					.Build()
+					.Start());
+
+			void StopContainer(Exception ex, int attempt) =>
+				host.GetRunningContainers().FirstOrDefault(x => x.Name == name)
+					?.Stop();
+		}
+
+		SQLiteConnectionStringBuilder SQLiteInTempFolder(Type projectionType)
+		{
+			var dataSource = Path.Combine(Path.GetTempPath(), $"{projectionType.FullName}-{_runId}.db");
+			_sqliteDatabases.Add(new FileInfo(dataSource));
+			return new SQLiteConnectionStringBuilder {
+				JournalMode = SQLiteJournalModeEnum.Wal,
+				SyncMode = SynchronizationModes.Off,
+				DataSource = dataSource
+			};
+		}
 	}
 
 
 	protected async IAsyncEnumerable<Account> OpenBooks(LocalDateTime now) {
 		await HttpClient.SendCommand("/chart-of-accounts", new ConfigureChartOfAccounts {
 			AccountNumberWidth = 4
-		}, TransactoSerializerOptions.Commands);
+		}, TransactoHttpSerializerOptions.Commands);
 		await foreach (var account in GetChartOfAccounts().OrderBy(_ => Guid.NewGuid())) {
 			await HttpClient.SendCommand("/chart-of-accounts", new DefineAccount {
 				AccountName = account.AccountName.ToString(),
 				AccountNumber = account.AccountNumber.ToInt32(),
 				CashFlowCategory = account.CashFlowCategory.ToEnum(),
 				AffectsCash = account.AffectsCash
-			}, TransactoSerializerOptions.Commands);
+			}, TransactoHttpSerializerOptions.Commands);
 			yield return account;
 		}
 
 		await HttpClient.SendCommand("/general-ledger", new OpenGeneralLedger {
 			OpenedOn = now.ToDateTimeUnspecified()
-		}, TransactoSerializerOptions.Commands);
+		}, TransactoHttpSerializerOptions.Commands);
 
 		await Task.Delay(TimeSpan.FromMilliseconds(500));
 	}

@@ -14,10 +14,11 @@ public class NpgsqlProjectionHost(
 	IMessageTypeMapper messageTypeMap,
 	Func<NpgsqlConnection> connectionFactory,
 	ILogger<NpgsqlProjectionHost> logger,
-	params NpgsqlProjection[] projections)
+	params IEnumerable<NpgsqlProjection> projections)
 	: BackgroundService {
 	protected override async Task ExecuteAsync(CancellationToken stoppingToken) {
-		if (projections.Length == 0) {
+		projections = projections.ToArray();
+		if (!projections.Any()) {
 			return;
 		}
 
@@ -77,9 +78,8 @@ public class NpgsqlProjectionHost(
 	async ValueTask<Projector[]> ReadCheckpoints(CancellationToken ct) {
 		await using var connection = connectionFactory();
 		await connection.OpenAsync(ct);
-		return await Task.WhenAll(Array.ConvertAll(projections,
-			async projection => new Projector(projection,
-				await projection.ReadCheckpoint(connection, ct))));
+		return await Task.WhenAll(projections.Select(async projection => new Projector(projection,
+			await projection.ReadCheckpoint(connection, ct))));
 	}
 
 	private Task CreateSchema(CancellationToken ct) =>

@@ -1,5 +1,6 @@
 using System.Text.Json;
 using Transacto.Domain;
+using Transacto.Framework.Http;
 
 namespace Transacto.Infrastructure;
 
@@ -17,7 +18,7 @@ public class CommandSerializerOptionTests {
 }}";
 
 		var command = JsonSerializer.Deserialize<TestCommand>(json,
-			TransactoSerializerOptions.BusinessTransactions(typeof(TestBusinessTransaction)))!;
+			TransactoHttpSerializerOptions.BusinessTransactions(typeof(TestBusinessTransaction)))!;
 
 		Assert.Equal(property, command.Property);
 		Assert.Equal(anotherProperty, command.AnotherProperty);
@@ -39,7 +40,7 @@ public class CommandSerializerOptionTests {
 }}";
 
 		var command = JsonSerializer.Deserialize<TestCommand>(json,
-			TransactoSerializerOptions.BusinessTransactions(typeof(TestBusinessTransaction)))!;
+			TransactoHttpSerializerOptions.BusinessTransactions(typeof(TestBusinessTransaction)))!;
 
 		Assert.Equal(property, command.Property);
 		Assert.Equal(anotherProperty, command.AnotherProperty);
@@ -48,7 +49,7 @@ public class CommandSerializerOptionTests {
 	}
 
 	public void Serialization() {
-		var sut = TransactoSerializerOptions.BusinessTransactions(typeof(TestBusinessTransaction));
+		var sut = TransactoHttpSerializerOptions.BusinessTransactions(typeof(TestBusinessTransaction));
 
 		var testBusinessTransaction = new TestBusinessTransaction {
 			TransactionId = Guid.NewGuid()

@@ -6,6 +6,9 @@
 
 	<ItemGroup>
 	  <Compile Remove="Program.cs" />
+	  <Compile Update="..\Shared\Fixie\FixieSink.cs">
+	    <Link>Fixie\FixieSink.cs</Link>
+	  </Compile>
 	</ItemGroup>
 
 </Project>

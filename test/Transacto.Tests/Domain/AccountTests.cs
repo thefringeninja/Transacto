@@ -34,6 +34,16 @@ public class AccountTests {
 	public void CreatesExpectedAccount(AccountNumber accountNumber, Type expected) =>
 		Assert.IsType(expected, Account.For(accountNumber, _fixture.Create<AccountName>()));
 
+	public static IEnumerable<object[]> CannotBeCashAccountCases() => GenerateAccountNumbers()
+		.Where(an => an >= 2000)
+		.Select(an => (object[])[new AccountNumber(an)]);
+
+	[MemberData(nameof(CannotBeCashAccountCases))]
+	public void NonAssetAccountsAffectingThrow(AccountNumber accountNumber)
+		=> Assert.Throws<AccountCannotBeCashAccountException>(() =>
+			Account.For(accountNumber, _fixture.Create<AccountName>(), affectsCash: true));
+
+
 	// ReSharper disable once UnusedType.Global
 	public class ShortTermCashAssetAccountTests()
 		: LeftSideTests<AssetAccount>(true, CashFlowCategory.Investment, CashFlowCategory.Finance);

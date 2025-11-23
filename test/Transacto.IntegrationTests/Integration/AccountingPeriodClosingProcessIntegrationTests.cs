@@ -5,17 +5,18 @@ using System.Text.Json;
 using KurrentDB.Client;
 using NodaTime;
 using Transacto.Domain;
+using Transacto.Framework.Http;
 using Transacto.Messages;
 using EventTypeFilter = KurrentDB.Client.EventTypeFilter;
 
 namespace Transacto.Integration;
 
-public class AccountingPeriodClosingProcessIntegrationTests : IntegrationTests {
+public class AccountingPeriodClosingProcessIntegrationTests(TextWriter textWriter) : IntegrationTests(textWriter) {
 	[AutoFixtureData(1)]
 	private async Task when_closing_the_period(LocalDateTime createdOn,
 		GeneralLedgerEntryIdentifier closingEntryIdentifier) {
 		var period = AccountingPeriod.Open(createdOn.Date);
-		await OpenBooks(createdOn).LastAsync();
+		await OpenBooks(createdOn).ToArrayAsync();
 
 		var command = new BeginClosingAccountingPeriod {
 			ClosingOn = createdOn.ToDateTimeUnspecified(),
@@ -24,7 +25,7 @@ public class AccountingPeriodClosingProcessIntegrationTests : IntegrationTests {
 			GeneralLedgerEntryIds = ImmutableArray<Guid>.Empty
 		};
 
-		await HttpClient.SendCommand("/general-ledger", command, TransactoSerializerOptions.Commands);
+		await HttpClient.SendCommand("/general-ledger", command, TransactoHttpSerializerOptions.Commands);
 
 		var (accountingPeriodClosed, position, checkpoint) = await ReadData();
 

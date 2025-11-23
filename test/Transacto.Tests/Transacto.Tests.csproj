@@ -2,7 +2,6 @@
 	<ItemGroup>
 		<ProjectReference Include="..\Transacto.Specifications\Transacto.Specifications.csproj"/>
 		<ProjectReference Include="..\..\src\Transacto\Transacto.csproj"/>
-		<ProjectReference Include="..\..\src\Transacto.AspNetCore\Transacto.AspNetCore.csproj"/>
 	</ItemGroup>
 
 	<ItemGroup>

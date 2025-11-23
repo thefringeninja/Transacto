@@ -254,3 +254,6 @@ paket-files/
 .dotnet
 **/*.g.cs
 .test-results/
+
+**/.coverage
+**/.coverage-reports

@@ -1,3 +1,5 @@
+using Fixie;
+
 namespace Transacto;
 
 partial class TestProject {
@@ -11,5 +13,7 @@ partial class TestProject {
 		}
 	}
 
-	partial class Execution : ParallelExecution;
+	partial class Execution {
+		public Task Run(TestSuite testSuite) => Task.WhenAll(AllTests(testSuite));
+	};
 }

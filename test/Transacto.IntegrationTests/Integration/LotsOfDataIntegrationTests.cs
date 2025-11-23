@@ -3,18 +3,19 @@ using System.Text.Json;
 using NodaTime;
 using Polly;
 using Transacto.Domain;
+using Transacto.Framework.Http;
 using Transacto.Messages;
 
 namespace Transacto.Integration;
 
-public class LotsOfDataIntegrationTests : IntegrationTests {
-	public async Task one_year_of_invoices_and_payments() {
+public class LotsOfDataIntegrationTests(TextWriter textWriter) : IntegrationTests(textWriter)  {
+	private async Task one_year_of_invoices_and_payments() {
 		var openDate = new LocalDate(2025, 1, 1).AtMidnight();
 		var period = AccountingPeriod.Open(openDate.Date);
 		var accounts = await OpenBooks(openDate).ToArrayAsync();
 
 		var jsonSerializerOptions =
-			TransactoSerializerOptions.BusinessTransactions(typeof(JournalEntry));
+			TransactoHttpSerializerOptions.BusinessTransactions(typeof(JournalEntry));
 
 		var entryIds = new List<Guid>();
 
