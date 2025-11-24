@@ -105,16 +105,17 @@ public abstract class IntegrationTests : IAsyncDisposable {
 
 		var serilogLoggerProvider = new SerilogLoggerProvider(new LoggerConfiguration()
 			.MinimumLevel.Verbose()
-			.MinimumLevel.Override("Microsoft.AspNetCore", LogEventLevel.Warning)
+			.MinimumLevel.Override("Microsoft", LogEventLevel.Warning)
 			.Enrich.FromLogContext()
-			.WriteTo.Sink(new FixieSink(logOutput))
+			.WriteTo.TextWriter(logOutput,
+				outputTemplate: "[{Timestamp:HH:mm:ss} {Level:u3}] [{SourceContext}] {Message:lj} {Properties:j}{NewLine}{Exception}")
 			.CreateLogger());
 
 		var builder = WebApplication.CreateBuilder();
 		builder.Logging.ClearProviders().AddProvider(serilogLoggerProvider);
 
 		builder.Services.AddTransacto(
-			KurrentDBClient, 
+			KurrentDBClient,
 			new NpgsqlConnectionStringBuilder(),
 			SQLiteInTempFolder,
 			_streamStoreClient,
@@ -149,8 +150,7 @@ public abstract class IntegrationTests : IAsyncDisposable {
 					?.Stop();
 		}
 
-		SQLiteConnectionStringBuilder SQLiteInTempFolder(Type projectionType)
-		{
+		SQLiteConnectionStringBuilder SQLiteInTempFolder(Type projectionType) {
 			var dataSource = Path.Combine(Path.GetTempPath(), $"{projectionType.FullName}-{_runId}.db");
 			_sqliteDatabases.Add(new FileInfo(dataSource));
 			return new SQLiteConnectionStringBuilder {

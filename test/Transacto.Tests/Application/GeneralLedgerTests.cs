@@ -1,7 +1,7 @@
 using NodaTime;
 using Transacto.Domain;
 using Transacto.Testing;
-using static Transacto.GeneralLedgerSpecifications;
+using static Transacto.Specifications.GeneralLedgerSpecifications;
 
 namespace Transacto.Application;
 

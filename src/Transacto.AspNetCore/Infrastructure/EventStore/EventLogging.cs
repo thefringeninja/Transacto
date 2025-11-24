@@ -4,7 +4,7 @@ using Transacto.Framework;
 
 namespace Transacto.Infrastructure.EventStore;
 
-public class EventLogging(
+public partial class EventLogging(
 	KurrentDBClient eventStore,
 	IMessageTypeMapper messageTypeMapper,
 	ILogger<EventLogging> logger) : BackgroundService {
@@ -27,9 +27,13 @@ public class EventLogging(
 				? JsonSerializer.Deserialize(eventRecord.Data.Span, messageType, TransactoSerializerOptions.Events)
 				: null;
 
-			logger.LogTrace("Event {streamName}@{streamNumber} - {eventType} {position} received: {message}",
-				eventRecord.EventStreamId, eventRecord.EventNumber, eventRecord.EventType, eventRecord.Position,
-				e ?? "N/A");
+			LogReceivedMessage(logger, eventRecord.EventStreamId, eventRecord.EventNumber, eventRecord.EventType,
+				eventRecord.Position, e ?? "N/A");
 		}
 	}
+
+	[LoggerMessage(LogLevel.Trace, "Event {streamName}@{streamNumber} - {eventType} {position} received: {message}")]
+	static partial void LogReceivedMessage(ILogger<EventLogging> logger,
+		string streamName, StreamPosition streamNumber, string eventType,
+		Position position, object message);
 }

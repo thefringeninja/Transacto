@@ -1,57 +1,83 @@
-﻿using System.Globalization;
+﻿using System.CommandLine;
+using System.Globalization;
 using AutoFixture.Kernel;
+using Bogus;
 using Inflector;
 using Microsoft.Extensions.Logging;
 using Serilog;
 using Serilog.Extensions.Logging;
 using Serilog.Sinks.SystemConsole.Themes;
 using Transacto;
-using Transacto.Testing;
+using Transacto.Specifications;
 
 Inflector.Inflector.SetDefaultCultureFunc = () => CultureInfo.CurrentCulture;
 
-var logger = new SerilogLoggerFactory(
-		new LoggerConfiguration()
-			.WriteTo.Console(outputTemplate: "{Message:lj}{NewLine}{Exception}", theme: AnsiConsoleTheme.Literate)
-			.CreateLogger())
-	.CreateLogger(typeof(Program));
+Option<string> formatOption = new("--format") {
+};
 
-var writer = new TestSpecificationLogger(logger);
+var rootCommand = new RootCommand() {
+	formatOption
+};
 
-var fixture = new ScenarioFixture();
+var parseResult = rootCommand.Parse(args);
 
-var specs = GetSpecificationTypes<Program>();
-
-foreach (var spec in specs) {
-	var constructor = spec.GetConstructors()[0];
-	
-	var parameters = Array.ConvertAll(
-		constructor.GetParameters(),
-		pi => fixture.Create(pi.ParameterType, new SpecimenContext(fixture)));
-
-	var specInstance = Activator.CreateInstance(spec, parameters);
-	
-	Console.WriteLine($"\e[1m{spec.Name.Underscore().Humanize()}\e[0m");
-	switch (specInstance) {
-		case ExceptionSpecification ex:
-			writer.Write(ex);
-			break;
-		case EventSpecification ev:
-			writer.Write(ev);
-			break;
-	}
-	Console.WriteLine();
+if (parseResult.Errors.Count > 0) {
+	return -1;
 }
+
+ISpecificationWriter writer = parseResult.GetValue(formatOption) switch {
+	"html" => new HtmlSpecificationWriter(Console.Out),
+	"text" or null => new LoggerSpecificationWriter(
+		new SerilogLoggerFactory(
+				new LoggerConfiguration()
+					.WriteTo.Console(outputTemplate: "{Message:lj}{NewLine}{Exception}",
+						theme: AnsiConsoleTheme.Literate)
+					.CreateLogger())
+			.CreateLogger<Program>()),
+	_ => null!
+};
+
+var fixture = new ScenarioFixture(new Randomizer(1776));
+var specificationGroupTypes = GetSpecificationGroupTypes<Program>();
+foreach (var specificationGroupType in specificationGroupTypes) {
+	using var _ = writer.BeginSpecificationGroup(specificationGroupType.Name.Underscore().Humanize());
+	foreach (var spec in GetSpecificationTypes(specificationGroupType)) {
+		var constructor = spec.GetConstructors()[0];
+
+		var parameters = Array.ConvertAll(
+			constructor.GetParameters(),
+			pi => fixture.Create(pi.ParameterType, new SpecimenContext(fixture)));
+
+		var specInstance = Activator.CreateInstance(spec, parameters);
+
+		var specificationName = spec.Name.Underscore().Humanize();
+
+		switch (specInstance) {
+			case ExceptionSpecification ex:
+				writer.WriteSpecification(specificationName, ex);
+				break;
+			case EventSpecification ev:
+				writer.WriteSpecification(specificationName, ev);
+				break;
+		}
+	}
+
+}
+
+await writer.FlushAsync();
 
 return 0;
 
-static IEnumerable<Type> GetSpecificationTypes<T>() {
-	foreach (var containerType in typeof(T).Assembly.GetTypes().Where(type => type.DeclaringType is null)) {
-		foreach (var type in containerType.GetNestedTypes()) {
-			if (type.IsAssignableTo(typeof(EventSpecification)) ||
-			    type.IsAssignableTo(typeof(ExceptionSpecification))) {
-				yield return type;
-			}
-		}
-	}
-}
+static IEnumerable<Type> GetSpecificationGroupTypes<T>() =>
+	from containerType in typeof(T).Assembly.GetTypes()
+	where containerType.DeclaringType is null &&
+	      containerType.Namespace == typeof(GeneralLedgerSpecifications).Namespace
+	orderby containerType.Name
+	select containerType;
+
+static IEnumerable<Type> GetSpecificationTypes(Type containerType) =>
+	from type in containerType.GetNestedTypes()
+	where type.IsAssignableTo(typeof(EventSpecification)) ||
+	      type.IsAssignableTo(typeof(ExceptionSpecification))
+	orderby type.Name
+	select type;

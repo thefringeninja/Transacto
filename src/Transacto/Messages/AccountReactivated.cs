@@ -1,8 +1,8 @@
 namespace Transacto.Messages;
 
-public record AccountReactivated : IMessage {
+public record AccountReactivated : IFormattableMessage {
 	public required int AccountNumber { get; init; }
 
-	public (string template, object[] args) GetMessage() =>
-		("Account {AccountNumber} was reactivated.", [AccountNumber]);
+	public FormattableString ToFormattableString() =>
+		$"Account {AccountNumber} was reactivated.";
 }

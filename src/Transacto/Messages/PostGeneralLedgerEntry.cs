@@ -3,10 +3,9 @@ using Transacto.Domain;
 
 namespace Transacto.Messages;
 
-public partial record PostGeneralLedgerEntry : IMessage {
+public partial record PostGeneralLedgerEntry : IFormattableMessage {
 	[JsonPropertyName("document")] public required IBusinessTransaction BusinessTransaction { get; init; }
 
-	public (string template, object[] args) GetMessage() => (
-		"Posting general ledger entry {SequenceNumber} in period {Period} on {CreatedOn:O}",
-		[BusinessTransaction.SequenceNumber, Period, CreatedOn]); 
+	public FormattableString ToFormattableString() => 
+		$"Posting general ledger entry {BusinessTransaction.SequenceNumber} in accounting period {Period} on {CreatedOn:O}"; 
 }

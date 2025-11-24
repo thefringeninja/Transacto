@@ -1,6 +1,8 @@
+using System.Collections;
 using System.Collections.Concurrent;
 using System.Data.SQLite;
 using KurrentDB.Client;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Npgsql;
 using SqlStreamStore;
 using Transacto.Framework;
@@ -35,7 +37,9 @@ public static class ServiceCollectionExtensions {
 				// projections
 				.AddSingleton<Func<IPlugin, NpgsqlConnection>>(NpqsqlConnectonFactory),
 			(services, plugin) => {
-				var pluginServices = new ServiceCollection();
+				var logger = getLoggerProvider().CreateLogger($"Plugin {plugin.Name} Service Registration");
+				
+				var pluginServices = new PluginServiceCollection(logger);
 
 				plugin.ConfigureServices(pluginServices);
 
@@ -45,6 +49,7 @@ public static class ServiceCollectionExtensions {
 					.AddSingleton(eventStore)
 					.AddSingleton(streamStore)
 					.AddSingleton(messageTypeMapper)
+					.AddSingleton<IPluginDescriptor>(plugin)
 					.AddSingleton<InMemoryProjectionDatabase>()
 					.AddHostedService<InMemoryProjectionHost>()
 					.AddHostedService<NpgsqlProjectionHost>()
@@ -66,15 +71,74 @@ public static class ServiceCollectionExtensions {
 				}).ConnectionString);
 	}
 
-	private class HostedServicesBackgroundService(IPlugin plugin, IServiceProvider serviceProvider) : IHostedService {
+	private class HostedServicesBackgroundService(IPluginDescriptor plugin, IServiceProvider serviceProvider) : IHostedService {
 		public string Name => plugin.Name;
 		public Task StartAsync(CancellationToken cancellationToken) =>
 			Task.WhenAll(serviceProvider.GetServices<IHostedService>()
 				.Select(service => service.StartAsync(cancellationToken)));
-
-
+		
 		public Task StopAsync(CancellationToken cancellationToken) =>
 			Task.WhenAll(serviceProvider.GetServices<IHostedService>()
 				.Select(service => service.StopAsync(cancellationToken)));
 	}
+}
+
+internal partial class PluginServiceCollection(ILogger logger) : IServiceCollection {
+	private readonly ServiceCollection _inner = [];
+	public IEnumerator<ServiceDescriptor> GetEnumerator() => _inner.GetEnumerator();
+
+	IEnumerator IEnumerable.GetEnumerator() => ((IEnumerable)_inner).GetEnumerator();
+
+	public void Add(ServiceDescriptor serviceDescriptor) {
+		LogAddition(logger, serviceDescriptor);
+		_inner.Add(serviceDescriptor);
+	}
+
+	public void Clear() {
+		LogCleared(logger);
+		_inner.Clear();
+	}
+
+	public bool Contains(ServiceDescriptor item) => _inner.Contains(item);
+
+	public void CopyTo(ServiceDescriptor[] array, int arrayIndex) => _inner.CopyTo(array, arrayIndex);
+
+	public bool Remove(ServiceDescriptor serviceDescriptor) {
+		LogRemoval(logger, serviceDescriptor);
+		return _inner.Remove(serviceDescriptor);
+	}
+
+	public int Count => _inner.Count;
+	public bool IsReadOnly => _inner.IsReadOnly;
+	public int IndexOf(ServiceDescriptor item) => _inner.IndexOf(item);
+
+	public void Insert(int index, ServiceDescriptor item) {
+		LogInsertion(logger, item, index);
+		_inner.Insert(index, item);
+	}
+
+	public void RemoveAt(int index) {
+		LogRemovingIndex(logger, index);
+		_inner.RemoveAt(index);
+	}
+
+	public ServiceDescriptor this[int index] {
+		get => _inner[index];
+		set => _inner[index] = value;
+	}
+
+	[LoggerMessage(LogLevel.Trace, "Adding {serviceDescriptor}")]
+	static partial void LogAddition(ILogger logger, ServiceDescriptor serviceDescriptor);
+
+	[LoggerMessage(LogLevel.Trace, "Cleared")]
+	static partial void LogCleared(ILogger logger);
+
+	[LoggerMessage(LogLevel.Trace, "Removing {serviceDescriptor}")]
+	static partial void LogRemoval(ILogger logger, ServiceDescriptor serviceDescriptor);
+
+	[LoggerMessage(LogLevel.Trace, "Inserting {serviceDescriptor} at {index}")]
+	static partial void LogInsertion(ILogger logger, ServiceDescriptor serviceDescriptor, int index);
+
+	[LoggerMessage(LogLevel.Trace, "Removing {index}")]
+	static partial void LogRemovingIndex(ILogger logger, int index);
 }

@@ -4,7 +4,7 @@ using Polly;
 
 namespace Transacto.Framework.ProcessManagers;
 
-public class ProcessManagerHost(
+public partial class ProcessManagerHost(
 	KurrentDBClient eventStore,
 	IMessageTypeMapper messageTypeMapper,
 	string checkpointStreamName,
@@ -28,50 +28,46 @@ public class ProcessManagerHost(
 		try {
 			await Policy.Handle<Exception>(ex => ex is not OperationCanceledException)
 				.WaitAndRetryAsync(5, attempt => TimeSpan.FromSeconds(Math.Pow(2, attempt)),
-					(ex, delay) => logger.LogInformation(ex,
-						"Process manager {processManager} encountered an issue. Will retry after {delay}", _name,
-						delay))
+					(ex, delay) => LogRetryAfterDelay(logger, ex, _name, delay))
 				.ExecuteAsync(SubscribeInternal, ct);
 		} catch (OperationCanceledException) {
-			logger.LogTrace("Operation cancelled.");
+			LogOperationCancelled(logger);
 		}
 	}
 
 	private async Task SubscribeInternal(CancellationToken ct) {
+		var scope = new ProcessManagerScope(_name);
+
 		var checkpoint = await ReadCheckpoint(ct);
+
+		LogResumingFromCheckpoint(logger, checkpoint);
 
 		await using var subscription = eventStore.SubscribeToAll(checkpoint.ToEventStoreCheckpoint(),
 			filterOptions: new SubscriptionFilterOptions(EventTypeFilter.ExcludeSystemEvents()), cancellationToken: ct);
 
 		await foreach (var message in subscription.Messages.WithCancellation(ct)) {
-			logger.LogTrace("Process manager {processManager} saw {message}", _name, message);
+			using var pms = logger.BeginScope(scope);
+			LogSawMessage(logger, message);
 			if (message is not StreamMessage.Event (var resolvedEvent)) {
 				continue;
 			}
 
+			using var ers = logger.BeginScope(Scopes.EventRecord.From(resolvedEvent.Event));
+
 			if (!messageTypeMapper.TryMap(resolvedEvent.Event.EventType, out var type)) {
-				logger.LogDebug(
-					"Process manager {processManager} did not understand {messageType} {streamVersion}@{streamName}",
-					_name, resolvedEvent.Event.EventType, resolvedEvent.Event.EventNumber,
-					resolvedEvent.Event.EventStreamId);
+				LogDidNotUnderstandMessageType(logger);
 				continue;
 			}
 
 			var e = JsonSerializer.Deserialize(resolvedEvent.Event.Data.Span, type,
 				TransactoSerializerOptions.Events) ?? throw new InvalidOperationException();
 
-			logger.LogDebug(
-				"Process manager {processManager} handling message {messageType} {streamVersion}@{streamName}",
-				_name, resolvedEvent.Event.EventType, resolvedEvent.Event.EventNumber,
-				resolvedEvent.Event.EventStreamId);
+			LogDispatchingMessage(logger);
 
 			checkpoint = await _dispatcher.Handle(e, ct);
 
 			if (checkpoint == Checkpoint.None) {
-				logger.LogDebug(
-					"Process manager {processManager} did not produce checkpoint when handling message {messageType} {streamVersion}@{streamName}",
-					_name, resolvedEvent.Event.EventType, resolvedEvent.Event.EventNumber,
-					resolvedEvent.Event.EventStreamId);
+				LogNoCheckpoint(logger);
 				continue;
 			}
 
@@ -80,8 +76,7 @@ public class ProcessManagerHost(
 					contentType: "application/octet-stream")
 			], cancellationToken: ct);
 
-			logger.LogDebug("Process manager {processManager} persisted checkpoint {checkpoint} to {streamName}",
-				_name, checkpoint, checkpointStreamName);
+			LogPersistedCheckpoint(logger, checkpoint, checkpointStreamName);
 		}
 	}
 
@@ -92,4 +87,33 @@ public class ProcessManagerHost(
 			.OfType<StreamMessage.Event>()
 			.Select(e => new Checkpoint(e.ResolvedEvent.Event.Data))
 			.SingleOrDefaultAsync(ct);
+
+	private readonly record struct ProcessManagerScope(string Name);
+
+	[LoggerMessage(LogLevel.Information,
+		"Process manager {processManager} encountered an issue. Will retry after {delay}.")]
+	static partial void LogRetryAfterDelay(ILogger<ProcessManagerHost> logger, Exception ex, string processManager,
+		TimeSpan delay);
+
+	[LoggerMessage(LogLevel.Trace, "Operation cancelled.")]
+	static partial void LogOperationCancelled(ILogger<ProcessManagerHost> logger);
+
+	[LoggerMessage(LogLevel.Information, "Process manager resuming from checkpoint {checkpoint}.")]
+	static partial void LogResumingFromCheckpoint(ILogger<ProcessManagerHost> logger, Checkpoint checkpoint);
+
+	[LoggerMessage(LogLevel.Trace, "Process manager saw {message}")]
+	static partial void LogSawMessage(ILogger<ProcessManagerHost> logger, StreamMessage message);
+
+	[LoggerMessage(LogLevel.Debug, "Process manager did not understand type.")]
+	static partial void LogDidNotUnderstandMessageType(ILogger<ProcessManagerHost> logger);
+
+	[LoggerMessage(LogLevel.Debug, "Process manager dispatching message.")]
+	static partial void LogDispatchingMessage(ILogger<ProcessManagerHost> logger);
+
+	[LoggerMessage(LogLevel.Debug, "Process manager did not produce checkpoint when handling message.")]
+	static partial void LogNoCheckpoint(ILogger<ProcessManagerHost> logger);
+
+	[LoggerMessage(LogLevel.Debug, "Process manager persisted checkpoint {checkpoint} to {checkpointStreamName}.")]
+	static partial void LogPersistedCheckpoint(ILogger<ProcessManagerHost> logger, Checkpoint checkpoint,
+		string checkpointStreamName);
 }

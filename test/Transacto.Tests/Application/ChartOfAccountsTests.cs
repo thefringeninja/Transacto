@@ -1,6 +1,6 @@
 using Transacto.Domain;
 using Transacto.Testing;
-using static Transacto.ChartOfAccountsSpecifications;
+using static Transacto.Specifications.ChartOfAccountsSpecifications;
 
 namespace Transacto.Application;
 

@@ -2,7 +2,7 @@ using Transacto.Domain;
 using Transacto.Messages;
 using Transacto.Testing;
 
-namespace Transacto;
+namespace Transacto.Specifications;
 
 public static class ChartOfAccountsSpecifications {
 	public class ConfiguringTheChartOfAccounts(int accountNumberWidth) : EventSpecification(new Scenario()

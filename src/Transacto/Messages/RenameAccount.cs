@@ -1,6 +1,5 @@
 namespace Transacto.Messages;
 
-public partial record RenameAccount : IMessage {
-	public (string template, object[] args) GetMessage() => ("Renaming account {AccountNumber} to {NewAccountName}.",
-		[NewAccountName, AccountNumber]);
+public partial record RenameAccount : IFormattableMessage {
+	public FormattableString ToFormattableString() => $"Renaming account {AccountNumber} to {NewAccountName}.";
 }

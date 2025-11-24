@@ -2,10 +2,11 @@ using System.Reflection;
 using Fixie;
 using Serilog.Events;
 using SerilogTimings;
+using Transacto.Testing;
 
 namespace Transacto;
 
-internal partial class TestProject : ITestProject {
+partial class TestProject : ITestProject {
 	private static readonly string[] LifecycleMethods = ["InitializeAsync", "DisposeAsync", "Dispose"];
 	private static readonly IEnumerable<object[]> NoParameters = [[]];
 

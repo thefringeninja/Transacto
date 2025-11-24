@@ -1,15 +1,47 @@
 using Microsoft.Extensions.Logging;
 using Transacto.Messages;
+using Transacto.Testing;
 
-namespace Transacto.Testing;
+namespace Transacto;
 
-public class TestSpecificationLogger(ILogger inner) : IEventCentricTestSpecificationWriter,
-	IExceptionCentricTestSpecificationWriter {
+public interface ISpecificationWriter {
+	public Task FlushAsync(CancellationToken cancellationToken = default) => Task.CompletedTask;
+
+	IDisposable BeginSpecificationGroup(string name);
+
 	/// <summary>
 	///     Writes the specified test specification.
 	/// </summary>
 	/// <param name="specification">The test specification to write.</param>
-	public void Write(EventCentricTestSpecification specification) {
+	void WriteSpecification(string name, EventCentricTestSpecification specification);
+
+	/// <summary>
+	///     Writes the specified test specification.
+	/// </summary>
+	/// <param name="specification">The test specification to write.</param>
+	void WriteSpecification(string name, ExceptionCentricTestSpecification specification);
+}
+
+public class LoggerSpecificationWriter(ILogger inner) : ISpecificationWriter {
+	private IDisposable? _specificationScope;
+	public IDisposable BeginSpecificationGroup(string name) {
+		var scope = inner.BeginScope("{specification}", name) ?? new DisposableAction(() => { });
+		inner.LogInformation(name);
+		return scope;
+	}
+
+	public void WriteSpecificationGroup(string name) {
+		_specificationScope?.Dispose();
+		_specificationScope = inner.BeginScope("{specificationGroup}", name);
+		inner.LogInformation(name);
+	}
+
+	/// <summary>
+	///     Writes the specified test specification.
+	/// </summary>
+	/// <param name="specification">The test specification to write.</param>
+	public void WriteSpecification(string name, EventCentricTestSpecification specification) {
+		using var scope = inner.BeginScope("{specification}", name);
 		WriteGivens(specification);
 		WriteWhen(specification);
 		WriteThens(specification);
@@ -19,7 +51,8 @@ public class TestSpecificationLogger(ILogger inner) : IEventCentricTestSpecifica
 	///     Writes the specified test specification.
 	/// </summary>
 	/// <param name="specification">The test specification to write.</param>
-	public void Write(ExceptionCentricTestSpecification specification) {
+	public void WriteSpecification(string name, ExceptionCentricTestSpecification specification) {
+		using var scope = inner.BeginScope("{specification}", name);
 		WriteGivens(specification);
 		WriteWhen(specification);
 		WriteThrows(specification);
@@ -56,13 +89,14 @@ public class TestSpecificationLogger(ILogger inner) : IEventCentricTestSpecifica
 
 	private void WriteThrows(ExceptionCentricTestSpecification specification) {
 		inner.LogInformation("Throws:");
-		inner.LogWarning("  [{exception}] {message}", specification.Throws.GetType().Name, specification.Throws.Message);
+		inner.LogWarning("  [{exception}] {message}", specification.Throws.GetType().Name,
+			specification.Throws.Message);
 	}
 
 	private void WriteMessage(object message) {
-		if (message is IMessage m) {
-			var (template, args) = m.GetMessage();
-			inner.LogInformation("  " + template, args);
+		if (message is IFormattableMessage m) {
+			var formattableString = m.ToFormattableString();
+			inner.LogInformation("  " + formattableString.Format, formattableString.GetArguments());
 		} else {
 			inner.LogInformation("  " + message);
 		}
@@ -82,4 +116,8 @@ public class TestSpecificationLogger(ILogger inner) : IEventCentricTestSpecifica
 			inner.LogInformation("  nothing happened");
 		}
 	}
+}
+
+internal class DisposableAction(Action dispose) : IDisposable {
+	public void Dispose() => dispose();
 }

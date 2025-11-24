@@ -1,7 +1,7 @@
 using NodaTime;
 using Transacto.Domain;
 using Transacto.Testing;
-using static Transacto.AccountClosingProcessSpecifications;
+using static Transacto.Specifications.AccountClosingProcessSpecifications;
 
 namespace Transacto.Application;
 

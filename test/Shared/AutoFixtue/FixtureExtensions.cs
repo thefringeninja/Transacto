@@ -25,7 +25,8 @@ internal static class FixtureExtensions {
 		fixture.CustomizeAccount<OperatingExpenseAccount>(6000, CashFlowCategory.Operations);
 		fixture.CustomizeAccount<OtherIncomeAccount>(7000, CashFlowCategory.Operations, CashFlowCategory.Investment,
 			CashFlowCategory.Finance);
-		fixture.CustomizeAccount<OtherExpenseAccount>(8000, CashFlowCategory.Operations, CashFlowCategory.Investment,
+		fixture.CustomizeAccount<OtherExpenseAccount>(8000, CashFlowCategory.Operations,
+			CashFlowCategory.Investment,
 			CashFlowCategory.Finance);
 		fixture.Customizations.Add(new TypeRelay(typeof(ExpenseAccount), typeof(CostOfRevenueExpenseAccount)));
 		fixture.Customizations.Add(new TypeRelay(typeof(Account), typeof(AssetAccount)));
@@ -36,9 +37,12 @@ internal static class FixtureExtensions {
 			composer.FromFactory<AccountName, int, bool, bool>((name, number, shortTerm, cash) => {
 				var accountNumber = new AccountNumber(lowestAccountNumber + number % 1000);
 				return (shortTerm, cash) switch {
-					(true, true) => (AssetAccount)Account.For(accountNumber, name, CashFlowCategory.Operations, true), // bank account
-					(true, false) => (AssetAccount)Account.For(accountNumber, name, CashFlowCategory.Operations), // inventory, AR
-					_ => (AssetAccount)Account.For(accountNumber, name, CashFlowCategory.Investment) // long term asset
+					(true, true) => (AssetAccount)Account.For(accountNumber, name, CashFlowCategory.Operations,
+						true), // bank account
+					(true, false) => (AssetAccount)Account.For(accountNumber, name,
+						CashFlowCategory.Operations), // inventory, AR
+					_ => (AssetAccount)Account.For(accountNumber, name,
+						CashFlowCategory.Investment) // long term asset
 				};
 			}));
 
@@ -52,7 +56,6 @@ internal static class FixtureExtensions {
 				((CashFlowCategory[])[cashFlowCategory, ..cashFlowCategories])
 				[category % (cashFlowCategories.Length + 1)]
 			)));
-
 
 	public static void CustomizeAccountingPeriod(this IFixture fixture) =>
 		fixture.Customize<AccountingPeriod>(composer => composer.FromFactory<LocalDate>(AccountingPeriod.Open));
@@ -70,7 +73,8 @@ internal static class FixtureExtensions {
 
 	public static void CustomizeGeneralLedgerEntryNumberPrefix(this IFixture fixture) =>
 		fixture.Customize<GeneralLedgerEntryNumberPrefix>(composer =>
-			composer.FromFactory<int>(number => new GeneralLedgerEntryNumberPrefix(new string('a', number % 5 + 1))));
+			composer.FromFactory<int>(number =>
+				new GeneralLedgerEntryNumberPrefix(new string('a', number % 5 + 1))));
 
 	public static void CustomizeNodaTime(this IFixture fixture) {
 		fixture.Customize<DateTimeOffset>(_ => new IncreasingDateTimeOffsetGenerator(DateTimeOffset.Now));
@@ -80,6 +84,7 @@ internal static class FixtureExtensions {
 		fixture.Customize<LocalDate>(composer => composer.FromFactory<OffsetDateTime>(x => x.Date));
 		fixture.Customize<YearMonth>(composer => composer.FromFactory<LocalDate>(x => x.ToYearMonth()));
 	}
+
 
 	private class IncreasingDateTimeOffsetGenerator(DateTimeOffset seed) : ISpecimenBuilder {
 		private int _baseValue = 0;

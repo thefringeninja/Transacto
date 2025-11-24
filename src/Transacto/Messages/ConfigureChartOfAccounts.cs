@@ -1,6 +1,6 @@
 namespace Transacto.Messages;
 
-public partial record ConfigureChartOfAccounts : IMessage {
-	public (string template, object[] args) GetMessage() => (
-		$"Configuring Chart of Accounts: AccountNumberWidth = {AccountNumberWidth}.", [AccountNumberWidth]);
+public partial record ConfigureChartOfAccounts : IFormattableMessage {
+	public FormattableString ToFormattableString() => 
+		$"Configuring Chart of Accounts: AccountNumberWidth = {AccountNumberWidth}.";
 }

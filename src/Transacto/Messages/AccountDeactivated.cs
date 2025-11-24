@@ -1,8 +1,8 @@
 namespace Transacto.Messages;
 
-public record AccountDeactivated : IMessage {
+public record AccountDeactivated : IFormattableMessage {
 	public required int AccountNumber { get; init; }
 
-	public (string template, object[] args) GetMessage() =>
-		("Account {AccountNumber} was deactivated.", [AccountNumber]);
+	public FormattableString ToFormattableString() =>
+		$"Account {AccountNumber} was deactivated.";
 }

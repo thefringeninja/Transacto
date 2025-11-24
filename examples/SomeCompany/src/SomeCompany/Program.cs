@@ -32,7 +32,7 @@ var logProvider = new SerilogLoggerProvider(new LoggerConfiguration()
 	.Enrich.FromLogContext()
 	.WriteTo.Console(
 		outputTemplate:
-		"[{Timestamp:HH:mm:ss} {Level:u3}] [{SourceContext}] {Message:lj}{NewLine}{Exception}")
+		"[{Timestamp:HH:mm:ss} {Level:u3}] [{SourceContext}] {Message:lj} {Properties:j}{NewLine}{Exception}")
 	.CreateLogger());
 
 var dockerHostUri = new DockerUri(Environment.GetEnvironmentVariable("DOCKER_HOST") ??

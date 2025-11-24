@@ -5,7 +5,7 @@ using Projac;
 
 namespace Transacto.Framework.Projections;
 
-public class InMemoryProjectionHost(
+public partial class InMemoryProjectionHost(
 	KurrentDBClient eventStore,
 	IMessageTypeMapper messageTypeMapper,
 	InMemoryProjectionDatabase target,
@@ -19,12 +19,9 @@ public class InMemoryProjectionHost(
 		try {
 			await Policy.Handle<Exception>(ex => ex is not OperationCanceledException)
 				.WaitAndRetryAsync(5, attempt => TimeSpan.FromSeconds(Math.Pow(2, attempt)),
-					(ex, delay) => logger.LogInformation(ex,
-						"InMemoryProjectionHost encountered an issue. Will retry after {delay}",
-						delay))
+					(ex, delay) => LogRetryAfterDelay(logger, ex, delay))
 				.ExecuteAsync(SubscribeInternal, stoppingToken);
 		} catch (OperationCanceledException) {
-			
 		}
 	}
 
@@ -48,4 +45,7 @@ public class InMemoryProjectionHost(
 			await _projector.ProjectAsync(target, new Envelope(e, resolvedEvent.OriginalEvent.Position), ct);
 		}
 	}
+
+	[LoggerMessage(LogLevel.Information, "InMemoryProjectionHost encountered an issue. Will retry after {delay}")]
+	static partial void LogRetryAfterDelay(ILogger<InMemoryProjectionHost> logger, Exception ex, TimeSpan delay);
 }

@@ -4,7 +4,7 @@ using Transacto.Domain;
 using Transacto.Messages;
 using Transacto.Testing;
 
-namespace Transacto;
+namespace Transacto.Specifications;
 
 public static class GeneralLedgerEntrySpecifications {
 	public class PostingAnEntry(
