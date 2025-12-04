@@ -29,11 +29,3 @@ public static partial class ServiceCollectionExtensions {
 					provider.GetRequiredService<ILoggerFactory>().CreateLogger<SQLiteProjectionHost>()));
 	}
 }
-
-public static class SQLiteConnectionStringBuilderFactories {
-	public static SQLiteConnectionStringBuilder OnDisk(Type projectionType) => new() {
-		JournalMode = SQLiteJournalModeEnum.Wal,
-		SyncMode = SynchronizationModes.Off,
-		DataSource = $"{projectionType.FullName}.db"
-	};
-}

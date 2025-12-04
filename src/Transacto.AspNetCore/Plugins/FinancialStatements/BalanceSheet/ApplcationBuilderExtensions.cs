@@ -18,7 +18,7 @@ static partial class ApplicationBuilderExtensions {
 			var resource =
 				await getBalanceSheetReportsAsync([..Array.ConvertAll(thru, t => t ?? LocalDate.MaxIsoValue)], ct);
 
-			return Results.Extensions.Hal(resource, Checkpoint.None, new BalanceSheetReportsRepresentation());
+			return Results.Hal(resource, Checkpoint.None, new BalanceSheetReportsRepresentation());
 		});
 		return builder;
 	}

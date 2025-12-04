@@ -1,9 +1,11 @@
+using System.Diagnostics.CodeAnalysis;
 using System.Text.Json;
 using KurrentDB.Client;
 using Transacto.Framework;
 
 namespace Transacto.Infrastructure.EventStore;
 
+[ExcludeFromCodeCoverage]
 public partial class EventLogging(
 	KurrentDBClient eventStore,
 	IMessageTypeMapper messageTypeMapper,

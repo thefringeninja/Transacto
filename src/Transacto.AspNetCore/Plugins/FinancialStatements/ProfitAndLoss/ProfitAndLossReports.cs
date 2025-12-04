@@ -6,7 +6,6 @@ namespace Transacto.Plugins.FinancialStatements.ProfitAndLoss;
 public sealed record ProfitAndLossReports(
 	ImmutableDictionary<int, string> Accounts,
 	ImmutableArray<ProfitAndLossReport> Reports) {
-	public static readonly ProfitAndLossReports Empty = new(ImmutableDictionary<int, string>.Empty, []);
 
 	public bool Equals(ProfitAndLossReports? other) {
 		if (other is null) return false;

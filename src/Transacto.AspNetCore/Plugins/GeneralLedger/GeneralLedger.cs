@@ -21,14 +21,14 @@ internal class GeneralLedger : IPlugin {
 		builder
 			.MapBusinessTransaction<JournalEntry>("/entries")
 			.MapCommands(string.Empty,
-				typeof(OpenGeneralLedger),
-				typeof(BeginClosingAccountingPeriod));
+				[typeof(OpenGeneralLedger),
+				typeof(BeginClosingAccountingPeriod)]);
 
 		builder.MapGet("/period", ([FromServices] InMemoryProjectionDatabase database) => {
 			var optional = database.Get<CurrentPeriod>();
 
 			return optional switch {
-				{ HasValue: true, Value: { } period } => Results.Extensions.Hal(period,
+				{ HasValue: true, Value.Period: { } period } => Results.Hal(new Plugins.GeneralLedger.CurrentPeriod(period),
 					optional.Value.Checkpoint.ToCheckpoint(), new CurrentPeriodRepresentation()),
 				_ => Results.NotFound()
 			};
@@ -37,7 +37,7 @@ internal class GeneralLedger : IPlugin {
 			[FromServices] LedgerEntryIndex.SearchJournalEntriesAsync search, CancellationToken ct) => {
 			var results = await search(prefix, ct);
 
-			return Results.Extensions.Hal(results, Checkpoint.None, new LedgerEntryIndex.SearchResultRepresentation());
+			return Results.Hal(results, Checkpoint.None, new LedgerEntryIndex.SearchResultsRepresentation());
 		});
 
 		builder.MapGet("/entries/{id:guid}",
@@ -48,7 +48,7 @@ internal class GeneralLedger : IPlugin {
 						return Results.NotFound();
 					}
 
-					return Results.Extensions.Hal(JournalLedgerEntry.FromGeneralLedgerEntry(optional.Value),
+					return Results.Hal(JournalLedgerEntry.FromGeneralLedgerEntry(optional.Value),
 						Checkpoint.None, new JournalEntryRepresentation());
 				}
 			});
@@ -147,37 +147,35 @@ internal class GeneralLedger : IPlugin {
 			ImmutableDictionary<string, ImmutableHashSet<Guid>>.Empty;
 	}
 
-	private class CurrentPeriodRepresentation : Hal<CurrentPeriod>, IHalState<CurrentPeriod> {
-		public object StateFor(CurrentPeriod resource) => new { resource.Period };
-	}
-
 	private record CurrentPeriod : MemoryReadModel {
 		public string? Period { get; init; }
 	}
+}
 
-	public class JournalEntryRepresentation : Hal<JournalLedgerEntry>, IHalState<JournalLedgerEntry> {
-		public object StateFor(JournalLedgerEntry resource) => resource;
+public class CurrentPeriodRepresentation : Hal<CurrentPeriod>, IHalState<CurrentPeriod> {
+	public object StateFor(CurrentPeriod resource) => resource;
+}
+
+public record CurrentPeriod(string Period);
+
+public record JournalLedgerEntry(
+	string ReferenceNumber,
+	// ReSharper disable once InconsistentNaming
+	[property: JsonIgnore] IBusinessTransaction? businessTransaction,
+	ImmutableArray<JournalLedgerEntry.Item> Items) {
+	[JsonPropertyName(nameof(businessTransaction))]
+	public object? BusinessTransactionObject => businessTransaction;
+
+	public static JournalLedgerEntry FromGeneralLedgerEntry(GeneralLedgerEntry entry) {
+		var items = entry.Debits.Select(d => new Item(d.AccountNumber.ToInt32(), d.Amount.ToDecimal(), Type.Debit))
+			.Concat(
+				entry.Credits.Select(c => new Item(c.AccountNumber.ToInt32(), c.Amount.ToDecimal(), Type.Credit)))
+			.OrderBy(i => i.AccountNumber)
+			.ToImmutableArray();
+		return new JournalLedgerEntry(entry.ReferenceNumber.ToString(), entry.BusinessTransaction, items);
 	}
 
-	public record JournalLedgerEntry(
-		string ReferenceNumber,
-		// ReSharper disable once InconsistentNaming
-		[property: JsonIgnore] IBusinessTransaction? businessTransaction,
-		ImmutableArray<JournalLedgerEntry.Item> Items) {
-		[JsonPropertyName(nameof(businessTransaction))]
-		public object? BusinessTransactionObject => businessTransaction;
+	public enum Type { Debit, Credit };
 
-		public static JournalLedgerEntry FromGeneralLedgerEntry(GeneralLedgerEntry entry) {
-			var items = entry.Debits.Select(d => new Item(d.AccountNumber.ToInt32(), d.Amount.ToDecimal(), Type.Debit))
-				.Concat(
-					entry.Credits.Select(c => new Item(c.AccountNumber.ToInt32(), c.Amount.ToDecimal(), Type.Credit)))
-				.OrderBy(i => i.AccountNumber)
-				.ToImmutableArray();
-			return new JournalLedgerEntry(entry.ReferenceNumber.ToString(), entry.BusinessTransaction, items);
-		}
-
-		public enum Type { Debit, Credit };
-
-		public record Item(int AccountNumber, decimal Amount, Type Type);
-	}
+	public record Item(int AccountNumber, decimal Amount, Type Type);
 }

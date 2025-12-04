@@ -31,6 +31,7 @@ var logProvider = new SerilogLoggerProvider(new LoggerConfiguration()
 	//.MinimumLevel.Override("Microsoft.AspNetCore", LogEventLevel.Warning)
 	.Enrich.FromLogContext()
 	.WriteTo.Console(
+		applyThemeToRedirectedOutput: true,
 		outputTemplate:
 		"[{Timestamp:HH:mm:ss} {Level:u3}] [{SourceContext}] {Message:lj} {Properties:j}{NewLine}{Exception}")
 	.CreateLogger());

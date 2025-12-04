@@ -1,6 +1,7 @@
 using System.Collections;
 using System.Collections.Concurrent;
 using System.Data.SQLite;
+using System.Diagnostics.CodeAnalysis;
 using KurrentDB.Client;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Npgsql;
@@ -85,8 +86,10 @@ public static class ServiceCollectionExtensions {
 
 internal partial class PluginServiceCollection(ILogger logger) : IServiceCollection {
 	private readonly ServiceCollection _inner = [];
+	[ExcludeFromCodeCoverage]
 	public IEnumerator<ServiceDescriptor> GetEnumerator() => _inner.GetEnumerator();
 
+	[ExcludeFromCodeCoverage]
 	IEnumerator IEnumerable.GetEnumerator() => ((IEnumerable)_inner).GetEnumerator();
 
 	public void Add(ServiceDescriptor serviceDescriptor) {
@@ -94,29 +97,36 @@ internal partial class PluginServiceCollection(ILogger logger) : IServiceCollect
 		_inner.Add(serviceDescriptor);
 	}
 
+	[ExcludeFromCodeCoverage]
 	public void Clear() {
 		LogCleared(logger);
 		_inner.Clear();
 	}
 
+	[ExcludeFromCodeCoverage]
 	public bool Contains(ServiceDescriptor item) => _inner.Contains(item);
 
 	public void CopyTo(ServiceDescriptor[] array, int arrayIndex) => _inner.CopyTo(array, arrayIndex);
 
+	[ExcludeFromCodeCoverage]
 	public bool Remove(ServiceDescriptor serviceDescriptor) {
 		LogRemoval(logger, serviceDescriptor);
 		return _inner.Remove(serviceDescriptor);
 	}
 
 	public int Count => _inner.Count;
+	[ExcludeFromCodeCoverage]
 	public bool IsReadOnly => _inner.IsReadOnly;
+	[ExcludeFromCodeCoverage]
 	public int IndexOf(ServiceDescriptor item) => _inner.IndexOf(item);
 
+	[ExcludeFromCodeCoverage]
 	public void Insert(int index, ServiceDescriptor item) {
 		LogInsertion(logger, item, index);
 		_inner.Insert(index, item);
 	}
 
+	[ExcludeFromCodeCoverage]
 	public void RemoveAt(int index) {
 		LogRemovingIndex(logger, index);
 		_inner.RemoveAt(index);
@@ -124,6 +134,7 @@ internal partial class PluginServiceCollection(ILogger logger) : IServiceCollect
 
 	public ServiceDescriptor this[int index] {
 		get => _inner[index];
+		[ExcludeFromCodeCoverage]
 		set => _inner[index] = value;
 	}
 

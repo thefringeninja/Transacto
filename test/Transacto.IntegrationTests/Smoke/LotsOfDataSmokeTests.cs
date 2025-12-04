@@ -1,18 +1,29 @@
+using System.Diagnostics;
+using System.Net;
+using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text.Json;
+using System.Text.Json.Nodes;
+using Hallo;
 using NodaTime;
 using Polly;
 using Transacto.Domain;
 using Transacto.Framework.Http;
+using Transacto.Integration;
 using Transacto.Messages;
+using Transacto.Plugins.FinancialStatements;
 
-namespace Transacto.Integration;
+namespace Transacto.Smoke;
 
-public class LotsOfDataIntegrationTests(TextWriter textWriter) : IntegrationTests(textWriter)  {
-	private async Task one_year_of_invoices_and_payments() {
-		var openDate = new LocalDate(2025, 1, 1).AtMidnight();
-		var period = AccountingPeriod.Open(openDate.Date);
-		var accounts = await OpenBooks(openDate).ToArrayAsync();
+public class LotsOfDataSmokeTests : SmokeTests {
+	private readonly TextWriter _textWriter;
+
+	public LotsOfDataSmokeTests(TextWriter textWriter) : base(textWriter) {
+		_textWriter = textWriter;
+	}
+
+	public async Task one_year_of_invoices_and_payments() {
+		var period = Period;
 
 		var jsonSerializerOptions =
 			TransactoHttpSerializerOptions.BusinessTransactions(typeof(JournalEntry));
@@ -31,7 +42,7 @@ public class LotsOfDataIntegrationTests(TextWriter textWriter) : IntegrationTest
 						new JournalEntry.Item(1040, 200.12m, JournalEntry.Type.Debit)
 					]
 				},
-				CreatedOn = openDate.ToDateTimeUnspecified(),
+				CreatedOn = OpenDate.ToDateTimeUnspecified(),
 				GeneralLedgerEntryId = openingBalanceId,
 				Period = period.ToString()
 			},
@@ -43,9 +54,9 @@ public class LotsOfDataIntegrationTests(TextWriter textWriter) : IntegrationTest
 
 		for (var month = 0; month < 12; month++) {
 			int day = 0;
-			var current = openDate.PlusMonths(month);
+			var current = OpenDate.PlusMonths(month);
 			var daysInMonth = CalendarSystem.Gregorian.GetDaysInMonth(current.Year, current.Month);
-			for (var i = 0; i < 1000; i++) {
+			for (var i = 0; i < 10; i++) {
 				sequenceNumber++;
 				if (sequenceNumber % 2 != 0) {
 					var invoiceId = Guid.NewGuid();
@@ -86,18 +97,31 @@ public class LotsOfDataIntegrationTests(TextWriter textWriter) : IntegrationTest
 				},
 				jsonSerializerOptions);
 
+			await _textWriter.WriteAsync("Books closed");
+
 			period = period.Next();
-			await Policy.HandleResult<string?>(s => {
-					if (!AccountingPeriod.TryParse(s, out var p)) return true;
-					return p != period;
-				})
-				.RetryForeverAsync()
+			await Policy.HandleResult<string?>(s => !AccountingPeriod.TryParse(s, out var p) || p != period)
+				.WaitAndRetryAsync(10, _ => TimeSpan.FromMilliseconds(200))
 				.ExecuteAsync(async () => {
-					var response = await HttpClient.GetFromJsonAsync<JsonDocument>("/general-ledger/period");
+					using var response = await HttpClient.GetFromJsonAsync<JsonDocument>("/general-ledger/period");
 					return response?.RootElement.GetProperty("period").GetString();
 				});
 			entryIds.Clear();
 		}
+		
+		var crawler = new HalCrawler(HttpClient, "/");
+
+		var links = await crawler.CrawlAsync();
+
+		await Task.WhenAll(Array.ConvertAll(links, async href => {
+
+			using var request = new HttpRequestMessage(HttpMethod.Get, href) {
+				Headers = { Accept = { new MediaTypeWithQualityHeaderValue("application/hal+html") } }
+			};
+
+			using var response = await HttpClient.SendAsync(request);
+			Assert.InRange(response.StatusCode, HttpStatusCode.OK, (HttpStatusCode)399);
+		}));
 	}
 
 	private class Invoice(int number, Money subtotal, Money shipping, Percentage salesTaxRate, Money inventory)

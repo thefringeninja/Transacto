@@ -1,5 +1,6 @@
 using System.Net;
 using Hallo;
+using Microsoft.AspNetCore.Http.Headers;
 using Microsoft.AspNetCore.Mvc.Formatters;
 using Microsoft.Net.Http.Headers;
 using Transacto.Framework.Http.Html;
@@ -15,7 +16,7 @@ internal abstract class HalResult {
 }
 
 internal class HalResult<T>(T? resource, Checkpoint checkpoint, IHal hal, HttpStatusCode statusCode = HttpStatusCode.OK)
-	: HalResult, IResult where T : class {
+	: HalResult, IResult {
 	private static TransactoRazorEngine RazorLightEngine => new();
 
 	public Task ExecuteAsync(HttpContext context) {
@@ -32,23 +33,29 @@ internal class HalResult<T>(T? resource, Checkpoint checkpoint, IHal hal, HttpSt
 
 				var requestedCheckpoint = Checkpoint.FromString(etag.Value.AsSpan()[1..^1]);
 
-				if (requestedCheckpoint > checkpoint) {
-					return Results.Extensions.PreconditionFailed().ExecuteAsync(context);
+				if (requestedCheckpoint <= checkpoint) {
+					continue;
 				}
+				context.Response.StatusCode = (int)HttpStatusCode.PreconditionFailed;
+				return NegotiateFromHeaders(requestHeaders, default).ExecuteAsync(context);
 			}
 
 			context.Response.Headers.ETag = checkpoint.ToString();
 		}
 
-		var inner = requestHeaders.Accept.Count switch {
-			0 => new HalJsonResult(resource, hal),
-			_ => requestHeaders.Accept.Select(MediaType).Select(Negotiate).FirstOrDefault() ??
-			     Results.Extensions.NotAcceptable()
-		};
+		var inner = NegotiateFromHeaders(requestHeaders, resource);
 
 		return inner.ExecuteAsync(context);
 
-		IResult Negotiate(MediaType m) =>
+		IResult NegotiateFromHeaders(RequestHeaders headers, T? resource) {
+			return headers.Accept.Count switch {
+				0 => new HalJsonResult(resource, hal),
+				_ => headers.Accept.Select(MediaType).Select(NegotiateFromMediaType).FirstOrDefault() ??
+				     NotAcceptableResult.Instance
+			};
+		}
+
+		IResult NegotiateFromMediaType(MediaType m) =>
 			(HalJson.IsSubsetOf(m), Html.IsSubsetOf(m) || m.SubTypeSuffix == "html") switch {
 				(true, false) => new HalJsonResult(resource, hal),
 				(false, true) => new HalHtmlResult(resource, hal),
@@ -56,13 +63,14 @@ internal class HalResult<T>(T? resource, Checkpoint checkpoint, IHal hal, HttpSt
 			};
 
 		static MediaType MediaType(MediaTypeHeaderValue value) => new(value.MediaType);
+
 	}
 
 	private class HalJsonResult(T? resource, IHal hal) : IResult {
 		public async Task ExecuteAsync(HttpContext context) {
-			context.Response.ContentType = HalJsonContentType;
 			var representation = await hal.RepresentationOfAsync(resource);
-			await context.Response.WriteAsJsonAsync(representation, TransactoHttpSerializerOptions.HalJsonSerializerOptions, context.RequestAborted);
+			await context.Response.WriteAsJsonAsync(representation,
+				TransactoHttpSerializerOptions.HalJsonSerializerOptions, HalJsonContentType, context.RequestAborted);
 		}
 	}
 

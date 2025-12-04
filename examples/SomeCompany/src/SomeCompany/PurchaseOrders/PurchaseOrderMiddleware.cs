@@ -11,7 +11,7 @@ public static class PurchaseOrderMiddleware {
 		builder.MapGet(string.Empty, async (CancellationToken ct) => {
 			var orders = await purchaseOrders.List(ct);
 
-			return Results.Extensions.Hal(orders, Checkpoint.None, PurchaseOrderListRepresentation.Instance);
+			return Results.Hal(orders, Checkpoint.None, PurchaseOrderListRepresentation.Instance);
 		});
 
 		builder.MapPost(string.Empty, async ([FromBody] PurchaseOrder purchaseOrder, CancellationToken ct) => {
@@ -23,16 +23,16 @@ public static class PurchaseOrderMiddleware {
 
 			await purchaseOrders.Save(purchaseOrder, -1, ct);
 
-			return Results.Extensions.Hal(purchaseOrder, 0.ToCheckpoint(),
+			return Results.Hal(purchaseOrder, 0.ToCheckpoint(),
 				PurchaseOrderRepresentation.Instance, HttpStatusCode.Created);
 		});
 
 		builder.MapGet("{purchaseOrderId:guid}", async (Guid purchaseOrderId, CancellationToken ct) =>
 			await purchaseOrders.Get(purchaseOrderId, ct) switch {
-				{ BusinessTransaction.HasValue: true } envelope => Results.Extensions.Hal(
+				{ BusinessTransaction.HasValue: true } envelope => Results.Hal(
 					envelope.BusinessTransaction.Value, envelope.ExpectedRevision.ToCheckpoint(),
 					PurchaseOrderRepresentation.Instance),
-				_ => Results.Extensions.Hal<PurchaseOrder>(null, Checkpoint.None,
+				_ => Results.Hal<PurchaseOrder>(null, Checkpoint.None,
 					PurchaseOrderRepresentation.Instance, HttpStatusCode.NotFound)
 			});
 
@@ -46,7 +46,7 @@ public static class PurchaseOrderMiddleware {
 				? documentRevision.Value.Value + 1
 				: -1, ct);
 
-			return Results.Extensions.Hal(purchaseOrder, Checkpoint.None, PurchaseOrderRepresentation.Instance);
+			return Results.Hal(purchaseOrder, Checkpoint.None, PurchaseOrderRepresentation.Instance);
 		});
 
 		builder.MapBusinessTransaction<PurchaseOrder>("{purchaseOrderId:guid}");

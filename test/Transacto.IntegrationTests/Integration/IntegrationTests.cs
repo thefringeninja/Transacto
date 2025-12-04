@@ -1,5 +1,6 @@
 using System.Data.SQLite;
 using System.Globalization;
+using System.Net;
 using System.Text.Json;
 using Ductus.FluentDocker.Builders;
 using Ductus.FluentDocker.Common;
@@ -28,8 +29,7 @@ namespace Transacto.Integration;
 public abstract class IntegrationTests : IAsyncDisposable {
 	private static int s_RunId = -1;
 	private static int s_Port = 2113;
-
-
+	
 	private readonly HttpClientSqlStreamStore _streamStoreClient;
 	private readonly WebApplication _app;
 	private readonly TestServer _testServer;

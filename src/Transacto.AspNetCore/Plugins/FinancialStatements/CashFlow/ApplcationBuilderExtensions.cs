@@ -22,7 +22,7 @@ static partial class ApplicationBuilderExtensions {
 
 				var resource = await getCashFlowReportsAsync([..reportRanges], ct);
 
-				return Results.Extensions.Hal(resource, Checkpoint.None, new CashFlowReportsRepresentation());
+				return Results.Hal(resource, Checkpoint.None, new CashFlowReportsRepresentation());
 			});
 
 		return builder;

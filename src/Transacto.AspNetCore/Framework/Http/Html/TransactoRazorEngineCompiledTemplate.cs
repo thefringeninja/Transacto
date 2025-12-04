@@ -8,8 +8,8 @@ public abstract class TransactoRazorEngineCompiledTemplate {
 public class TransactoRazorEngineCompiledTemplate<T>(
 	IRazorEngineCompiledTemplate<TransactoRazorEngine.View<T>> compiledTemplate,
 	Dictionary<string, IRazorEngineCompiledTemplate<TransactoRazorEngine.View<object>>> compiledParts)
-	: TransactoRazorEngineCompiledTemplate where T : class {
-	public string Run(T? model = null, object? viewBag = null) => RunInternal(compiledTemplate, model, viewBag);
+	: TransactoRazorEngineCompiledTemplate{
+	public string Run(T? model = default, object? viewBag = null) => RunInternal(compiledTemplate, model, viewBag);
 
 	private string RunInternal<TModel>(
 		IRazorEngineCompiledTemplate<TransactoRazorEngine.View<TModel>> compiledTemplate, TModel? model,

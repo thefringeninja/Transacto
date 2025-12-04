@@ -22,7 +22,7 @@ static partial class ApplicationBuilderExtensions {
 
 				var resource = await getProfitAndLossReportsAsync([..reportRanges], ct);
 
-				return Results.Extensions.Hal(resource, Checkpoint.None, new ProfitAndLossReportsRepresentation());
+				return Results.Hal(resource, Checkpoint.None, new ProfitAndLossReportsRepresentation());
 			});
 		return builder;
 	}

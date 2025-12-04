@@ -15,17 +15,17 @@ internal class ChartOfAccounts : IPlugin {
 	public void Configure(IEndpointRouteBuilder builder) {
 		builder.MapGet(string.Empty, ([FromServices] InMemoryProjectionDatabase database) =>
 			database.Get<ReadModel>() switch {
-				{ HasValue: true } optional => Results.Extensions.Hal(optional.Value,
+				{ HasValue: true } optional => Results.Hal(optional.Value,
 					optional.Value.Checkpoint.ToCheckpoint(), new ChartOfAccountsRepresentation()),
-				_ => Results.Extensions.Hal(ReadModel.None, Checkpoint.None, new ChartOfAccountsRepresentation())
+				_ => Results.Hal(ReadModel.None, Checkpoint.None, new ChartOfAccountsRepresentation())
 			});
 
 		builder.MapCommands(string.Empty,
-			typeof(ConfigureChartOfAccounts),
+			[typeof(ConfigureChartOfAccounts),
 			typeof(DefineAccount),
 			typeof(RenameAccount),
 			typeof(DeactivateAccount),
-			typeof(ReactivateAccount));
+			typeof(ReactivateAccount)]);
 	}
 
 	public void ConfigureServices(IServiceCollection services) => services

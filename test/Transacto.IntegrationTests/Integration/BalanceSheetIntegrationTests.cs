@@ -53,7 +53,8 @@ public class BalanceSheetIntegrationTests(TextWriter textWriter) : IntegrationTe
 			$"/financial-statements/balance-sheet?thru={LocalDatePattern.Iso.Format(thru)}",
 			position);
 
-		await Assert.HalResponseEqual<BalanceSheetReports, BalanceSheetReportsRepresentation>(new(expected), actual);
+		await Assert.HalResponseEqual<BalanceSheetReports, BalanceSheetReportsRepresentation>(
+			new(expected, []), actual);
 	}
 
 	private class Invoice(int number, Money subtotal, Money shipping, Money tax, Money inventory)

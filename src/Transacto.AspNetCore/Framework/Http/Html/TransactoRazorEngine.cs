@@ -43,8 +43,7 @@ public class TransactoRazorEngine {
 				builder.AddUsing(typeof(AsyncEnumerable).Namespace!);
 				builder.AddUsing(typeof(Enumerable).Namespace!);
 				builder.AddUsing(typeof(Link).Namespace!);
-				builder.AddUsing(typeof(RazorEngine).Namespace!
-				);
+				builder.AddUsing(typeof(RazorEngine).Namespace!);
 			});
 		}, _engine);
 }

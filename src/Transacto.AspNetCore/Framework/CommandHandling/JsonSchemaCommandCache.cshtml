@@ -1,0 +1,24 @@
+@using System.Text.Json
+@using NodaTime.Text
+@using Corvus.Json.JsonSchema.Draft201909
+@using Transacto.Framework.Http.Html
+@using Transacto.Framework.CommandHandling
+@inherits Transacto.Framework.Http.Html.TransactoRazorEngine.View<JsonCommandSchemaCache>
+@{
+	Layout = "Layout.cshtml";
+
+	dynamic model = Model;
+}
+
+@foreach(Schema schema in model.forms)
+{
+	<form action="" method="post">
+		@foreach (var property in schema.Properties)
+		{
+			<label for="@property.Key.ToString()"></label>
+			<br/>
+			<input name="@property.Key.ToString()" type="" />
+		}
+		<button type="submit">@schema.Title.ToString()</button>
+	</form>
+}

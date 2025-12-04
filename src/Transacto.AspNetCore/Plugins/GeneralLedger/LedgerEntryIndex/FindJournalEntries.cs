@@ -9,7 +9,7 @@ public delegate Task<SearchResults> SearchJournalEntriesAsync(string prefix,
 public record SearchResults(ImmutableArray<SearchResult> Results);
 public record SearchResult(string ReferenceNumber, Guid GeneralLedgerEntryId, DateTime CreatedOn);
 
-public class SearchResultRepresentation : Hal<SearchResults>, IHalState<SearchResults>,
+public class SearchResultsRepresentation : Hal<SearchResults>, IHalState<SearchResults>,
 	IHalLinks<SearchResults> {
 	public object StateFor(SearchResults results) => results;
 	public IEnumerable<Link> LinksFor(SearchResults resource) {

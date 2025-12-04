@@ -15,7 +15,7 @@ public static class AssertExtensions {
 	extension(Assert) {
 		public static async Task HalResponseEqual<T, THal>(HalResponse<T> expected, HttpResponseMessage actual)
 			where THal : IHal, new() {
-			var hal = await new THal().RepresentationOfAsync(expected.Resource);
+			var hal = await new THal().RepresentationOfAsync(expected.State);
 
 			var jExpected = JsonNode.Parse(JsonSerializer.Serialize(hal,
 				options: TransactoHttpSerializerOptions.HalJsonSerializerOptions));
