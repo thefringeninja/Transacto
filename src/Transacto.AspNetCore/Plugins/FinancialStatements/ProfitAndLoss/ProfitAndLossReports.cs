@@ -3,11 +3,11 @@ using Transacto.Domain;
 
 namespace Transacto.Plugins.FinancialStatements.ProfitAndLoss;
 
-public sealed record ProfitAndLossReports(
+public sealed record ProfitAndLossReports2(
 	ImmutableDictionary<int, string> Accounts,
 	ImmutableArray<ProfitAndLossReport> Reports) {
 
-	public bool Equals(ProfitAndLossReports? other) {
+	public bool Equals(ProfitAndLossReports2? other) {
 		if (other is null) return false;
 		if (ReferenceEquals(this, other)) return true;
 

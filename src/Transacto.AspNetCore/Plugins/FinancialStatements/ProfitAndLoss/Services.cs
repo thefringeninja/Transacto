@@ -1,4 +1,3 @@
-using System.Collections.Immutable;
 using System.Data.SQLite;
 using Dapper;
 using NodaTime;
@@ -16,21 +15,23 @@ internal static class Services {
 				SELECT account_number, account_name
 				FROM account_names
 				""")
-			.ToDictionaryAsync(a => a.AccountNumber, a => a.accountName, cancellationToken:ct);
+			.ToDictionaryAsync(a => a.AccountNumber, a => a.accountName, cancellationToken: ct);
 
 		var reports = await reportRanges.ToAsyncEnumerable()
 			.Select(GetReportAsync)
 			.ToArrayAsync(ct);
 
-		return new ProfitAndLossReports(accounts.ToImmutableDictionary(), [..reports]);
+		return new ProfitAndLossReports([..reports]);
 
-		async ValueTask<ProfitAndLossReport> GetReportAsync((LocalDate, Period) q, CancellationToken ct) {
+		async ValueTask<ProfitAndLossReport> GetReportAsync((LocalDate startingOn, Period period) q,
+			CancellationToken ct) {
 			var (start, period) = q;
 
-			var result = connection.QueryUnbufferedAsync<(int accountNumber, decimal balance)>(
+			var result = connection.QueryUnbufferedAsync<(int number, string name, decimal balance)>(
 				"""
-				SELECT p.account_number, SUM(p.balance) 
+				SELECT p.account_number, a.account_name, SUM(p.balance) 
 				FROM profit_and_loss_daily p
+					LEFT JOIN account_names a ON p.account_number = a.account_number
 				WHERE p.date 
 					BETWEEN @start AND @end
 				GROUP BY p.account_number 
@@ -39,9 +40,9 @@ internal static class Services {
 					end = (start + period - Period.FromDays(1)).ToDateTimeUnspecified()
 				});
 
-			return await result.AggregateAsync(ProfitAndLossReport.For(start, period), (report, item) => report with {
-				AccountBalances = report.AccountBalances.Add(new(item.accountNumber, item.balance / 100m))
-			}, cancellationToken: ct);
+			var lines = await result.Select(Report.Line.Create).ToArrayAsync(cancellationToken: ct);
+
+			return ProfitAndLossReport.Create(new ReportRange(q.startingOn, q.period), [..lines]);
 		}
 	}
 }
