@@ -1,3 +1,4 @@
+using System.Collections.Immutable;
 using System.Globalization;
 using System.Text.Json;
 using Dapper;
@@ -7,15 +8,13 @@ using Ductus.FluentDocker.Model.Common;
 using Ductus.FluentDocker.Services;
 using Ductus.FluentDocker.Services.Extensions;
 using KurrentDB.Client;
-using Microsoft.CodeAnalysis.Emit;
 using NodaTime;
-using NodaTime.Text;
 using Npgsql;
 using Polly;
 using Serilog;
-using Serilog.Events;
 using Serilog.Extensions.Logging;
 using SomeCompany;
+using SomeCompany.Sales;
 using SqlStreamStore;
 using Transacto;
 using Transacto.Domain;
@@ -26,6 +25,8 @@ var configuration = new SomeCompanyConfiguration(args, Environment.GetEnvironmen
 DefaultTypeMap.MatchNamesWithUnderscores = true;
 Inflector.Inflector.SetDefaultCultureFunc = () => new CultureInfo("en-US");
 
+var openedOn = new LocalDate(2025, 11, 1);
+var period = AccountingPeriod.Open(openedOn);
 var logProvider = new SerilogLoggerProvider(new LoggerConfiguration()
 	.MinimumLevel.Verbose()
 	//.MinimumLevel.Override("Microsoft.AspNetCore", LogEventLevel.Warning)
@@ -54,24 +55,42 @@ using var eventStore = BuildAndStartContainer(
 
 
 var builder = WebApplication.CreateBuilder(args);
+builder.Environment.EnvironmentName = Environments.Development;
 
 builder.Logging
 	.ClearProviders()
 	.AddProvider(logProvider);
 
-builder.Services.AddTransacto(
-	new KurrentDBClient(KurrentDBClientSettings.Create(configuration.EventStore)),
-	new NpgsqlConnectionStringBuilder(configuration.Postgres),
-	SQLiteConnectionStringBuilderFactories.OnDisk,
-	new HttpClientSqlStreamStore(new() { BaseAddress = new Uri(configuration.SqlStreamStore) }),
-	() => logProvider);
+builder.Services
+	.AddTransacto(
+		new KurrentDBClient(KurrentDBClientSettings.Create(configuration.EventStore)),
+		new NpgsqlConnectionStringBuilder(configuration.Postgres),
+		SQLiteConnectionStringBuilderFactories.OnDisk,
+		new HttpClientSqlStreamStore(new() { BaseAddress = new Uri(configuration.SqlStreamStore) }),
+		() => logProvider,
+		builder.Environment,
+		[new Sales()]);
 
 var app = builder.Build();
 
-var messageTypeMapper = app.Services.GetRequiredService<IMessageTypeMapper>();
-
 app.UseTransacto();
 
+var generalLedger = GeneralLedger.Open(openedOn);
+var chartOfAccounts = ChartOfAccounts.Factory();
+chartOfAccounts.DefineAccount(new AccountName("A/R"), new AccountNumber(1100), CashFlowCategory.Operations, false);
+chartOfAccounts.DefineAccount(new AccountName("Bank"), new AccountNumber(1000), CashFlowCategory.Operations, true);
+chartOfAccounts.DefineAccount(new AccountName("Inventory"), new AccountNumber(1200), CashFlowCategory.Investment,
+	false);
+chartOfAccounts.DefineAccount(new AccountName("Retained Earnings"), new AccountNumber(3900), CashFlowCategory.Finance,
+	false);
+chartOfAccounts.DefineAccount(new AccountName("COGS"), new AccountNumber(5000), CashFlowCategory.Operations, false);
+chartOfAccounts.DefineAccount(new AccountName("Sales"), new AccountNumber(4000), CashFlowCategory.Operations, false);
+chartOfAccounts.DefineAccount(new AccountName("Shipping"), new AccountNumber(4050), CashFlowCategory.Operations, false);
+chartOfAccounts.DefineAccount(new AccountName("Sales Tax Payable"), new AccountNumber(2300),
+	CashFlowCategory.Operations, false);
+
+var client = app.Services.GetRequiredService<KurrentDBClient>();
+var messageTypeMapper = app.Services.GetRequiredService<IMessageTypeMapper>();
 _ = Seed();
 
 try {
@@ -84,50 +103,105 @@ try {
 	Log.CloseAndFlush();
 }
 
+
 async Task Seed() {
-	var client = app.Services.GetRequiredService<KurrentDBClient>();
+	try {
+		var events = OpenBooks()
+			.Concat(DefineChartOfAccounts())
+			.Concat(CreateAndPayInvoices());
 
-	await client.AppendToStreamAsync(GeneralLedger.Identifier, StreamState.NoStream, Array.ConvertAll([
-		new GeneralLedgerOpened {
-			OpenedOn = LocalDatePattern.Iso.Format(new LocalDate(2025, 11, 1))
+		await foreach (var (streamName, @event) in events) {
+			await client.AppendToStreamAsync(streamName, StreamState.Any, [ToEventData(@event)]);
 		}
-	], ToEventData));
+	} catch (Exception ex) {
+		app.Logger.LogError(ex, "Seeding failed");
+	}
+}
 
-	await client.AppendToStreamAsync(ChartOfAccounts.Identifier, StreamState.NoStream, Array.ConvertAll([
-		(object)new ChartOfAccountsConfigured {
-			AccountNumberWidth = 4
-		},
-		new AccountDefined {
-			AccountName = "Bank",
-			AccountNumber = 1000,
-			AffectsCash = true,
-			CashFlowCategory = DefineAccountCashFlowCategory.Operations
-		},
-		new AccountDefined {
-			AccountName = "A/R",
-			AccountNumber = 1300,
-			AffectsCash = false,
-			CashFlowCategory = DefineAccountCashFlowCategory.Operations
-		},
-		new AccountDefined {
-			AccountName = "Retained Earnings",
-			AccountNumber = 3900,
-			AffectsCash = false,
-			CashFlowCategory = DefineAccountCashFlowCategory.Finance
-		},
-		new AccountDefined {
-			AccountName = "Income",
-			AccountNumber = 4000,
-			AffectsCash = false,
-			CashFlowCategory = DefineAccountCashFlowCategory.Operations
-		},
-		new AccountDefined {
-			AccountName = "COGS",
-			AccountNumber = 5000,
-			AffectsCash = false,
-			CashFlowCategory = DefineAccountCashFlowCategory.Operations
+async IAsyncEnumerable<(string, object)> CreateAndPayInvoices() {
+	await Task.Yield();
+	int invoiceNumber = 0;
+	for (var month = 0; month < 12; month++) {
+		generalLedger.MarkChangesAsCommitted();
+		var generalLedgerEntries = new List<GeneralLedgerEntry>();
+		for (var i = 0; i < configuration.TransactionsPerMonth; i++) {
+			var invoice = new Invoice(++invoiceNumber, new(100m), new(7.5m), new(45m), Percentage.Of(8.25m));
+
+			var invoiceEntry = generalLedger.Create(new(Guid.NewGuid()), invoice, new("invoice"),
+				openedOn.PlusMonths(month).AtMidnight(), _ => false);
+			invoiceEntry.Post();
+
+			foreach (var change in GetChanged(invoiceEntry)) {
+				yield return change;
+			}
+
+			generalLedgerEntries.Add(invoiceEntry);
+
+			var paymentEntry = generalLedger.Create(new(Guid.NewGuid()), new Payment(invoiceNumber, invoice.Total),
+				new("payment"), openedOn.PlusMonths(month).AtMidnight(), _ => false);
+			paymentEntry.Post();
+			foreach (var change in GetChanged(paymentEntry)) {
+				yield return change;
+			}
+
+			generalLedgerEntries.Add(paymentEntry);
 		}
-	], ToEventData));
+
+		await using var subscription = client.SubscribeToStream(GeneralLedger.Identifier, FromStream.End);
+
+		var closingGeneralLedgerEntryIdentifier = new GeneralLedgerEntryIdentifier(Guid.NewGuid());
+
+		generalLedger.BeginClosingPeriod(chartOfAccounts.Get<EquityAccount>(new(3900)),
+			closingGeneralLedgerEntryIdentifier, [..generalLedgerEntries.Select(x => x.Identifier)],
+			openedOn.PlusMonths(month + 1).PlusDays(-1).AtMidnight());
+
+		foreach (var e in generalLedger.GetChanges()) {
+			yield return (GeneralLedger.Identifier, e);
+		}
+
+		await foreach (var message in subscription.Messages) {
+			if (message is not StreamMessage.Event (var resolvedEvent)) {
+				continue;
+			}
+
+			if (!messageTypeMapper.TryMap(resolvedEvent.Event.EventType, out var type)) {
+				continue;
+			}
+
+			var e = JsonSerializer.Deserialize(resolvedEvent.Event.Data.Span, type, TransactoSerializerOptions.Events);
+			generalLedger.ReadFromHistory(e!);
+
+			if (resolvedEvent is { Event.EventType: nameof(AccountingPeriodClosed) }) {
+				break;
+			}
+		}
+
+		period = period.Next();
+	}
+
+	yield break;
+
+	static IEnumerable<(string, object)> GetChanged(GeneralLedgerEntry entry) {
+		var streamName = GeneralLedgerEntry.FormatStreamIdentifier(entry.Identifier);
+		foreach (var e in entry.GetChanges()) {
+			yield return (streamName, e);
+		}
+	}
+}
+
+async IAsyncEnumerable<(string streamName, object @event)> DefineChartOfAccounts() {
+	await Task.Yield();
+	foreach (var e in chartOfAccounts.GetChanges()) {
+		yield return (ChartOfAccounts.Identifier, e);
+	}
+}
+
+
+async IAsyncEnumerable<(string, object)> OpenBooks() {
+	await Task.Yield();
+	foreach (var e in generalLedger.GetChanges()) {
+		yield return (GeneralLedger.Identifier, e);
+	}
 }
 
 IContainerService BuildAndStartContainer(string name, string image, int hostPort, int containerPort,
