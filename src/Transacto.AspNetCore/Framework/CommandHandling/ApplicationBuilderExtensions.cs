@@ -2,7 +2,6 @@ using System.Text.Json;
 using Hallo;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Net.Http.Headers;
-using Transacto;
 using Transacto.Domain;
 using Transacto.Framework;
 using Transacto.Framework.CommandHandling;

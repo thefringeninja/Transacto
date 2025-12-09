@@ -1,28 +1,30 @@
 using System.Collections.Concurrent;
 using System.Text.Json;
+using System.Text.Json.Nodes;
 using Corvus.Json.JsonSchema.Draft201909;
 
 namespace Transacto.Framework.CommandHandling;
 
 public class JsonCommandSchemaCache(params Type[] commandTypes) {
-	private readonly ConcurrentDictionary<Type, Schema> _scripts = [];
+	private readonly ConcurrentDictionary<Type, JsonElement> _scripts = [];
 
 	public Type[] CommandTypes { get; } = commandTypes;
-	public Schema this[Type commandType] => GetSchema(commandType);
-	
-	private Schema GetSchema(Type commandType) {
+	public JsonElement this[Type commandType] => GetSchema(commandType);
+
+	private JsonElement GetSchema(Type commandType) {
 		if (!CommandTypes.Contains(commandType)) {
 			throw new InvalidOperationException();
 		}
 
 		return _scripts.GetOrAdd(commandType,
-			key => {
-				using var stream = key.Assembly.GetManifestResourceStream(key, $"{key.Name}.schema.json");
-				if (stream == null) {
-					throw new Exception($"Embedded resource {key} not found. BUG!");
-				}
+			static key => {
+				using var stream = key.Assembly.GetManifestResourceStream(key, $"{key.Name}.schema.json") ??
+				                   throw new Exception($"Embedded resource {key} not found. BUG!");
 
-				return Schema.Parse(stream);
+				var schema = JsonNode.Parse(stream) ?? throw new Exception($"Embedded resource {key} was null. BUG!");
+				schema[Schema.JsonPropertyNames.Id] = key.Name;
+
+				return JsonDocument.Parse(schema.ToJsonString()).RootElement;
 			});
 	}
 }

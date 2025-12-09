@@ -1,10 +1,10 @@
 using System.Net;
 using Hallo;
+using Microsoft.AspNetCore.Components;
+using Microsoft.AspNetCore.Components.Web;
 using Microsoft.AspNetCore.Http.Headers;
 using Microsoft.AspNetCore.Mvc.Formatters;
 using Microsoft.Net.Http.Headers;
-using Transacto.Framework.Http.Html;
-using Transacto.Views.Shared;
 
 namespace Transacto.Framework.Http;
 
@@ -17,8 +17,6 @@ internal abstract class HalResult {
 
 internal class HalResult<T>(T? resource, Checkpoint checkpoint, IHal hal, HttpStatusCode statusCode = HttpStatusCode.OK)
 	: HalResult, IResult {
-	private static TransactoRazorEngine RazorLightEngine => new();
-
 	public Task ExecuteAsync(HttpContext context) {
 		context.Response.StatusCode = (int)statusCode;
 
@@ -36,6 +34,7 @@ internal class HalResult<T>(T? resource, Checkpoint checkpoint, IHal hal, HttpSt
 				if (requestedCheckpoint <= checkpoint) {
 					continue;
 				}
+
 				context.Response.StatusCode = (int)HttpStatusCode.PreconditionFailed;
 				return NegotiateFromHeaders(requestHeaders, default).ExecuteAsync(context);
 			}
@@ -63,7 +62,6 @@ internal class HalResult<T>(T? resource, Checkpoint checkpoint, IHal hal, HttpSt
 			};
 
 		static MediaType MediaType(MediaTypeHeaderValue value) => new(value.MediaType);
-
 	}
 
 	private class HalJsonResult(T? resource, IHal hal) : IResult {
@@ -76,21 +74,34 @@ internal class HalResult<T>(T? resource, Checkpoint checkpoint, IHal hal, HttpSt
 
 	private class HalHtmlResult(T? resource, IHal hal) : IResult {
 		public async Task ExecuteAsync(HttpContext context) {
+			await using var htmlRenderer = new HtmlRenderer(context.RequestServices,
+				context.RequestServices.GetRequiredService<ILoggerFactory>());
 			context.Response.ContentType = HalHtmlContentType;
 
 			var representation = await hal.RepresentationOfAsync(resource);
 
-			var viewBag = new {
-				_links = representation.Links.ToArray(),
-				_embedded = representation.Embedded
+			var viewContext = context.RequestServices.GetRequiredService<ViewContext>();
+			viewContext._links = representation.Links.ToArray();
+			viewContext._embedded = representation.Embedded;
+
+			var parameters = new Dictionary<string, object?> {
+				["Model"] = representation.State
 			};
-			var compiledView = RazorLightEngine.Compile<T>();
-			var compiledLayout = RazorLightEngine.Compile<Layout, object>();
-			var compiledTemplate = new TransactoRazorEngineCompiledTemplate<T>(compiledView,
-				new() {
-					["Layout.cshtml"] = compiledLayout
-				});
-			var html = compiledTemplate.Run((T)representation.State, viewBag);
+
+			var viewTypeName = $"{typeof(T).FullName}_view".Replace('+', '_');
+			var viewType = Type.GetType(viewTypeName);
+
+			if (viewType is null) {
+				throw new Exception(
+					$"Could not find view for resource {typeof(T).FullName}. The view {viewTypeName} was not found.");
+			}
+
+			var html = await htmlRenderer.Dispatcher.InvokeAsync(async () => {
+				var component =
+					await htmlRenderer.RenderComponentAsync(viewType, ParameterView.FromDictionary(parameters));
+				return component.ToHtmlString();
+			});
+
 			await context.Response.WriteAsync(html, context.RequestAborted);
 		}
 	}

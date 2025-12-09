@@ -10,12 +10,12 @@ internal static class Services {
 		await using var connection = connectionFactory();
 
 		var accounts = await connection
-			.QueryUnbufferedAsync<(int AccountNumber, string accountName)>(
+			.QueryUnbufferedAsync<(int accountNumber, string accountName)>(
 				"""
 				SELECT account_number, account_name
 				FROM account_names
 				""")
-			.ToDictionaryAsync(a => a.AccountNumber, a => a.accountName, cancellationToken: ct);
+			.ToArrayAsync(ct);
 
 		var reports = await reportRanges.ToAsyncEnumerable()
 			.Select(GetReportAsync)
@@ -23,7 +23,7 @@ internal static class Services {
 
 		return new ProfitAndLossReports([..reports]);
 
-		async ValueTask<ProfitAndLossReport> GetReportAsync((LocalDate startingOn, Period period) q,
+		async ValueTask<ReportGroup> GetReportAsync((LocalDate startingOn, Period period) q,
 			CancellationToken ct) {
 			var (start, period) = q;
 
@@ -42,7 +42,7 @@ internal static class Services {
 
 			var lines = await result.Select(Report.Line.Create).ToArrayAsync(cancellationToken: ct);
 
-			return ProfitAndLossReport.Create(new ReportRange(q.startingOn, q.period), [..lines]);
+			return ReportGroup.Create(new ReportRange(q.startingOn, q.period), [..lines]);
 		}
 	}
 }

@@ -14,18 +14,20 @@ internal class ChartOfAccounts : IPlugin {
 
 	public void Configure(IEndpointRouteBuilder builder) {
 		builder.MapGet(string.Empty, ([FromServices] InMemoryProjectionDatabase database) =>
-			database.Get<ReadModel>() switch {
-				{ HasValue: true } optional => Results.Hal(optional.Value,
-					optional.Value.Checkpoint.ToCheckpoint(), new ChartOfAccountsRepresentation()),
-				_ => Results.Hal(ReadModel.None, Checkpoint.None, new ChartOfAccountsRepresentation())
-			});
+		database.Get<ReadModel>() switch {
+			{ HasValue: true } optional => Results.Hal(optional.Value,
+				optional.Value.Checkpoint.ToCheckpoint(), new ChartOfAccountsRepresentation()),
+			_ => Results.Hal(ReadModel.None, Checkpoint.None, new ChartOfAccountsRepresentation())
+		});
 
 		builder.MapCommands(string.Empty,
-			[typeof(ConfigureChartOfAccounts),
+		[
+			typeof(ConfigureChartOfAccounts),
 			typeof(DefineAccount),
 			typeof(RenameAccount),
 			typeof(DeactivateAccount),
-			typeof(ReactivateAccount)]);
+			typeof(ReactivateAccount)
+		]);
 	}
 
 	public void ConfigureServices(IServiceCollection services) => services
@@ -52,16 +54,17 @@ internal class ChartOfAccounts : IPlugin {
 			}
 		}
 
-		public object StateFor(ReadModel resource) => new SortedDictionary<string, string>(
-			resource.ChartOfAccounts.ToDictionary(x => x.Key.ToString(), x => x.Value.AccountName));
+		public object StateFor(ReadModel resource) => new SortedDictionary<string, AccountInfo>(
+			resource.ChartOfAccounts.ToDictionary(x => x.Key.ToString(), x => x.Value));
 	}
 
-	private record ReadModel : MemoryReadModel {
+	public record ReadModel : MemoryReadModel {
 		public static readonly ReadModel None = new();
 
-		public ImmutableSortedDictionary<int, Account> ChartOfAccounts { get; init; } =
-			ImmutableSortedDictionary<int, Account>.Empty;
+		public ImmutableSortedDictionary<int, AccountInfo> ChartOfAccounts { get; init; } =
+			ImmutableSortedDictionary<int, AccountInfo>.Empty;
 
-		public record Account(string AccountName, bool Active = true);
 	}
 }
+
+public record AccountInfo(string AccountName, bool Active = true);

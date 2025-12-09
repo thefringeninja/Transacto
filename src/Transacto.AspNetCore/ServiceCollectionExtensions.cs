@@ -4,10 +4,12 @@ using System.Data.SQLite;
 using System.Diagnostics.CodeAnalysis;
 using KurrentDB.Client;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Logging.Abstractions;
 using Npgsql;
 using SqlStreamStore;
 using Transacto.Framework;
 using Transacto.Framework.CommandHandling;
+using Transacto.Framework.Http;
 using Transacto.Framework.Projections;
 using Transacto.Infrastructure.EventStore;
 using Transacto.Infrastructure.Npgsql;
@@ -16,13 +18,91 @@ using Transacto.Plugins;
 
 namespace Transacto;
 
+public static class WebApplicationBuilderExtensions {
+	extension(WebApplicationBuilder builder) {
+		public void AddTransacto(
+			KurrentDBClient eventStore,
+			NpgsqlConnectionStringBuilder npgsqlConnectionStringBuilder,
+			Func<Type, SQLiteConnectionStringBuilder> sqliteConnectionStringBuilderFactory,
+			IStreamStore streamStore, params IPlugin[] plugins) {
+			var npgsqlConnectionStringBuilderCache = new ConcurrentDictionary<string, NpgsqlConnectionStringBuilder>();
+
+			var messageTypeMapper = MessageTypeMapper.Create(Array.ConvertAll(plugins,
+				plugin => new MessageTypeMapper(plugin.MessageTypes)));
+
+			_ = plugins.Concat(Standard.Plugins).Aggregate(builder.Services
+					.AddSingleton(eventStore)
+					.AddSingleton(npgsqlConnectionStringBuilder)
+					.AddSingleton(streamStore)
+					.AddHostedService<EventLogging>()
+					.AddRouting()
+					.AddSingleton(messageTypeMapper)
+					// projections
+					.AddSingleton<Func<IPlugin, NpgsqlConnection>>(NpqsqlConnectonFactory)
+					.AddRazorComponents().Services
+					.AddScoped<ViewContext>(),
+				(services, plugin) => {
+					var pluginServices = new PluginServiceCollection(NullLogger<PluginServiceCollection>.Instance);
+
+					foreach (var sd in builder.Logging.Services) {
+						pluginServices.Add(sd);
+					}
+					
+					plugin.ConfigureServices(pluginServices);
+
+					var pluginProvider = pluginServices
+						.AddSingleton<CommandDispatcher>()
+						.AddSingleton(eventStore)
+						.AddSingleton(streamStore)
+						.AddSingleton(messageTypeMapper)
+						.AddSingleton<IPluginDescriptor>(plugin)
+						.AddSingleton<InMemoryProjectionDatabase>()
+						.AddHostedService<InMemoryProjectionHost>()
+						.AddHostedService<NpgsqlProjectionHost>()
+						.AddHostedService<StreamStoreProjectionHost>()
+						.AddSingleton(sqliteConnectionStringBuilderFactory)
+						.AddSingleton<Func<NpgsqlConnection>>(() => NpqsqlConnectonFactory(plugin))
+						.AddSingleton<IConfiguration>(builder.Configuration)
+						.AddSingleton(builder.Environment)
+						.AddRazorComponents().Services
+						.AddScoped<ViewContext>()
+						.BuildServiceProvider();
+
+					return services
+						.AddKeyedSingleton<IServiceProvider>(plugin, pluginProvider)
+						.AddSingleton<IHostedService>(_ => new HostedServicesBackgroundService(plugin, pluginProvider));
+				});
+
+			NpgsqlConnection NpqsqlConnectonFactory(IPlugin plugin) =>
+				new(npgsqlConnectionStringBuilderCache.GetOrAdd(plugin.Name, username =>
+					new NpgsqlConnectionStringBuilder(
+						npgsqlConnectionStringBuilder.ConnectionString) {
+						Username = username
+					}).ConnectionString);
+		}
+	}
+
+	private class HostedServicesBackgroundService(IPluginDescriptor plugin, IServiceProvider serviceProvider)
+		: IHostedService {
+		public string Name => plugin.Name;
+
+		public Task StartAsync(CancellationToken cancellationToken) =>
+			Task.WhenAll(serviceProvider.GetServices<IHostedService>()
+				.Select(service => service.StartAsync(cancellationToken)));
+
+		public Task StopAsync(CancellationToken cancellationToken) =>
+			Task.WhenAll(serviceProvider.GetServices<IHostedService>()
+				.Select(service => service.StopAsync(cancellationToken)));
+	}
+}
+
 public static class ServiceCollectionExtensions {
-	public static IServiceCollection AddTransacto(this IServiceCollection services, 
+	public static IServiceCollection AddTransacto(this IServiceCollection services,
 		KurrentDBClient eventStore,
-		NpgsqlConnectionStringBuilder npgsqlConnectionStringBuilder, 
+		NpgsqlConnectionStringBuilder npgsqlConnectionStringBuilder,
 		Func<Type, SQLiteConnectionStringBuilder> sqliteConnectionStringBuilderFactory,
 		IStreamStore streamStore,
-		Func<ILoggerProvider> getLoggerProvider, params IPlugin[] plugins) {
+		Func<ILoggerProvider> getLoggerProvider, IWebHostEnvironment builderEnvironment, params IPlugin[] plugins) {
 		var npgsqlConnectionStringBuilderCache = new ConcurrentDictionary<string, NpgsqlConnectionStringBuilder>();
 
 		var messageTypeMapper = MessageTypeMapper.Create(Array.ConvertAll(plugins,
@@ -36,10 +116,12 @@ public static class ServiceCollectionExtensions {
 				.AddRouting()
 				.AddSingleton(messageTypeMapper)
 				// projections
-				.AddSingleton<Func<IPlugin, NpgsqlConnection>>(NpqsqlConnectonFactory),
+				.AddSingleton<Func<IPlugin, NpgsqlConnection>>(NpqsqlConnectonFactory)
+				.AddRazorComponents().Services
+				.AddScoped<ViewContext>(),
 			(services, plugin) => {
 				var logger = getLoggerProvider().CreateLogger($"Plugin {plugin.Name} Service Registration");
-				
+
 				var pluginServices = new PluginServiceCollection(logger);
 
 				plugin.ConfigureServices(pluginServices);
@@ -57,6 +139,8 @@ public static class ServiceCollectionExtensions {
 					.AddHostedService<StreamStoreProjectionHost>()
 					.AddSingleton(sqliteConnectionStringBuilderFactory)
 					.AddSingleton<Func<NpgsqlConnection>>(() => NpqsqlConnectonFactory(plugin))
+					.AddRazorComponents().Services
+					.AddScoped<ViewContext>()
 					.BuildServiceProvider();
 
 				return services
@@ -72,12 +156,14 @@ public static class ServiceCollectionExtensions {
 				}).ConnectionString);
 	}
 
-	private class HostedServicesBackgroundService(IPluginDescriptor plugin, IServiceProvider serviceProvider) : IHostedService {
+	private class HostedServicesBackgroundService(IPluginDescriptor plugin, IServiceProvider serviceProvider)
+		: IHostedService {
 		public string Name => plugin.Name;
+
 		public Task StartAsync(CancellationToken cancellationToken) =>
 			Task.WhenAll(serviceProvider.GetServices<IHostedService>()
 				.Select(service => service.StartAsync(cancellationToken)));
-		
+
 		public Task StopAsync(CancellationToken cancellationToken) =>
 			Task.WhenAll(serviceProvider.GetServices<IHostedService>()
 				.Select(service => service.StopAsync(cancellationToken)));
@@ -86,6 +172,7 @@ public static class ServiceCollectionExtensions {
 
 internal partial class PluginServiceCollection(ILogger logger) : IServiceCollection {
 	private readonly ServiceCollection _inner = [];
+
 	[ExcludeFromCodeCoverage]
 	public IEnumerator<ServiceDescriptor> GetEnumerator() => _inner.GetEnumerator();
 
@@ -115,8 +202,8 @@ internal partial class PluginServiceCollection(ILogger logger) : IServiceCollect
 	}
 
 	public int Count => _inner.Count;
-	[ExcludeFromCodeCoverage]
-	public bool IsReadOnly => _inner.IsReadOnly;
+	[ExcludeFromCodeCoverage] public bool IsReadOnly => _inner.IsReadOnly;
+
 	[ExcludeFromCodeCoverage]
 	public int IndexOf(ServiceDescriptor item) => _inner.IndexOf(item);
 
@@ -134,8 +221,7 @@ internal partial class PluginServiceCollection(ILogger logger) : IServiceCollect
 
 	public ServiceDescriptor this[int index] {
 		get => _inner[index];
-		[ExcludeFromCodeCoverage]
-		set => _inner[index] = value;
+		[ExcludeFromCodeCoverage] set => _inner[index] = value;
 	}
 
 	[LoggerMessage(LogLevel.Trace, "Adding {serviceDescriptor}")]

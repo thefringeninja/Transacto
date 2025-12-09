@@ -1,5 +1,12 @@
+using Microsoft.AspNetCore.Components;
+
 namespace Transacto.Views.Shared;
 
 internal static class Shared;
 
-internal abstract class Layout;
+partial class Layout;
+
+public abstract class ComponentBase<TModel> : ComponentBase {
+	[Parameter]
+	public required TModel Model { get; set; }
+}

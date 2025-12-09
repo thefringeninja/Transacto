@@ -3,13 +3,14 @@ using System.Data.SQLite;
 using Dapper;
 using NodaTime;
 using Transacto.Messages;
+using Transacto.Plugins.FinancialStatements.ProfitAndLoss;
 
 namespace Transacto.Plugins.FinancialStatements.CashFlow;
 
 internal static class Services {
-	public static async Task<CashFlowReports> CashFlowReportsAsync(
-		Func<SQLiteConnection> connectionFactory,
-		IEnumerable<(LocalDate startingon, Period period)> reportRanges,
+	public static async Task<CashFlowReports> CashFlowReportsAsync(Func<SQLiteConnection> connectionFactory,
+		GetProfitAndLossReportsAsync getProfitAndLossReportsAsync,
+		ImmutableArray<(LocalDate startingon, Period period)> reportRanges,
 		CancellationToken ct) {
 		await using var connection = connectionFactory();
 
@@ -22,20 +23,17 @@ internal static class Services {
 				FROM accounts
 				WHERE affects_cash = false
 				""")
-			.ToArrayAsync(ct);
+			.ToDictionaryAsync(account => account.accountNumber, cancellationToken: ct);
+
+		var netIncomes = await getProfitAndLossReportsAsync(reportRanges, ct);
 
 		var reports = await reportRanges.ToAsyncEnumerable()
 			.Select(GetReportAsync)
 			.ToArrayAsync(cancellationToken: ct);
 
-		return new CashFlowReports(
-			accounts.ToImmutableDictionary(
-				account => account.accountNumber,
-				account => new CashFlowReports.AccountInfo(account.accountNumber, account.accountName,
-					account.cashFlowCategory)),
-			[..reports]);
+		return new CashFlowReports([..reports]);
 
-		async ValueTask<CashFlowReport> GetReportAsync((LocalDate, Period) q, CancellationToken ct) {
+		async ValueTask<ReportGroup> GetReportAsync((LocalDate, Period) q, int index, CancellationToken ct) {
 			var (start, period) = q;
 
 			var startingCash = await connection.ExecuteScalarAsync<decimal>(
@@ -54,7 +52,7 @@ internal static class Services {
 					decimal balance,
 					DefineAccountCashFlowCategory cashFlowCategory)>(
 					"""
-					SELECT c.account_number, SUM(c.balance), a.cash_flow_category
+					SELECT c.account_number, SUM(c.balance)
 					FROM cash_flow_daily c
 						LEFT JOIN accounts a ON c.account_number = a.account_number 
 					WHERE c.date BETWEEN @start AND @end
@@ -65,10 +63,13 @@ internal static class Services {
 						start = start.ToDateTimeUnspecified(),
 						end = (start + period - Period.FromDays(1)).ToDateTimeUnspecified()
 					})
-				.Select(a => new CashFlowReport.AccountBalance(a.accountNumber, a.balance / 100m, a.cashFlowCategory))
+				.Select(a => new Report.Line(
+					new AccountInfo(a.accountNumber, accounts[a.accountNumber].accountName),
+					a.balance / 100m, accounts[a.accountNumber].cashFlowCategory))
 				.ToArrayAsync(ct);
 
-			return new CashFlowReport(new ReportRange(start, period), startingCash, [..cashFlow]);
+			return ReportGroup.Create(new ReportRange(start, period), startingCash, netIncomes.Groups[index].NetProfit,
+				[..cashFlow]);
 		}
 	}
 }

@@ -1,0 +1,23 @@
+@using Microsoft.AspNetCore.Components.Sections
+@using Transacto.Views.Shared
+@inherits ComponentBase<SortedDictionary<string, AccountInfo>>
+
+<LayoutView Layout="typeof(Layout)">
+	<section>
+		
+		<ul>
+			@foreach (var (key, value) in Model)
+			{
+				<li class="@(value.Active ? "active" : "inactive")">@key - @value.AccountName</li>
+			}
+		</ul>
+	</section>
+</LayoutView>
+
+<SectionContent SectionName="head">
+	<style type="text/css">
+		.inactive {
+			text-decoration: line-through;
+		}
+	</style>
+</SectionContent>

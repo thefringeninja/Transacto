@@ -1,5 +1,4 @@
 using System.Collections.Immutable;
-using Inflector;
 
 namespace Transacto.Plugins;
 

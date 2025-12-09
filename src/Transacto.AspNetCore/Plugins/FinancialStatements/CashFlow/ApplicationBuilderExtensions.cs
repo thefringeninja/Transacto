@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Mvc;
 using NodaTime;
 using Transacto.Framework;
 using Transacto.Framework.Http;
+using Transacto.Plugins;
 using Transacto.Plugins.FinancialStatements.CashFlow;
 
 namespace Microsoft.AspNetCore.Builder;
@@ -19,7 +20,6 @@ static partial class ApplicationBuilderExtensions {
 				for (var i = 0; i < reportRanges.Length; i++) {
 					reportRanges[i] = (startingOn[i], period[i]);
 				}
-
 				var resource = await getCashFlowReportsAsync([..reportRanges], ct);
 
 				return Results.Hal(resource, Checkpoint.None, new CashFlowReportsRepresentation());

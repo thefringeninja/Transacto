@@ -7,10 +7,10 @@ namespace Transacto.Plugins.FinancialStatements.BalanceSheet;
 public class BalanceSheetReportsRepresentation : Hal<BalanceSheetReports>, IHalLinks<BalanceSheetReports>,
 	IHalState<BalanceSheetReports> {
 	public IEnumerable<Link> LinksFor(BalanceSheetReports resource) {
-		if (resource.Reports.Length == 0) {
+		if (resource.Groups.Length == 0) {
 			yield break;
 		}
-		var report = resource.Reports[0];
+		var report = resource.Groups[0];
 		var includeAll = report.Thru == LocalDate.MaxIsoValue;
 		var current = includeAll ? LocalDate.FromDateTime(DateTime.Now) : report.Thru;
 

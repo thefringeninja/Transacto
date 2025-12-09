@@ -1,42 +1,23 @@
 using System.Collections.Immutable;
-using Transacto.Messages;
 
 namespace Transacto.Plugins.FinancialStatements.CashFlow;
 
-public sealed record CashFlowReports(
-	ImmutableDictionary<int, CashFlowReports.AccountInfo> Accounts,
-	ImmutableArray<CashFlowReport> Reports) {
-	
-	public record AccountInfo(int AccountNumber, string AccountName, DefineAccountCashFlowCategory CashFlowCategory);
-	
-	public bool Equals(CashFlowReports? other) {
-		if (other is null) return false;
-		if (ReferenceEquals(this, other)) return true;
+public sealed record CashFlowReports(ImmutableArray<ReportGroup> Groups) {
+	public AccountMap AccountMap => field ??= AccountMap.From(Groups);
+}
 
-		return Reports.SequenceEqual(other.Reports) &&
-		       Accounts.OrderBy(a => a.Key).SequenceEqual(other.Accounts.OrderBy(a => a.Key));
-	}
+public sealed record AccountMap(
+	ImmutableSortedDictionary<int, string> Operations,
+	ImmutableSortedDictionary<int, string> Investment,
+	ImmutableSortedDictionary<int, string> Finance) {
+	public static AccountMap From(ImmutableArray<ReportGroup> groups) => new(
+		GetAccountLookup(groups, group => group.Operations),
+		GetAccountLookup(groups, group => group.Investment),
+		GetAccountLookup(groups, group => group.Finance));
 
-	public override int GetHashCode() => HashCode.Combine(
-		Reports.Aggregate(397, HashCode.Combine),
-		Accounts.Aggregate(397, HashCode.Combine));
-
-	// [JsonIgnore]
-	// private IEnumerable<Account> DoesNotAffectCash => Accounts.Values
-	// 	.Where(account => !account.AffectsCash)
-	// 	.Select(account => Account.For(new(account.AccountNumber), new(account.AccountName),
-	// 		CashFlowCategory.FromCashFlowCategory(account.Category)))
-	// 	.Where(account => account.IsFictitious);
-	//
-	public IEnumerable<int> Operations => Accounts.Values
-		.Where(account => account.CashFlowCategory == DefineAccountCashFlowCategory.Operations)
-		.Select(account => account.AccountNumber);
-	
-	public IEnumerable<int> Investment => Accounts.Values
-		.Where(account => account.CashFlowCategory == DefineAccountCashFlowCategory.Investment)
-		.Select(account => account.AccountNumber);
-	
-	public IEnumerable<int> Finance => Accounts.Values
-		.Where(account => account.CashFlowCategory == DefineAccountCashFlowCategory.Finance)
-		.Select(account => account.AccountNumber);
+	private static ImmutableSortedDictionary<int, string> GetAccountLookup(ImmutableArray<ReportGroup> groups,
+		Func<ReportGroup, Report> getReport) => groups
+		.SelectMany(group => getReport(group).Accounts)
+		.Distinct()
+		.ToImmutableSortedDictionary(x => x.Number, x => x.Name);
 }

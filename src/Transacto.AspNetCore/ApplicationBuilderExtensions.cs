@@ -1,4 +1,3 @@
-using Inflector;
 using Transacto;
 using Transacto.Framework;
 using Transacto.Framework.Http;

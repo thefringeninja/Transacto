@@ -11,20 +11,21 @@ internal static class Services {
 		await using var connection = connectionFactory();
 
 		var accounts = await connection
-			.QueryUnbufferedAsync<(int AccountNumber, string accountName)>(
+			.QueryUnbufferedAsync<(int accountNumber, string accountName)>(
 				"""
 				SELECT account_number, account_name
 				FROM account_names
 				""")
-			.ToDictionaryAsync(a => a.AccountNumber, a => a.accountName, cancellationToken: ct);
+			.ToDictionaryAsync(a => a.accountNumber, a => new AccountInfo(a.accountNumber, a.accountName),
+				cancellationToken: ct);
 
 		var reports = await thru.ToAsyncEnumerable()
 			.Select(GetReportAsync)
 			.ToArrayAsync(cancellationToken: ct);
 
-		return new BalanceSheetReports(accounts.ToImmutableDictionary(), [..reports]);
+		return new BalanceSheetReports([..reports]);
 
-		async ValueTask<BalanceSheetReport> GetReportAsync(LocalDate thru, CancellationToken ct) {
+		async ValueTask<ReportGroup> GetReportAsync(LocalDate thru, CancellationToken ct) {
 			var result = connection.QueryUnbufferedAsync<(int accountNumber, decimal balance)>(
 				"""
 				SELECT b.account_number, SUM(b.balance)
@@ -36,10 +37,12 @@ internal static class Services {
 					thru = thru.ToDateTimeUnspecified()
 				});
 
-			return await result.AggregateAsync(BalanceSheetReport.For(thru),
-				(report, item) => report with {
-					AccountBalances = report.AccountBalances.Add(new(item.accountNumber, item.balance / 100m))
-				}, cancellationToken: ct);
+			var lines = await result.AggregateAsync(new List<Report.Line>(), (acc, line) => {
+				acc.Add(new Report.Line(accounts[line.accountNumber], line.balance / 100m));
+				return acc;
+			}, cancellationToken: ct);
+
+			return ReportGroup.Create(thru, [..lines]);
 		}
 	}
 }

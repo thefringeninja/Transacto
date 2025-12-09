@@ -1,0 +1,15 @@
+@{
+	if (Value >= decimal.Zero)
+	{
+		<span>@Value.ToString("N4")</span>	
+	}
+	else
+	{
+		<span style="color: red">(@Math.Abs(Value).ToString("N4"))</span>
+	}
+}
+
+@code {
+
+	[Parameter] public required decimal Value { get; set; }
+}
