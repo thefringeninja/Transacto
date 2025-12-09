@@ -8,6 +8,8 @@
 		<PackageReference Include="Corvus.Json.JsonSchema.Draft201909" Version="4.3.21"/>
 		<PackageReference Include="Dapper" Version="2.1.66"/>
 		<PackageReference Include="KurrentDB.Client" Version="1.2.0"/>
+		<PackageReference Include="System.Reactive.Linq" Version="6.1.0"/>		
+		<PackageReference Include="System.Interactive.Async" Version="7.0.0"/>
 		<PackageReference Include="Hallo" Version="3.0.2"/>
 		<PackageReference Include="Inflector.NetStandard" Version="1.2.2"/>
 		<PackageReference Include="Microsoft.AspNetCore.Mvc.Razor.RuntimeCompilation" Version="10.0.0"/>

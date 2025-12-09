@@ -7,18 +7,20 @@ namespace Microsoft.Extensions.DependencyInjection;
 // ReSharper restore CheckNamespace
 
 public static partial class ServiceCollectionExtensions {
-	public static IServiceCollection AddInMemoryProjection<T>(this IServiceCollection services,
-		Func<T, object, T> handler) where T : MemoryReadModel, new() =>
-		services.AddSingleton<ProjectionHandler<InMemoryProjectionDatabase>[]>(
-			new AnonymousProjectionBuilder<InMemoryProjectionDatabase>()
-				.When<Envelope>((target, envelope) => {
-					var optional = target.Get<T>();
-					var (message, position) = envelope;
+	extension(IServiceCollection services) {
+		public IServiceCollection AddInMemoryProjection<T>(Func<T, object, T> handler)
+			where T : MemoryReadModel, new() =>
+			services.AddSingleton<InMemoryProjection>(new InMemoryProjection<T>(handler));
+		public IServiceCollection AddProjectionHost<T>() where T : class, IHostedService, IProjectionHostStatus =>
+			services
+				.AddSingleton<T>()
+				.AddHostedService<T>(provider => provider.GetRequiredService<T>())
+				.AddSingleton<IProjectionHostStatus, ProjectionHostStatusWrapper<T>>();
 
-					var model = optional.HasValue ? optional.Value : new T();
-					target.Set(handler(model, message) with {
-						Checkpoint = position
-					});
-				})
-				.Build());
+		public IServiceCollection AddProjectionHost<T>(Func<IServiceProvider, T> factory)
+			where T : class, IHostedService, IProjectionHostStatus => services
+			.AddSingleton(factory)
+			.AddSingleton<IHostedService>(provider => provider.GetRequiredService<T>())
+			.AddSingleton<IProjectionHostStatus, ProjectionHostStatusWrapper<T>>();
+	}
 }

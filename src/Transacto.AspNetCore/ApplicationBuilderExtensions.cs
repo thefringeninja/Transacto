@@ -1,6 +1,7 @@
 using Transacto;
 using Transacto.Framework;
 using Transacto.Framework.Http;
+using Transacto.Framework.Projections;
 using Transacto.Plugins;
 using Index = Transacto.Plugins.Index;
 
@@ -18,7 +19,8 @@ static partial class ApplicationBuilderExtensions {
 						return next();
 					})
 					.UseRouting()
-					.UseEndpoints(plugin.Configure)))
+					.UseEndpoints(plugin.Configure)
+					.UseProjectionStatus()))
 			.Map("", inner => inner.UseTransactoIndex(plugins));
 	}
 

@@ -1,8 +1,11 @@
+@using Microsoft.AspNetCore.Components.Sections
 @using Transacto.Views.Shared
 @inherits ComponentBase<FinancialStatementsIndex>
 <LayoutView Layout="typeof(Layout)">
 	<section>
 		<h1>@Model.StartOfYear</h1>
 	</section>
-
+	<SectionContent SectionName="footer">
+		<ProjectionStatus />
+	</SectionContent>
 </LayoutView>

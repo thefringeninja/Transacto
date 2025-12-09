@@ -1,0 +1,43 @@
+<div id="ProjectionStatus">
+	
+	<ul>
+
+	</ul>
+</div>
+
+<section class="projection-status-template" style="visibility: hidden">
+	<details>
+		<summary class="name"></summary>
+		<p class="status"></p>
+		<p class="progress"></p>
+	</details>
+</section>
+
+<script type="text/javascript" language="javascript">
+	const { pathname } = window.location;
+	const eventSource = new EventSource(`${pathname}/projections`);
+	const container = document.getElementById('ProjectionStatus');
+	const template = document.querySelector('.projection-status-template');
+
+	const createNode = (name) => {
+		const node = template.cloneNode(true);
+
+		node.className = 'projection-status';
+		node.id = name;
+		node.attributes.removeNamedItem('style');
+
+		const li = document.createElement('li');
+		li.appendChild(node);
+		container.querySelector('ul').appendChild(li);
+
+		return node;
+	};
+
+	eventSource.onmessage = ({data}) => {
+		const state = JSON.parse(data);
+		const node = container.querySelector(`\#${state.name}`) || createNode(state.name);
+		node.querySelector('.name').innerText = state.name;
+		node.querySelector('.status').innerText = state.status;
+		node.querySelector('.progress').innerText = state.progress;
+	};
+</script>

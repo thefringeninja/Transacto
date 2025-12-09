@@ -4,7 +4,6 @@ using Microsoft.AspNetCore.Mvc;
 using NodaTime;
 using Transacto.Framework;
 using Transacto.Framework.Http;
-using Transacto.Plugins;
 using Transacto.Plugins.FinancialStatements.CashFlow;
 
 namespace Microsoft.AspNetCore.Builder;

@@ -10,10 +10,9 @@ namespace Microsoft.Extensions.DependencyInjection;
 public static partial class ServiceCollectionExtensions {
 	extension(IServiceCollection services) {
 		public IServiceCollection AddSQLiteProjection<T>()
-			where T : SQLiteProjection, new() => services.AddSQLiteProjection(new T(), typeof(T).Name);
-
-		public IServiceCollection AddSQLiteProjection(SQLiteProjection projection, string name) =>
-			services
+			where T : SQLiteProjection, new() {
+			SQLiteProjection projection = new T();
+			return services
 				.AddKeyedSingleton<Func<SQLiteConnection>>(projection.GetType(),
 					(provider, _) => {
 						var connectionString =
@@ -23,9 +22,10 @@ public static partial class ServiceCollectionExtensions {
 
 						return () => new SQLiteConnection(connectionString);
 					})
-				.AddSingleton<IHostedService>(provider => new SQLiteProjectionHost(provider.GetRequiredService<KurrentDBClient>(),
+				.AddProjectionHost(provider => new SQLiteProjectionHost<T>(provider.GetRequiredService<KurrentDBClient>(),
 					provider.GetRequiredService<IMessageTypeMapper>(),
 					provider.GetRequiredKeyedService<Func<SQLiteConnection>>(projection.GetType()), projection,
-					provider.GetRequiredService<ILoggerFactory>().CreateLogger<SQLiteProjectionHost>()));
+					provider.GetRequiredService<ILoggerFactory>().CreateLogger<SQLiteProjectionHost<T>>()));
+		}
 	}
 }

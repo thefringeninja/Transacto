@@ -13,6 +13,7 @@ public static class TransactoHttpSerializerOptions {
 		PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
 		PropertyNameCaseInsensitive = true,
 		IncludeFields = true,
+		NumberHandling = JsonNumberHandling.AllowNamedFloatingPointLiterals,
 		Converters = {
 			new LinksConverter(),
 			new HalRepresentationConverter(),

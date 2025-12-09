@@ -12,16 +12,30 @@ using EventTypeFilter = KurrentDB.Client.EventTypeFilter;
 
 namespace Transacto.Infrastructure.SQLite;
 
-public partial class SQLiteProjectionHost(
+public partial class SQLiteProjectionHost<T>(
 	KurrentDBClient eventStore,
 	IMessageTypeMapper messageTypeMap,
 	Func<SQLiteConnection> connectionFactory,
 	SQLiteProjection projection,
-	ILogger<SQLiteProjectionHost> logger)
-	: BackgroundService {
+	ILogger<SQLiteProjectionHost<T>> logger)
+	: BackgroundService, IProjectionHostStatus where T : SqlProjection {
 	private readonly SqlProjectionHandlerResolver _resolver = Resolve.WhenEqualToHandlerMessageType(projection);
 
+	private ProjectionState _state = ProjectionState.Named(projection.Name);
+
 	private static readonly SQLiteSyntax Sql = new();
+
+	public IReadOnlyList<ProjectionState> State => [_state];
+
+	public bool TryGetState(string name, out ProjectionState state) {
+		if (name != _state.Name) {
+			state = default;
+			return false;
+		}
+
+		state = _state;
+		return true;
+	}
 
 	protected override async Task ExecuteAsync(CancellationToken stoppingToken) {
 		CreateSchema();
@@ -33,9 +47,14 @@ public partial class SQLiteProjectionHost(
 		try {
 			await Policy.Handle<Exception>(ex => ex is not OperationCanceledException)
 				.WaitAndRetryAsync(5, attempt => TimeSpan.FromSeconds(Math.Pow(2, attempt)),
-					(ex, delay) =>
+					(ex, delay) => {
+						_state = _state with {
+							Status = ProjectionStatus.Faulted,
+							ErrorMessage = ex.Message
+						};
 						LogWillRetryAfterDelay(logger, ex, projection.Name,
-							delay))
+							delay);
+					})
 				.ExecuteAsync(SubscribeInternal, ct);
 		} catch (OperationCanceledException) { }
 	}
@@ -44,6 +63,10 @@ public partial class SQLiteProjectionHost(
 		var scope = new SQLiteProjectionScope(projection.Name);
 
 		var checkpoint = ReadCheckpoint();
+
+		_state = _state.Checkpoint(checkpoint);
+
+		await FellBehind(ct);
 
 		using (logger.BeginScope(scope)) {
 			LogResumingFromCheckpoint(logger, checkpoint);
@@ -64,12 +87,21 @@ public partial class SQLiteProjectionHost(
 					if (streamMessage is StreamMessage.CaughtUp) {
 						stopwatch.Stop();
 						LogCaughtUp(logger, stopwatch.Elapsed);
+
+						_state = _state with { Status = ProjectionStatus.Live };
+						continue;
+					}
+
+					if (streamMessage is StreamMessage.FellBehind) {
+						await FellBehind(ct);
 						continue;
 					}
 
 					if (streamMessage is not StreamMessage.Event(var resolvedEvent)) {
 						continue;
 					}
+
+					_state = _state.Checkpoint(FromAll.After(resolvedEvent.Event.Position));
 
 					using var ers = logger.BeginScope(Scopes.EventRecord.From(resolvedEvent.Event));
 
@@ -154,39 +186,48 @@ public partial class SQLiteProjectionHost(
 	}
 
 
+	private async Task FellBehind(CancellationToken ct) {
+		var last = await eventStore.ReadAllAsync(Direction.Backwards, Position.End, 1)
+			.Select(re => re.Event.Position)
+			.FirstOrDefaultAsync(ct);
+
+		_state = _state.End(FromAll.After(last)) with { Status = ProjectionStatus.CatchingUp };
+	}
+
+
 	private readonly record struct SQLiteProjectionScope(string Name);
 
 	[LoggerMessage(LogLevel.Information,
 		"SQLiteProjection {SQLiteProjection} encountered an issue. Will retry after {delay}.")]
-	static partial void LogWillRetryAfterDelay(ILogger<SQLiteProjectionHost> logger, Exception ex,
+	static partial void LogWillRetryAfterDelay(ILogger<SQLiteProjectionHost<T>> logger, Exception ex,
 		string SQLiteProjection, TimeSpan delay);
 
 	[LoggerMessage(LogLevel.Trace, "Operation cancelled.")]
-	static partial void LogOperationCancelled(ILogger<SQLiteProjectionHost> logger);
+	static partial void LogOperationCancelled(ILogger<SQLiteProjectionHost<T>> logger);
 
 	[LoggerMessage(LogLevel.Information, "SQLiteProjection resuming from checkpoint {checkpoint}.")]
-	static partial void LogResumingFromCheckpoint(ILogger<SQLiteProjectionHost> logger, FromAll checkpoint);
+	static partial void LogResumingFromCheckpoint(ILogger<SQLiteProjectionHost<T>> logger, FromAll checkpoint);
 
 	[LoggerMessage(LogLevel.Information, "SQLiteProjection caught up in {elapsed}.")]
-	static partial void LogCaughtUp(ILogger<SQLiteProjectionHost> logger, TimeSpan elapsed);
+	static partial void LogCaughtUp(ILogger<SQLiteProjectionHost<T>> logger, TimeSpan elapsed);
 
 	[LoggerMessage(LogLevel.Trace, "SQLiteProjection saw {message}")]
-	static partial void LogSawMessage(ILogger<SQLiteProjectionHost> logger, StreamMessage message);
+	static partial void LogSawMessage(ILogger<SQLiteProjectionHost<T>> logger, StreamMessage message);
 
 	[LoggerMessage(LogLevel.Debug, "SQLiteProjection did not understand type.")]
-	static partial void LogDidNotUnderstandMessageType(ILogger<SQLiteProjectionHost> logger);
+	static partial void LogDidNotUnderstandMessageType(ILogger<SQLiteProjectionHost<T>> logger);
 
 	[LoggerMessage(LogLevel.Debug, "SQLiteProjection added message to batch.")]
-	static partial void LogAddedToBatch(ILogger<SQLiteProjectionHost> logger);
+	static partial void LogAddedToBatch(ILogger<SQLiteProjectionHost<T>> logger);
 
 	[LoggerMessage(LogLevel.Debug, "SQLiteProjection flushing batch with {count} messages.")]
-	static partial void LogFlushingBatch(ILogger<SQLiteProjectionHost> logger, int count);
+	static partial void LogFlushingBatch(ILogger<SQLiteProjectionHost<T>> logger, int count);
 
 	[LoggerMessage(LogLevel.Debug,
 		"SQLiteProjection flushed batch at checkpoint {checkpoint} with {count} messages in {elapsed}.")]
-	static partial void LogFlushedBatch(ILogger<SQLiteProjectionHost> logger, Position checkpoint, int count,
+	static partial void LogFlushedBatch(ILogger<SQLiteProjectionHost<T>> logger, Position checkpoint, int count,
 		TimeSpan elapsed);
 
 	[LoggerMessage(LogLevel.Information, "Schema created {projection}")]
-	static partial void LogSchemaCreated(ILogger<SQLiteProjectionHost> logger, string projection);
+	static partial void LogSchemaCreated(ILogger<SQLiteProjectionHost<T>> logger, string projection);
 }

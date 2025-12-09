@@ -57,8 +57,8 @@ public static class WebApplicationBuilderExtensions {
 						.AddSingleton(messageTypeMapper)
 						.AddSingleton<IPluginDescriptor>(plugin)
 						.AddSingleton<InMemoryProjectionDatabase>()
-						.AddHostedService<InMemoryProjectionHost>()
-						.AddHostedService<NpgsqlProjectionHost>()
+						.AddProjectionHost<InMemoryProjectionHost>()
+						.AddProjectionHost<NpgsqlProjectionHost>()
 						.AddHostedService<StreamStoreProjectionHost>()
 						.AddSingleton(sqliteConnectionStringBuilderFactory)
 						.AddSingleton<Func<NpgsqlConnection>>(() => NpqsqlConnectonFactory(plugin))
@@ -74,11 +74,10 @@ public static class WebApplicationBuilderExtensions {
 				});
 
 			NpgsqlConnection NpqsqlConnectonFactory(IPlugin plugin) =>
-				new(npgsqlConnectionStringBuilderCache.GetOrAdd(plugin.Name, username =>
-					new NpgsqlConnectionStringBuilder(
-						npgsqlConnectionStringBuilder.ConnectionString) {
+				new(npgsqlConnectionStringBuilderCache.GetOrAdd(plugin.Name, static (username, cs) =>
+					new NpgsqlConnectionStringBuilder(cs.ConnectionString) {
 						Username = username
-					}).ConnectionString);
+					}, npgsqlConnectionStringBuilder).ConnectionString);
 		}
 	}
 
@@ -134,8 +133,8 @@ public static class ServiceCollectionExtensions {
 					.AddSingleton(messageTypeMapper)
 					.AddSingleton<IPluginDescriptor>(plugin)
 					.AddSingleton<InMemoryProjectionDatabase>()
-					.AddHostedService<InMemoryProjectionHost>()
-					.AddHostedService<NpgsqlProjectionHost>()
+					.AddProjectionHost<InMemoryProjectionHost>()
+					.AddProjectionHost<NpgsqlProjectionHost>()
 					.AddHostedService<StreamStoreProjectionHost>()
 					.AddSingleton(sqliteConnectionStringBuilderFactory)
 					.AddSingleton<Func<NpgsqlConnection>>(() => NpqsqlConnectonFactory(plugin))

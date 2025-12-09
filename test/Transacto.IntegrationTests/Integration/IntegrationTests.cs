@@ -114,12 +114,11 @@ public abstract class IntegrationTests : IAsyncDisposable {
 		var builder = WebApplication.CreateBuilder();
 		builder.Logging.ClearProviders().AddProvider(serilogLoggerProvider);
 
-		builder.Services.AddTransacto(
+		builder.AddTransacto(
 			KurrentDBClient,
 			new NpgsqlConnectionStringBuilder(),
 			SQLiteInTempFolder,
-			_streamStoreClient,
-			() => serilogLoggerProvider);
+			_streamStoreClient);
 		builder.WebHost.UseTestServer();
 		_app = builder.Build();
 		_app.UseTransacto();

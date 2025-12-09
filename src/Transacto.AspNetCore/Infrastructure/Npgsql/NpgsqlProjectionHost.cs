@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Text.Json;
 using KurrentDB.Client;
@@ -18,10 +19,19 @@ public partial class NpgsqlProjectionHost(
 	Func<NpgsqlConnection> connectionFactory,
 	ILogger<NpgsqlProjectionHost> logger,
 	params IEnumerable<NpgsqlProjection> projections)
-	: BackgroundService {
+	: BackgroundService, IProjectionHostStatus {
+	private readonly NpgsqlProjection[] _projections = projections.ToArray();
+
+	private readonly ConcurrentDictionary<string, ProjectionState> _state = [];
+
+	public IReadOnlyList<ProjectionState> State => _state.Values.ToList();
+
+	public bool TryGetState(string name, out ProjectionState state) =>
+		_state.TryGetValue(name, out state);
+
+
 	protected override async Task ExecuteAsync(CancellationToken stoppingToken) {
-		projections = projections.ToArray();
-		if (!projections.Any()) {
+		if (_projections.Length == 0) {
 			return;
 		}
 
@@ -34,7 +44,13 @@ public partial class NpgsqlProjectionHost(
 		try {
 			await Policy.Handle<Exception>(ex => ex is not OperationCanceledException)
 				.WaitAndRetryAsync(5, attempt => TimeSpan.FromSeconds(Math.Pow(2, attempt)),
-					(ex, delay) => LogWillRetryAfterDelay(logger, ex, plugin.Name, delay))
+					(ex, delay) => {
+						_state.UpdateAll((state, ex) => state with {
+							Status = ProjectionStatus.Faulted,
+							ErrorMessage = ex.Message
+						}, ex);
+						LogWillRetryAfterDelay(logger, ex, plugin.Name, delay);
+					})
 				.ExecuteAsync(SubscribeInternal, ct);
 		} catch (OperationCanceledException) { }
 	}
@@ -42,13 +58,20 @@ public partial class NpgsqlProjectionHost(
 	private async Task SubscribeInternal(CancellationToken ct) {
 		var scope = new NpgSqlProjectionScope(plugin.Name);
 
+		FromAll checkpoint = FromAll.End;
 		var projectors = await LoadProjectors(ct);
 
-		var checkpoint = projectors.Select(p => p.Checkpoint).Min();
+		foreach (var projector in projectors) {
+			checkpoint = checkpoint < projector.Checkpoint ? checkpoint : projector.Checkpoint;
+			var key = projector.Projection.GetType().Name;
+			_state[key] = ProjectionState.Named(key).Checkpoint(projector.Checkpoint);
+		}
 
 		using (logger.BeginScope(scope)) {
 			LogResumingFromCheckpoint(logger, checkpoint);
 		}
+
+		await FellBehind(ct);
 
 		var stopwatch = Stopwatch.StartNew();
 
@@ -58,21 +81,33 @@ public partial class NpgsqlProjectionHost(
 
 		var batch = new List<ResolvedEvent>(110);
 
-
 		await foreach (var message in subscription.Batch(100, TimeSpan.FromMilliseconds(20), ct)) {
 			using var sps = logger.BeginScope(scope);
 
 			switch (message) {
 				case SubscriptionControlMessage.SubscriptionMessage (var streamMessage): {
-					if (streamMessage is StreamMessage.CaughtUp) {
-						stopwatch.Stop();
-						LogCaughtUp(logger, stopwatch.Elapsed);
-						continue;
+					switch (streamMessage) {
+						case StreamMessage.CaughtUp: {
+							stopwatch.Stop();
+							LogCaughtUp(logger, stopwatch.Elapsed);
+							_state.UpdateAll(value => value with { Status = ProjectionStatus.Live });
+
+							continue;
+						}
+						case StreamMessage.FellBehind: {
+							await FellBehind(ct);
+
+							continue;
+						}
 					}
 
 					if (streamMessage is not StreamMessage.Event(var resolvedEvent)) {
 						continue;
 					}
+
+					_state.UpdateAll((value, position) => value
+						.End(FromAll.After(position))
+						.Checkpoint(FromAll.After(position)), resolvedEvent.Event.Position);
 
 					using var ers = logger.BeginScope(Scopes.EventRecord.From(resolvedEvent.Event));
 
@@ -84,7 +119,8 @@ public partial class NpgsqlProjectionHost(
 					batch.Add(resolvedEvent);
 
 					LogAddedToBatch(logger);
-					break;
+
+					continue;
 				}
 				case SubscriptionControlMessage.Flush: {
 					if (batch.Count == 0) {
@@ -128,17 +164,28 @@ public partial class NpgsqlProjectionHost(
 		}
 	}
 
+	private async Task FellBehind(CancellationToken ct) {
+		var last = await eventStore.ReadAllAsync(Direction.Backwards, Position.End, 1)
+			.Select(re => re.Event.Position)
+			.FirstOrDefaultAsync(ct);
+
+		_state.UpdateAll(
+			static (value, position) =>
+				value.End(FromAll.After(position)) with { Status = ProjectionStatus.CatchingUp },
+			last);
+	}
+
 	async ValueTask<Projector[]> LoadProjectors(CancellationToken ct) {
 		await using var connection = connectionFactory();
 		await connection.OpenAsync(ct);
-		return await Task.WhenAll(projections.Select(async projection => new Projector(projection,
+		return await Task.WhenAll(Array.ConvertAll(_projections, async projection => new Projector(projection,
 			await projection.ReadCheckpoint(connection, ct))));
 	}
 
 	private Task CreateSchema(CancellationToken ct) =>
-		Task.WhenAll(projections.Select(p =>
-			new AsyncSqlProjector(Resolve.WhenEqualToHandlerMessageType(p),
-				new NpgsqlExecutor(connectionFactory)).ProjectAsync(new CreateSchema(), ct)));
+		Task.WhenAll(Array.ConvertAll(_projections,
+			p => new AsyncSqlProjector(Resolve.WhenEqualToHandlerMessageType(p), new NpgsqlExecutor(connectionFactory))
+				.ProjectAsync(new CreateSchema(), ct)));
 
 	private record Projector(NpgsqlProjection Projection, FromAll Checkpoint) {
 		public SqlProjectionHandlerResolver Resolver { get; } = Resolve.WhenEqualToHandlerMessageType(Projection);
