@@ -1,0 +1,8 @@
+{
+	"accountName": {
+		"ui:autofocus": true
+	},
+	"accountNumber": {
+		"ui:widget": "text"
+	}
+}

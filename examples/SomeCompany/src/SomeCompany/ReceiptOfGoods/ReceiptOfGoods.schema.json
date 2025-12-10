@@ -1,5 +1,5 @@
 {
-	"$schema": "https://json-schema.org/draft/2019-09/hyper-schema",
+	"$schema": "http://json-schema.org/draft-07/schema",
 	"$id": "http://somecompany.com/ReceiptOfGoods.json",
 	"type": "object",
 	"title": "Receipt Of Goods",

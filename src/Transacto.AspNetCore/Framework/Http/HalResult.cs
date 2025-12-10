@@ -1,4 +1,7 @@
 using System.Net;
+using AngleSharp;
+using AngleSharp.Html;
+using AngleSharp.Html.Parser;
 using Hallo;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
@@ -73,6 +76,13 @@ internal class HalResult<T>(T? resource, Checkpoint checkpoint, IHal hal, HttpSt
 	}
 
 	private class HalHtmlResult(T? resource, IHal hal) : IResult {
+		private static readonly HtmlParser s_HtmlParser = new();
+
+		private static readonly PrettyMarkupFormatter s_PrettyMarkupFormatter = new() {
+			Indentation = "\t",
+			NewLine = "\n"
+		};
+
 		public async Task ExecuteAsync(HttpContext context) {
 			await using var htmlRenderer = new HtmlRenderer(context.RequestServices,
 				context.RequestServices.GetRequiredService<ILoggerFactory>());
@@ -101,6 +111,10 @@ internal class HalResult<T>(T? resource, Checkpoint checkpoint, IHal hal, HttpSt
 					await htmlRenderer.RenderComponentAsync(viewType, ParameterView.FromDictionary(parameters));
 				return component.ToHtmlString();
 			});
+
+			if (context.RequestServices.GetRequiredService<IWebHostEnvironment>().IsDevelopment()) {
+				html = s_HtmlParser.ParseDocument(html).ToHtml(s_PrettyMarkupFormatter);
+			}
 
 			await context.Response.WriteAsync(html, context.RequestAborted);
 		}

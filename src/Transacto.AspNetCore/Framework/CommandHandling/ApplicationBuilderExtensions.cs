@@ -24,7 +24,7 @@ public static partial class ApplicationBuilderExtensions {
 		private IEndpointRouteBuilder MapCommandsInternal(string route,
 			JsonSerializerOptions serializerOptions, params Type[] commandTypes) {
 			var map = commandTypes.ToDictionary(commandType => commandType.Name);
-			var schemaCache = new JsonCommandSchemaCache(commandTypes);
+			var schemaCache = new JsonCommandSchemataCache(commandTypes);
 			builder.MapPost(route, async (HttpRequest request, [FromServices] CommandDispatcher dispatcher) => {
 				if (!MediaTypeHeaderValue.TryParse(request.ContentType, out var mediaType)) {
 					return Results.Text($"No media type specified.", statusCode: 415);
@@ -58,16 +58,25 @@ public static partial class ApplicationBuilderExtensions {
 				return Results.CommandHandled(checkpoint);
 			});
 
+			builder.MapGet($"{route}/commands/{{commandType}}", (string commandType, CancellationToken ct) => {
+				var schema = schemaCache[commandType];
+
+				return Results.Hal(schema, Checkpoint.None, new JsonCommandSchemaRepresentation());
+			});
+
 			builder.MapGet($"{route}/commands", (HttpRequest request) =>
-				Results.Hal(schemaCache, Checkpoint.None, new JsonCommandSchemaRepresentation()));
+				Results.Hal(schemaCache, Checkpoint.None, new JsonCommandSchemataRepresentation()));
 
 			return builder;
 		}
 	}
 
+	private class JsonCommandSchemaRepresentation : Hal<JsonCommandSchema>, IHalState<JsonCommandSchema> {
+		public object StateFor(JsonCommandSchema resource) => resource;
+	}
 
-	private class JsonCommandSchemaRepresentation : Hal<JsonCommandSchemaCache>, IHalState<JsonCommandSchemaCache> {
-		public object StateFor(JsonCommandSchemaCache resource) =>
+	private class JsonCommandSchemataRepresentation : Hal<JsonCommandSchemataCache>, IHalState<JsonCommandSchemataCache> {
+		public object StateFor(JsonCommandSchemataCache resource) =>
 			new {
 				forms = Array.ConvertAll(resource.CommandTypes, type => resource[type])
 			};
