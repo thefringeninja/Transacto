@@ -6,6 +6,7 @@ using Hallo;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
 using Microsoft.AspNetCore.Http.Headers;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Formatters;
 using Microsoft.Net.Http.Headers;
 
@@ -102,8 +103,11 @@ internal class HalResult<T>(T? resource, Checkpoint checkpoint, IHal hal, HttpSt
 			var viewType = Type.GetType(viewTypeName);
 
 			if (viewType is null) {
-				throw new Exception(
-					$"Could not find view for resource {typeof(T).FullName}. The view {viewTypeName} was not found.");
+				viewType = typeof(ProblemDetails_view);
+				parameters["Model"] = new ProblemDetails {
+					Detail = $"The view {viewTypeName} was not found and no html could be rendered.",
+					Status = 406
+				};
 			}
 
 			var html = await htmlRenderer.Dispatcher.InvokeAsync(async () => {

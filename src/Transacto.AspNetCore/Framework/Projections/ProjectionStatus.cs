@@ -8,7 +8,12 @@ public enum ProjectionStatus {
 	Faulted
 }
 
-public class ProjectionStateRepresentation : Hal<Dictionary<string, ProjectionState>>,
-	IHalState<Dictionary<string, ProjectionState>> {
-	public object StateFor(Dictionary<string, ProjectionState> resource) => resource;
+public class ProjectionsControllerRepresentation : Hal<ProjectionsController>,
+	IHalState<ProjectionsController> {
+	public object StateFor(ProjectionsController resource) => resource.State;
+}
+
+public class ProjectionStateRepresentation : Hal<ProjectionState>,
+	IHalState<ProjectionState> {
+	public object StateFor(ProjectionState resource) => resource;
 }

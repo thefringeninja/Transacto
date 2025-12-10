@@ -16,5 +16,11 @@ public readonly struct Optional<T>(T value) : IEquatable<Optional<T>> {
 	public static bool operator !=(Optional<T> left, Optional<T> right) => !left.Equals(right);
 	public static implicit operator Optional<T>(T value) => new(value);
 
+	public TResult? ToNullable<TResult>() where TResult : unmanaged, T =>
+		HasValue ? new TResult?((TResult)Value!) : null;
+
+	public TResult? ToObject<TResult>() where TResult : class, T =>
+		HasValue ? (TResult)Value! : null;
+	
 	public override int GetHashCode() => HasValue ? Value?.GetHashCode() ?? 0 : 0;
 }

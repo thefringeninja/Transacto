@@ -3,6 +3,8 @@ using System.Collections.Concurrent;
 using System.Data.SQLite;
 using System.Diagnostics.CodeAnalysis;
 using KurrentDB.Client;
+using Microsoft.AspNetCore.Hosting.Server;
+using Microsoft.AspNetCore.Hosting.Server.Features;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging.Abstractions;
 using Npgsql;
@@ -18,7 +20,7 @@ using Transacto.Plugins;
 
 namespace Transacto;
 
-public static class WebApplicationBuilderExtensions {
+public static partial class WebApplicationBuilderExtensions {
 	extension(WebApplicationBuilder builder) {
 		public void AddTransacto(
 			KurrentDBClient eventStore,
@@ -40,14 +42,16 @@ public static class WebApplicationBuilderExtensions {
 					// projections
 					.AddSingleton<Func<IPlugin, NpgsqlConnection>>(NpqsqlConnectonFactory)
 					.AddRazorComponents().Services
-					.AddScoped<ViewContext>(),
+					.AddScoped<ViewContext>()
+					.AddSingleton(GetRootUri)
+					.AddSingleton<IndexRepresentation>(),
 				(services, plugin) => {
 					var pluginServices = new PluginServiceCollection(NullLogger<PluginServiceCollection>.Instance);
 
 					foreach (var sd in builder.Logging.Services) {
 						pluginServices.Add(sd);
 					}
-					
+
 					plugin.ConfigureServices(pluginServices);
 
 					var pluginProvider = pluginServices
@@ -60,12 +64,14 @@ public static class WebApplicationBuilderExtensions {
 						.AddProjectionHost<InMemoryProjectionHost>()
 						.AddProjectionHost<NpgsqlProjectionHost>()
 						.AddHostedService<StreamStoreProjectionHost>()
+						.AddSingleton<ProjectionsController>()
 						.AddSingleton(sqliteConnectionStringBuilderFactory)
 						.AddSingleton<Func<NpgsqlConnection>>(() => NpqsqlConnectonFactory(plugin))
 						.AddSingleton<IConfiguration>(builder.Configuration)
 						.AddSingleton(builder.Environment)
 						.AddRazorComponents().Services
 						.AddScoped<ViewContext>()
+						.AddSingleton(GetPluginRootUri)
 						.BuildServiceProvider();
 
 					return services
@@ -78,6 +84,26 @@ public static class WebApplicationBuilderExtensions {
 					new NpgsqlConnectionStringBuilder(cs.ConnectionString) {
 						Username = username
 					}, npgsqlConnectionStringBuilder).ConnectionString);
+		}
+
+		private static SiteRoot GetPluginRootUri(IServiceProvider provider) {
+			var pluginDescriptor = provider.GetRequiredService<IPluginDescriptor>();
+			var uriBuilder = new UriBuilder(GetRootUri(provider).Uri);
+			uriBuilder.Path += pluginDescriptor.Slug;
+			return new(uriBuilder.Uri);
+		}
+
+		private static SiteRoot GetRootUri(IServiceProvider provider) {
+			var serverAddresses = provider.GetRequiredService<IServer>()
+				.Features.Get<IServerAddressesFeature>();
+
+			if (serverAddresses?.Addresses.Count > 0) {
+				return new(new Uri(serverAddresses.Addresses.First()));
+			}
+
+			return new(new UriBuilder {
+				Port = 5000
+			}.Uri);
 		}
 	}
 
@@ -93,148 +119,74 @@ public static class WebApplicationBuilderExtensions {
 			Task.WhenAll(serviceProvider.GetServices<IHostedService>()
 				.Select(service => service.StopAsync(cancellationToken)));
 	}
-}
 
-public static class ServiceCollectionExtensions {
-	public static IServiceCollection AddTransacto(this IServiceCollection services,
-		KurrentDBClient eventStore,
-		NpgsqlConnectionStringBuilder npgsqlConnectionStringBuilder,
-		Func<Type, SQLiteConnectionStringBuilder> sqliteConnectionStringBuilderFactory,
-		IStreamStore streamStore,
-		Func<ILoggerProvider> getLoggerProvider, IWebHostEnvironment builderEnvironment, params IPlugin[] plugins) {
-		var npgsqlConnectionStringBuilderCache = new ConcurrentDictionary<string, NpgsqlConnectionStringBuilder>();
+	private partial class PluginServiceCollection(ILogger logger) : IServiceCollection {
+		private readonly ServiceCollection _inner = [];
 
-		var messageTypeMapper = MessageTypeMapper.Create(Array.ConvertAll(plugins,
-			plugin => new MessageTypeMapper(plugin.MessageTypes)));
+		[ExcludeFromCodeCoverage]
+		public IEnumerator<ServiceDescriptor> GetEnumerator() => _inner.GetEnumerator();
 
-		return plugins.Concat(Standard.Plugins).Aggregate(services
-				.AddSingleton(eventStore)
-				.AddSingleton(npgsqlConnectionStringBuilder)
-				.AddSingleton(streamStore)
-				.AddHostedService<EventLogging>()
-				.AddRouting()
-				.AddSingleton(messageTypeMapper)
-				// projections
-				.AddSingleton<Func<IPlugin, NpgsqlConnection>>(NpqsqlConnectonFactory)
-				.AddRazorComponents().Services
-				.AddScoped<ViewContext>(),
-			(services, plugin) => {
-				var logger = getLoggerProvider().CreateLogger($"Plugin {plugin.Name} Service Registration");
+		[ExcludeFromCodeCoverage]
+		IEnumerator IEnumerable.GetEnumerator() => ((IEnumerable)_inner).GetEnumerator();
 
-				var pluginServices = new PluginServiceCollection(logger);
+		public void Add(ServiceDescriptor serviceDescriptor) {
+			LogAddition(logger, serviceDescriptor);
+			_inner.Add(serviceDescriptor);
+		}
 
-				plugin.ConfigureServices(pluginServices);
+		[ExcludeFromCodeCoverage]
+		public void Clear() {
+			LogCleared(logger);
+			_inner.Clear();
+		}
 
-				var pluginProvider = pluginServices
-					.AddLogging(builder => builder.ClearProviders().AddProvider(getLoggerProvider()))
-					.AddSingleton<CommandDispatcher>()
-					.AddSingleton(eventStore)
-					.AddSingleton(streamStore)
-					.AddSingleton(messageTypeMapper)
-					.AddSingleton<IPluginDescriptor>(plugin)
-					.AddSingleton<InMemoryProjectionDatabase>()
-					.AddProjectionHost<InMemoryProjectionHost>()
-					.AddProjectionHost<NpgsqlProjectionHost>()
-					.AddHostedService<StreamStoreProjectionHost>()
-					.AddSingleton(sqliteConnectionStringBuilderFactory)
-					.AddSingleton<Func<NpgsqlConnection>>(() => NpqsqlConnectonFactory(plugin))
-					.AddRazorComponents().Services
-					.AddScoped<ViewContext>()
-					.BuildServiceProvider();
+		[ExcludeFromCodeCoverage]
+		public bool Contains(ServiceDescriptor item) => _inner.Contains(item);
 
-				return services
-					.AddKeyedSingleton<IServiceProvider>(plugin, pluginProvider)
-					.AddSingleton<IHostedService>(_ => new HostedServicesBackgroundService(plugin, pluginProvider));
-			});
+		public void CopyTo(ServiceDescriptor[] array, int arrayIndex) => _inner.CopyTo(array, arrayIndex);
 
-		NpgsqlConnection NpqsqlConnectonFactory(IPlugin plugin) =>
-			new(npgsqlConnectionStringBuilderCache.GetOrAdd(plugin.Name, username =>
-				new NpgsqlConnectionStringBuilder(
-					npgsqlConnectionStringBuilder.ConnectionString) {
-					Username = username
-				}).ConnectionString);
+		[ExcludeFromCodeCoverage]
+		public bool Remove(ServiceDescriptor serviceDescriptor) {
+			LogRemoval(logger, serviceDescriptor);
+			return _inner.Remove(serviceDescriptor);
+		}
+
+		public int Count => _inner.Count;
+		[ExcludeFromCodeCoverage] public bool IsReadOnly => _inner.IsReadOnly;
+
+		[ExcludeFromCodeCoverage]
+		public int IndexOf(ServiceDescriptor item) => _inner.IndexOf(item);
+
+		[ExcludeFromCodeCoverage]
+		public void Insert(int index, ServiceDescriptor item) {
+			LogInsertion(logger, item, index);
+			_inner.Insert(index, item);
+		}
+
+		[ExcludeFromCodeCoverage]
+		public void RemoveAt(int index) {
+			LogRemovingIndex(logger, index);
+			_inner.RemoveAt(index);
+		}
+
+		public ServiceDescriptor this[int index] {
+			get => _inner[index];
+			[ExcludeFromCodeCoverage] set => _inner[index] = value;
+		}
+
+		[LoggerMessage(LogLevel.Trace, "Adding {serviceDescriptor}")]
+		static partial void LogAddition(ILogger logger, ServiceDescriptor serviceDescriptor);
+
+		[LoggerMessage(LogLevel.Trace, "Cleared")]
+		static partial void LogCleared(ILogger logger);
+
+		[LoggerMessage(LogLevel.Trace, "Removing {serviceDescriptor}")]
+		static partial void LogRemoval(ILogger logger, ServiceDescriptor serviceDescriptor);
+
+		[LoggerMessage(LogLevel.Trace, "Inserting {serviceDescriptor} at {index}")]
+		static partial void LogInsertion(ILogger logger, ServiceDescriptor serviceDescriptor, int index);
+
+		[LoggerMessage(LogLevel.Trace, "Removing {index}")]
+		static partial void LogRemovingIndex(ILogger logger, int index);
 	}
-
-	private class HostedServicesBackgroundService(IPluginDescriptor plugin, IServiceProvider serviceProvider)
-		: IHostedService {
-		public string Name => plugin.Name;
-
-		public Task StartAsync(CancellationToken cancellationToken) =>
-			Task.WhenAll(serviceProvider.GetServices<IHostedService>()
-				.Select(service => service.StartAsync(cancellationToken)));
-
-		public Task StopAsync(CancellationToken cancellationToken) =>
-			Task.WhenAll(serviceProvider.GetServices<IHostedService>()
-				.Select(service => service.StopAsync(cancellationToken)));
-	}
-}
-
-internal partial class PluginServiceCollection(ILogger logger) : IServiceCollection {
-	private readonly ServiceCollection _inner = [];
-
-	[ExcludeFromCodeCoverage]
-	public IEnumerator<ServiceDescriptor> GetEnumerator() => _inner.GetEnumerator();
-
-	[ExcludeFromCodeCoverage]
-	IEnumerator IEnumerable.GetEnumerator() => ((IEnumerable)_inner).GetEnumerator();
-
-	public void Add(ServiceDescriptor serviceDescriptor) {
-		LogAddition(logger, serviceDescriptor);
-		_inner.Add(serviceDescriptor);
-	}
-
-	[ExcludeFromCodeCoverage]
-	public void Clear() {
-		LogCleared(logger);
-		_inner.Clear();
-	}
-
-	[ExcludeFromCodeCoverage]
-	public bool Contains(ServiceDescriptor item) => _inner.Contains(item);
-
-	public void CopyTo(ServiceDescriptor[] array, int arrayIndex) => _inner.CopyTo(array, arrayIndex);
-
-	[ExcludeFromCodeCoverage]
-	public bool Remove(ServiceDescriptor serviceDescriptor) {
-		LogRemoval(logger, serviceDescriptor);
-		return _inner.Remove(serviceDescriptor);
-	}
-
-	public int Count => _inner.Count;
-	[ExcludeFromCodeCoverage] public bool IsReadOnly => _inner.IsReadOnly;
-
-	[ExcludeFromCodeCoverage]
-	public int IndexOf(ServiceDescriptor item) => _inner.IndexOf(item);
-
-	[ExcludeFromCodeCoverage]
-	public void Insert(int index, ServiceDescriptor item) {
-		LogInsertion(logger, item, index);
-		_inner.Insert(index, item);
-	}
-
-	[ExcludeFromCodeCoverage]
-	public void RemoveAt(int index) {
-		LogRemovingIndex(logger, index);
-		_inner.RemoveAt(index);
-	}
-
-	public ServiceDescriptor this[int index] {
-		get => _inner[index];
-		[ExcludeFromCodeCoverage] set => _inner[index] = value;
-	}
-
-	[LoggerMessage(LogLevel.Trace, "Adding {serviceDescriptor}")]
-	static partial void LogAddition(ILogger logger, ServiceDescriptor serviceDescriptor);
-
-	[LoggerMessage(LogLevel.Trace, "Cleared")]
-	static partial void LogCleared(ILogger logger);
-
-	[LoggerMessage(LogLevel.Trace, "Removing {serviceDescriptor}")]
-	static partial void LogRemoval(ILogger logger, ServiceDescriptor serviceDescriptor);
-
-	[LoggerMessage(LogLevel.Trace, "Inserting {serviceDescriptor} at {index}")]
-	static partial void LogInsertion(ILogger logger, ServiceDescriptor serviceDescriptor, int index);
-
-	[LoggerMessage(LogLevel.Trace, "Removing {index}")]
-	static partial void LogRemovingIndex(ILogger logger, int index);
 }

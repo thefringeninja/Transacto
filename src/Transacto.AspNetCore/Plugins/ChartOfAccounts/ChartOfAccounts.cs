@@ -13,12 +13,15 @@ internal class ChartOfAccounts : IPlugin {
 	public string Name { get; } = nameof(ChartOfAccounts);
 
 	public void Configure(IEndpointRouteBuilder builder) {
-		builder.MapGet(string.Empty, ([FromServices] InMemoryProjectionDatabase database) =>
-		database.Get<ReadModel>() switch {
-			{ HasValue: true } optional => Results.Hal(optional.Value,
-				optional.Value.Checkpoint.ToCheckpoint(), new ChartOfAccountsRepresentation()),
-			_ => Results.Hal(ReadModel.None, Checkpoint.None, new ChartOfAccountsRepresentation())
-		});
+		builder.MapGet(string.Empty,
+			([FromServices] InMemoryProjectionDatabase database,
+					[FromServices] ChartOfAccountsRepresentation representation) => {
+				return database.Get<ReadModel>() switch {
+					{ HasValue: true } optional => Results.Hal(optional.Value,
+						optional.Value.Checkpoint.ToCheckpoint(), representation),
+					_ => Results.Hal(ReadModel.None, Checkpoint.None, representation)
+				};
+			});
 
 		builder.MapCommands(string.Empty,
 		[
@@ -43,14 +46,16 @@ internal class ChartOfAccounts : IPlugin {
 					readModel.ChartOfAccounts[r.AccountNumber] with { Active = true }),
 				_ => readModel.ChartOfAccounts
 			}
-		});
+		})
+		.AddSingleton<ChartOfAccountsRepresentation>();
 
 	public IEnumerable<Type> MessageTypes => [];
 
-	private class ChartOfAccountsRepresentation : Hal<ReadModel>, IHalLinks<ReadModel>, IHalState<ReadModel> {
+	private class ChartOfAccountsRepresentation(SiteRoot siteRoot)
+		: Hal<ReadModel>, IHalLinks<ReadModel>, IHalState<ReadModel> {
 		public IEnumerable<Link> LinksFor(ReadModel resource) {
 			foreach (var (accountNumber, (accountName, _)) in resource.ChartOfAccounts) {
-				yield return new Link("self", $"chart-of-accounts/{accountNumber}", title: accountName);
+				yield return new Link("self", $"{siteRoot.Uri.AbsolutePath}/{accountNumber}", title: accountName);
 			}
 		}
 
@@ -63,7 +68,6 @@ internal class ChartOfAccounts : IPlugin {
 
 		public ImmutableSortedDictionary<int, AccountInfo> ChartOfAccounts { get; init; } =
 			ImmutableSortedDictionary<int, AccountInfo>.Empty;
-
 	}
 }
 

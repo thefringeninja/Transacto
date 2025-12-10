@@ -10,29 +10,32 @@ public static class ProjectionsMiddleware {
 	public static void UseProjectionStatus(this IApplicationBuilder app) {
 		app.Map("/projections", inner => inner.UseRouting().UseEndpoints(ep => {
 			ep.MapGet("",
-				(HttpContext context, [FromServices] IEnumerable<IProjectionHostStatus> projectionHostStatus) => {
+				(HttpContext context, [FromServices] ProjectionsController projectionsController) => {
 					if (context.Request.Headers.Accept.Contains("text/event-stream")) {
-						return Results.ObservableServerSentEvents(
-							projectionHostStatus.ObserveAll(context.RequestAborted));
+						return Results.ServerSentEvents(projectionsController.ObserveAll(context.RequestAborted));
 					}
 
-					return Results.Hal(projectionHostStatus
-						.SelectMany(x => x.State)
-						.ToDictionary(x => x.Name), Checkpoint.None, new ProjectionStateRepresentation());
+					return Results.Hal(projectionsController, Checkpoint.None,
+						new ProjectionsControllerRepresentation());
 				});
 			ep.MapGet("{name}",
 				(string name, HttpContext context,
-					[FromServices] IEnumerable<IProjectionHostStatus> projectionHostStatus) => {
+					[FromServices] ProjectionsController projectionsController) => {
 					if (context.Request.Headers.Accept.Contains("text/event-stream")) {
 						return Results.ObservableServerSentEvents(
-							projectionHostStatus.Observe(name, context.RequestAborted));
+							projectionsController.Observe(name, context.RequestAborted));
 					}
 
-					return Results.Hal(projectionHostStatus
-						.SelectMany(x => x.State)
-						.Where(x => x.Name == name)
-						.ToDictionary(x => x.Name), Checkpoint.None, new ProjectionStateRepresentation());
+					return Results.Hal(projectionsController.State[name], Checkpoint.None,
+						new ProjectionStateRepresentation());
 				});
+			ep.MapDelete("{name}", async (string name, 
+				[FromServices] ProjectionsController projectionsController,
+				[FromServices] SiteRoot siteRoot) => {
+				await projectionsController.Delete(name);
+
+				return Results.Redirect($"{siteRoot.Uri.AbsolutePath}/projections");
+			});
 		}));
 	}
 
@@ -55,64 +58,94 @@ public static class ProjectionsMiddleware {
 			}
 		}
 	}
+}
+
+public class ProjectionsController(IEnumerable<IProjectionsControl> projections) {
+	public Dictionary<string, ProjectionState> State => projections
+		.SelectMany(x => x.State)
+		.ToDictionary(x => x.Name);
 
 
-	extension(IEnumerable<IProjectionHostStatus> items) {
-		private IObservable<ProjectionState> ObserveAll(CancellationToken ct) => items.EnumerateAll(ct).ToObservable()
-			.GroupBy(item => item.Name).SelectMany(Observable.DistinctUntilChanged);
+	public async IAsyncEnumerable<ProjectionState> ObserveAll([EnumeratorCancellation] CancellationToken ct) {
+		var array = projections as IProjectionHostStatus[] ?? projections.ToArray();
 
-		private async IAsyncEnumerable<ProjectionState> EnumerateAll([EnumeratorCancellation] CancellationToken ct) {
-			var array = items as IProjectionHostStatus[] ?? items.ToArray();
+		var cache = new Dictionary<string, ProjectionState>();
+		using var timer = new PeriodicTimer(TimeSpan.FromMilliseconds(300));
 
-			using var timer = new PeriodicTimer(TimeSpan.FromSeconds(1));
-
-			Loop:
-			try {
-				await timer.WaitForNextTickAsync(ct);
-			} catch (OperationCanceledException) {
-				yield break;
-			}
-
-			foreach (var item in array) {
-				foreach (var state in item.State) {
-					if (ct.IsCancellationRequested) {
-						yield break;
-					}
-
-					yield return state;
-				}
-			}
-
-			goto Loop;
+		Loop:
+		try {
+			await timer.WaitForNextTickAsync(ct);
+		} catch (OperationCanceledException) {
+			yield break;
 		}
 
-		private IObservable<ProjectionState> Observe(string name, CancellationToken ct) =>
-			items.EnumerateAll(name, ct).ToObservable().DistinctUntilChanged();
-
-		private async IAsyncEnumerable<ProjectionState> EnumerateAll(
-			string name, [EnumeratorCancellation] CancellationToken ct) {
-			using var timer = new PeriodicTimer(TimeSpan.FromSeconds(1));
-
-			Loop:
-			try {
-				await timer.WaitForNextTickAsync(ct);
-			} catch (OperationCanceledException) {
-				yield break;
-			}
-
-			foreach (var item in items) {
+		foreach (var item in array) {
+			foreach (var state in item.State) {
 				if (ct.IsCancellationRequested) {
 					yield break;
 				}
 
-				if (!item.TryGetState(name, out var state)) {
-					continue;
+				if (!cache.TryGetValue(state.Name, out var current) || current != state ) {
+					yield return state;
+					
 				}
+
+				cache[state.Name] = state;
+			}
+		}
+
+		goto Loop;
+	}
+
+	public IObservable<ProjectionState> Observe(string name, CancellationToken ct) =>
+		EnumerateNamed(name, ct).ToObservable().DistinctUntilChanged();
+
+	private async IAsyncEnumerable<ProjectionState> EnumerateNamed(
+		string name, [EnumeratorCancellation] CancellationToken ct) {
+		using var timer = new PeriodicTimer(TimeSpan.FromMilliseconds(300));
+
+		Loop:
+		try {
+			await timer.WaitForNextTickAsync(ct);
+		} catch (OperationCanceledException) {
+			yield break;
+		}
+
+		ProjectionState current = default;
+		foreach (var item in projections) {
+			if (ct.IsCancellationRequested) {
+				yield break;
+			}
+
+			if (!item.TryGetState(name, out var state)) {
+				continue;
+			}
+
+			if (current != state) {
 
 				yield return state;
 			}
 
-			goto Loop;
+			current = state;
 		}
+
+		goto Loop;
 	}
+
+	public async Task Delete(string name) {
+		foreach (var projection in projections) {
+			if (projection.State.All(state => state.Name != name)) {
+				continue;
+			}
+
+			await projection.Delete(name);
+			return;
+		}
+
+		throw new InvalidOperationException($"Could not find a projection named {name}");
+	}
+}
+
+public interface IProjectionsControl : IProjectionHostStatus {
+	public Task Delete(string name);
 }

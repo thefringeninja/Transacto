@@ -19,7 +19,7 @@ public partial class NpgsqlProjectionHost(
 	Func<NpgsqlConnection> connectionFactory,
 	ILogger<NpgsqlProjectionHost> logger,
 	params IEnumerable<NpgsqlProjection> projections)
-	: BackgroundService, IProjectionHostStatus {
+	: BackgroundService, IProjectionHostStatus, IProjectionsControl {
 	private readonly NpgsqlProjection[] _projections = projections.ToArray();
 
 	private readonly ConcurrentDictionary<string, ProjectionState> _state = [];
@@ -28,6 +28,10 @@ public partial class NpgsqlProjectionHost(
 
 	public bool TryGetState(string name, out ProjectionState state) =>
 		_state.TryGetValue(name, out state);
+
+	public Task Delete(string name) {
+		throw new NotImplementedException();
+	}
 
 
 	protected override async Task ExecuteAsync(CancellationToken stoppingToken) {

@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Mvc;
 using Transacto;
 using Transacto.Framework;
 using Transacto.Framework.Http;
@@ -29,8 +30,8 @@ static partial class ApplicationBuilderExtensions {
 		.UseEndpoints(builder => {
 			var resource = Index.Create(plugins);
 
-			var result = Results.Hal(resource, Checkpoint.None, new IndexRepresentation());
-
-			builder.MapGet("", () => result);
+			builder.MapGet("",
+				([FromServices] IndexRepresentation representation) =>
+					Results.Hal(resource, Checkpoint.None, representation));
 		});
 }

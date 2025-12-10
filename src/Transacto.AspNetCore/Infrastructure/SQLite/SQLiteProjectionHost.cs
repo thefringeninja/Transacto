@@ -18,10 +18,12 @@ public partial class SQLiteProjectionHost<T>(
 	Func<SQLiteConnection> connectionFactory,
 	SQLiteProjection projection,
 	ILogger<SQLiteProjectionHost<T>> logger)
-	: BackgroundService, IProjectionHostStatus where T : SqlProjection {
+	: BackgroundService, IProjectionsControl where T : SqlProjection {
 	private readonly SqlProjectionHandlerResolver _resolver = Resolve.WhenEqualToHandlerMessageType(projection);
 
 	private ProjectionState _state = ProjectionState.Named(projection.Name);
+	private KurrentDBClient.StreamSubscriptionResult? _subscription;
+	private TaskCompletionSource _pauseSubscription = new();
 
 	private static readonly SQLiteSyntax Sql = new();
 
@@ -37,13 +39,28 @@ public partial class SQLiteProjectionHost<T>(
 		return true;
 	}
 
+	public async Task Delete(string name) {
+		_pauseSubscription = new();
+		if (_subscription is { } subscription) {
+			await subscription.DisposeAsync();
+		}
+
+		using var connection = connectionFactory();
+		var fileName = new SQLiteConnectionStringBuilder(connection.ConnectionString).DataSource;
+		File.Delete(fileName);
+		CreateSchema();
+		_pauseSubscription.SetResult();
+	}
+
 	protected override async Task ExecuteAsync(CancellationToken stoppingToken) {
 		CreateSchema();
 
+		_pauseSubscription.SetResult();
 		await Subscribe(stoppingToken);
 	}
 
 	private async Task Subscribe(CancellationToken ct) {
+		await _pauseSubscription.Task;
 		try {
 			await Policy.Handle<Exception>(ex => ex is not OperationCanceledException)
 				.WaitAndRetryAsync(5, attempt => TimeSpan.FromSeconds(Math.Pow(2, attempt)),
@@ -74,12 +91,12 @@ public partial class SQLiteProjectionHost<T>(
 
 		var stopwatch = Stopwatch.StartNew();
 
-		await using var subscription = eventStore.SubscribeToAll(checkpoint,
+		_subscription = eventStore.SubscribeToAll(checkpoint,
 			filterOptions: new(EventTypeFilter.ExcludeSystemEvents()), cancellationToken: ct);
 
 		var batch = new List<ResolvedEvent>(110);
 
-		await foreach (var message in subscription.Batch(100, TimeSpan.FromMilliseconds(20), ct)) {
+		await foreach (var message in _subscription.Batch(100, TimeSpan.FromMilliseconds(20), ct)) {
 			using var sps = logger.BeginScope(scope);
 
 			switch (message) {
@@ -138,6 +155,8 @@ public partial class SQLiteProjectionHost<T>(
 					transaction.Commit();
 					batch.Clear();
 
+					await UpdateHead(ct);
+
 					stopwatch.Stop();
 					LogFlushedBatch(logger, position, batch.Count, stopwatch.Elapsed);
 					break;
@@ -167,9 +186,13 @@ public partial class SQLiteProjectionHost<T>(
 		using var command = new SQLiteCommand(statement.Text, connection);
 
 		using var reader = command.ExecuteReader();
-		return !reader.Read()
-			? FromAll.Start
-			: FromAll.After(new Position(unchecked((ulong)reader.GetInt64(0)), unchecked((ulong)reader.GetInt64(1))));
+		if (!reader.Read()) {
+			return FromAll.Start;
+		}
+
+		var position = new Position(unchecked((ulong)reader.GetInt64(0)), unchecked((ulong)reader.GetInt64(1)));
+
+		return position == Position.Start ? FromAll.Start : FromAll.After(position);
 	}
 
 	private static void WriteCheckpoint(SQLiteTransaction transaction, Position position) {
@@ -187,11 +210,16 @@ public partial class SQLiteProjectionHost<T>(
 
 
 	private async Task FellBehind(CancellationToken ct) {
+		await UpdateHead(ct);
+		_state = _state with { Status = ProjectionStatus.CatchingUp };
+	}
+
+	private async Task UpdateHead(CancellationToken ct) {
 		var last = await eventStore.ReadAllAsync(Direction.Backwards, Position.End, 1)
 			.Select(re => re.Event.Position)
 			.FirstOrDefaultAsync(ct);
 
-		_state = _state.End(FromAll.After(last)) with { Status = ProjectionStatus.CatchingUp };
+		_state = _state.End(FromAll.After(last));
 	}
 
 

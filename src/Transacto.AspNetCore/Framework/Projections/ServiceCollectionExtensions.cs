@@ -9,16 +9,18 @@ public static partial class ServiceCollectionExtensions {
 		public IServiceCollection AddInMemoryProjection<T>(Func<T, object, T> handler)
 			where T : MemoryReadModel, new() =>
 			services.AddSingleton<InMemoryProjection>(new InMemoryProjection<T>(handler));
-		public IServiceCollection AddProjectionHost<T>() where T : class, IHostedService, IProjectionHostStatus =>
+		public IServiceCollection AddProjectionHost<T>() where T : class, IHostedService, IProjectionsControl =>
 			services
 				.AddSingleton<T>()
 				.AddHostedService<T>(provider => provider.GetRequiredService<T>())
-				.AddSingleton<IProjectionHostStatus, ProjectionHostStatusWrapper<T>>();
+				.AddSingleton<IProjectionHostStatus, ProjectionHostStatusWrapper<T>>()
+				.AddSingleton<IProjectionsControl>(provider => provider.GetRequiredService<T>());
 
 		public IServiceCollection AddProjectionHost<T>(Func<IServiceProvider, T> factory)
-			where T : class, IHostedService, IProjectionHostStatus => services
+			where T : class, IHostedService, IProjectionsControl => services
 			.AddSingleton(factory)
 			.AddSingleton<IHostedService>(provider => provider.GetRequiredService<T>())
-			.AddSingleton<IProjectionHostStatus, ProjectionHostStatusWrapper<T>>();
+			.AddSingleton<IProjectionHostStatus, ProjectionHostStatusWrapper<T>>()
+			.AddSingleton<IProjectionsControl>(provider => provider.GetRequiredService<T>());
 	}
 }

@@ -8,10 +8,12 @@ namespace Microsoft.Extensions.DependencyInjection;
 static partial class ServiceCollectionExtensions {
 	public static IServiceCollection AddProfitAndLoss(this IServiceCollection services) => services
 		.AddSQLiteProjection<ProfitAndLossProjection>()
+		.AddSingleton<ProfitAndLossReportsRepresentation>()
 		.AddSingleton<GetProfitAndLossReportsAsync>(provider => {
 			var connectionFactory =
 				provider.GetRequiredKeyedService<Func<SQLiteConnection>>(typeof(ProfitAndLossProjection));
 			return async (reportRanges, ct) =>
 				await Services.ProfitAndLossReportsAsync(connectionFactory, reportRanges, ct);
-		});
+		})
+		.AddSingleton<ProfitAndLossReportsRepresentation>();
 }

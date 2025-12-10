@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Mvc;
 using NodaTime;
 using Transacto.Framework;
 using Transacto.Framework.Http;
@@ -12,18 +13,19 @@ public class FinancialStatements : IPlugin {
 		builder.MapGroup("/profit-and-loss").UseProfitAndLoss();
 		builder.MapGroup("/balance-sheet").UseBalanceSheet();
 		builder.MapGroup("/cash-flow").UseCashFlow();
-		builder.MapGet("/", () => {
+		builder.MapGet("/", ([FromServices] FinancialStatementsIndexRepresentation representation) => {
 			var startOfYear = LocalDate.FromDateTime(DateTime.Now);
 
 			return Results.Hal(
 				new FinancialStatementsIndex(startOfYear),
 				Checkpoint.None,
-				new FinancialStatementsIndexRepresentation());
+				representation);
 		});
 	}
 
 	public void ConfigureServices(IServiceCollection services) => services
 		.AddProfitAndLoss()
 		.AddBalanceSheet()
-		.AddCashFlow();
+		.AddCashFlow()
+		.AddSingleton<FinancialStatementsIndexRepresentation>();
 }

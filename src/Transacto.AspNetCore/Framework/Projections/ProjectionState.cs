@@ -1,3 +1,4 @@
+using System.Text.Json.Serialization;
 using KurrentDB.Client;
 
 namespace Transacto.Framework.Projections;
@@ -6,7 +7,7 @@ public readonly record struct ProjectionState(
 	string Name,
 	ulong Last,
 	ulong? Current,
-	ProjectionStatus Status,
+	[property:  JsonConverter(typeof(JsonStringEnumConverter))] ProjectionStatus Status,
 	string? ErrorMessage = null) {
 	public double Progress {
 		get {
@@ -28,11 +29,13 @@ public readonly record struct ProjectionState(
 
 	public ProjectionState Checkpoint(FromAll checkpoint) =>
 		this with {
-			Current = checkpoint.ToUInt64().preparePosition,
+			Current = checkpoint == FromAll.Start ? 0 : checkpoint.ToUInt64().preparePosition,
 			Status = ProjectionStatus.CatchingUp,
 			ErrorMessage = null
 		};
 
-	public ProjectionState End(FromAll last) => this with { Last = last.ToUInt64().preparePosition };
+	public ProjectionState End(FromAll last) =>
+		this with { Last = last == FromAll.Start ? 0 : last.ToUInt64().preparePosition };
+
 	public static ProjectionState Named(string name) => new(name, ulong.MaxValue, null, ProjectionStatus.CatchingUp);
 }

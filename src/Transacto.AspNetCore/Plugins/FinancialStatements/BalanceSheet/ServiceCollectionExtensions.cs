@@ -14,5 +14,6 @@ static partial class ServiceCollectionExtensions {
 				provider.GetRequiredKeyedService<Func<SQLiteConnection>>(typeof(BalanceSheetProjection));
 
 			return async (thru, ct) => await Services.GetBalanceSheetReportsAsync(connectionFactory, thru, ct);
-		});
+		})
+		.AddSingleton<BalanceSheetReportsRepresentation>();
 }

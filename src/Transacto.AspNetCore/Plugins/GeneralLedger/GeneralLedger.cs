@@ -21,23 +21,41 @@ internal class GeneralLedger : IPlugin {
 		builder
 			.MapBusinessTransaction<JournalEntry>("/entries")
 			.MapCommands(string.Empty,
-				[typeof(OpenGeneralLedger),
-				typeof(BeginClosingAccountingPeriod)]);
+			[
+				typeof(OpenGeneralLedger),
+				typeof(BeginClosingAccountingPeriod)
+			]);
 
+		builder.MapGet("", ([FromServices] InMemoryProjectionDatabase database,
+			[FromServices] IndexRepresentation representation) => {
+			var optionalPeriod = database.Get<CurrentPeriod>();
+			var optionalEntries = database.Get<UnclosedGeneralLedgerEntries>();
+
+			var period = optionalPeriod.ToObject<CurrentPeriod>();
+			var entries = optionalEntries.HasValue ? optionalEntries.Value.NotClosed : [];
+
+			var checkpoint = period?.Checkpoint.HasValue ?? false
+				? period.Checkpoint.Value.ToCheckpoint()
+				: Checkpoint.None;
+			return Results.Hal(new Index(entries, period?.Period, checkpoint.ToString()), checkpoint, representation);
+		});
 		builder.MapGet("/period", ([FromServices] InMemoryProjectionDatabase database) => {
 			var optional = database.Get<CurrentPeriod>();
 
 			return optional switch {
-				{ HasValue: true, Value.Period: { } period } => Results.Hal(new Plugins.GeneralLedger.CurrentPeriod(period),
+				{ HasValue: true, Value.Period: { } period } => Results.Hal(
+					new Plugins.GeneralLedger.CurrentPeriod(period),
 					optional.Value.Checkpoint.ToCheckpoint(), new CurrentPeriodRepresentation()),
 				_ => Results.NotFound()
 			};
 		});
 		builder.MapGet("/entries/search", async ([FromQuery] string prefix,
-			[FromServices] LedgerEntryIndex.SearchJournalEntriesAsync search, CancellationToken ct) => {
+			[FromServices] LedgerEntryIndex.SearchJournalEntriesAsync search,
+			[FromServices] LedgerEntryIndex.SearchResultsRepresentation representation,
+			CancellationToken ct) => {
 			var results = await search(prefix, ct);
 
-			return Results.Hal(results, Checkpoint.None, new LedgerEntryIndex.SearchResultsRepresentation());
+			return Results.Hal(results, Checkpoint.None, representation);
 		});
 
 		builder.MapGet("/entries/{id:guid}",
@@ -134,6 +152,7 @@ internal class GeneralLedger : IPlugin {
 				_ => readModel.Period
 			}
 		})
+		.AddSingleton<IndexRepresentation>()
 		.AddProcessManager<AccountingPeriodClosingModule>("accountingPeriodClosingCheckpoint");
 
 	private record DeactivatedAccounts : MemoryReadModel {
@@ -149,6 +168,16 @@ internal class GeneralLedger : IPlugin {
 
 	private record CurrentPeriod : MemoryReadModel {
 		public string? Period { get; init; }
+	}
+
+	private record Index(ImmutableHashSet<Guid> UnclosedGeneralLedgerEntryIds, string? Period, string Checkpoint);
+
+	private class IndexRepresentation(SiteRoot siteRoot) : Hal<Index>, IHalState<Index>, IHalLinks<Index> {
+		public object StateFor(Index resource) => resource;
+
+		public IEnumerable<Link> LinksFor(Index resource) {
+			yield return new Link("self", siteRoot.Uri.AbsolutePath);
+		}
 	}
 }
 

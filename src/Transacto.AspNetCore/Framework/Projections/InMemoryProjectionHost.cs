@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.Text.Json;
 using KurrentDB.Client;
@@ -15,16 +16,28 @@ public partial class InMemoryProjectionHost(
 	InMemoryProjectionDatabase target,
 	ILogger<InMemoryProjectionHost> logger,
 	params IEnumerable<InMemoryProjection> projections)
-	: BackgroundService, IProjectionHostStatus {
+	: BackgroundService, IProjectionHostStatus, IProjectionsControl {
 	private readonly Projector<InMemoryProjectionDatabase> _projector = new(
 		EnvelopeResolve.WhenAssignableToHandlerMessageType(projections.SelectMany(_ => _).ToArray()));
 
+	private readonly InMemoryProjectionCollection _projections = [..projections];
+
 	private readonly ConcurrentDictionary<string, ProjectionState> _state = [];
+	private KurrentDBClient.StreamSubscriptionResult? _currentSubscription;
 
 	public IReadOnlyList<ProjectionState> State => _state.Values.ToList();
 
 	public bool TryGetState(string name, out ProjectionState state) =>
 		_state.TryGetValue(name, out state);
+
+	public async Task Delete(string name) {
+		if (_currentSubscription is not { } subscription) {
+			return;
+		}
+
+		await subscription.DisposeAsync();
+	}
+
 
 	protected override async Task ExecuteAsync(CancellationToken stoppingToken) {
 		try {
@@ -47,7 +60,7 @@ public partial class InMemoryProjectionHost(
 
 		var scope = new InMemoryProjectionScope(pluginDescriptor.Name);
 
-		foreach (var projectionHandler in projections) {
+		foreach (var projectionHandler in _projections) {
 			var key = $"{projectionHandler.Name}-Projection";
 			_state.TryAdd(key, ProjectionState.Named(key));
 		}
@@ -60,10 +73,10 @@ public partial class InMemoryProjectionHost(
 
 		var stopwatch = Stopwatch.StartNew();
 
-		await using var subscription = eventStore.SubscribeToAll(FromAll.Start,
+		_currentSubscription = eventStore.SubscribeToAll(FromAll.Start,
 			filterOptions: new SubscriptionFilterOptions(EventTypeFilter.ExcludeSystemEvents()), cancellationToken: ct);
 
-		await foreach (var message in subscription.Messages.WithCancellation(ct)) {
+		await foreach (var message in _currentSubscription.Messages.WithCancellation(ct)) {
 			LogSawMessage(logger, message);
 			switch (message) {
 				case StreamMessage.CaughtUp:
@@ -127,4 +140,8 @@ public partial class InMemoryProjectionHost(
 
 	[LoggerMessage(LogLevel.Debug, "InMemoryProjection did not understand type {type}.")]
 	static partial void LogDidNotUnderstandMessageType(ILogger<InMemoryProjectionHost> logger, string type);
+
+	private class InMemoryProjectionCollection : KeyedCollection<string, InMemoryProjection> {
+		protected override string GetKeyForItem(InMemoryProjection item) => item.Name;
+	}
 }

@@ -14,11 +14,12 @@ static partial class ApplicationBuilderExtensions {
 		builder.MapGet("", async (
 			[FromQuery] ParseableLocalDate?[] thru,
 			[FromServices] GetBalanceSheetReportsAsync getBalanceSheetReportsAsync,
+			[FromServices] BalanceSheetReportsRepresentation representation,
 			CancellationToken ct) => {
 			var resource =
 				await getBalanceSheetReportsAsync([..Array.ConvertAll(thru, t => t ?? LocalDate.MaxIsoValue)], ct);
 
-			return Results.Hal(resource, Checkpoint.None, new BalanceSheetReportsRepresentation());
+			return Results.Hal(resource, Checkpoint.None, representation);
 		});
 		return builder;
 	}

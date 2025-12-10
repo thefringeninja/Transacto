@@ -1,34 +1,59 @@
-<div id="ProjectionStatus">
-	
-	<ul>
+@using Microsoft.AspNetCore.Components.Sections
+@using Transacto.Framework.Http
+@inject IServiceProvider provider
+
+<SectionContent SectionName="styles">
+	<style>
+		#projection-status {
+			.errorMessage {
+				color: red;
+			}
+
+			li {
+				display: block;
+				padding: 1em;
+			}
+		}
+	</style>
+</SectionContent>
+
+<div id="projection-status">
+
+	<ul style="display: flex">
 
 	</ul>
 </div>
 
-<section class="projection-status-template" style="visibility: hidden">
-	<details>
+<li class="projection-status-template" style="visibility: hidden">
+	<details open>
 		<summary class="name"></summary>
+		<progress class="progress" max="100"></progress>
 		<p class="status"></p>
-		<p class="progress"></p>
+		<p class="errorMessage"></p>
+		<form method="delete">
+			<input type="submit" value="Restart Projection"/>
+		</form>
 	</details>
-</section>
+</li>
 
 <script type="text/javascript" language="javascript">
-	const { pathname } = window.location;
-	const eventSource = new EventSource(`${pathname}/projections`);
-	const container = document.getElementById('ProjectionStatus');
+	const eventSource = new EventSource(`@(EventSourcePath)`);
+	const container = document.getElementById('projection-status');
 	const template = document.querySelector('.projection-status-template');
+
+	const percentFormatter = new Intl.NumberFormat('en-US', {
+		style: 'percent',
+		minimumFractionDigits: 1,
+	});
 
 	const createNode = (name) => {
 		const node = template.cloneNode(true);
 
 		node.className = 'projection-status';
 		node.id = name;
-		node.attributes.removeNamedItem('style');
+		node.removeAttribute('style');
 
-		const li = document.createElement('li');
-		li.appendChild(node);
-		container.querySelector('ul').appendChild(li);
+		container.querySelector('ul').appendChild(node);
 
 		return node;
 	};
@@ -38,6 +63,35 @@
 		const node = container.querySelector(`\#${state.name}`) || createNode(state.name);
 		node.querySelector('.name').innerText = state.name;
 		node.querySelector('.status').innerText = state.status;
-		node.querySelector('.progress').innerText = state.progress;
+
+		const progress = node.querySelector('.progress');
+		progress.innerText = percentFormatter.format(state.progress);
+		progress.setAttribute('value', state.progress * 100);
+
+		node.querySelector('.errorMessage').innerText = state.errorMessage || '';
+
+		const form = node.querySelector('form');
+		const action = `@(siteRoot.Uri.AbsolutePath)/projections/${state.name}`;
+		form.setAttribute('action', action);
+		form.onsubmit = async event => {
+			event.preventDefault();
+			var response = await fetch(action, {
+				method: 'DELETE',
+			});
+
+			if (response.status < 400) {
+				return;
+			}
+		}
 	};
 </script>
+
+@code
+{
+	public SiteRoot siteRoot => provider.GetRequiredService<SiteRoot>();
+	[Parameter] public string? Name { get; set; }
+
+	public string EventSourcePath => Name is null
+		? $"{siteRoot.Uri.AbsolutePath}/projections"
+		: $"{siteRoot.Uri.AbsolutePath}/projections/{Name}";
+}
