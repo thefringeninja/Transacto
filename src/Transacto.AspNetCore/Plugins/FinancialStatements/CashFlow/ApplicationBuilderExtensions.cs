@@ -12,16 +12,21 @@ namespace Microsoft.AspNetCore.Builder;
 static partial class ApplicationBuilderExtensions {
 	public static IEndpointRouteBuilder UseCashFlow(this IEndpointRouteBuilder builder) {
 		builder.MapGet("",
-			async ([FromQuery] ParseableLocalDate[] startingOn, [FromQuery] ParseablePeriod[] period,
-				[FromServices] GetCashFlowReportsAsync getCashFlowReportsAsync, CancellationToken ct) => {
+			async (
+				[FromQuery] ParseableLocalDate[] startingOn,
+				[FromQuery] ParseablePeriod[] period,
+				[FromServices] GetCashFlowReportsAsync getCashFlowReportsAsync,
+				[FromServices] CashFlowReportsRepresentation representation,
+				CancellationToken ct) => {
 				var reportRanges = new (LocalDate, Period)[Math.Min(startingOn.Length, period.Length)];
 
 				for (var i = 0; i < reportRanges.Length; i++) {
 					reportRanges[i] = (startingOn[i], period[i]);
 				}
+
 				var resource = await getCashFlowReportsAsync([..reportRanges], ct);
 
-				return Results.Hal(resource, Checkpoint.None, new CashFlowReportsRepresentation());
+				return Results.Hal(resource, Checkpoint.None, representation);
 			});
 
 		return builder;

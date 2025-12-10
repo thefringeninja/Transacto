@@ -1,3 +1,4 @@
+using System.Text.Json.Serialization;
 using KurrentDB.Client;
 
 namespace Transacto.Framework.Projections;

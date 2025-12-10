@@ -23,6 +23,30 @@ public static class TransactoHttpSerializerOptions {
 		},
 	};
 
+	public class LocalDateConverter : JsonConverter<LocalDate> {
+		private readonly JsonConverter<LocalDate> _inner = new NodaPatternConverter<LocalDate>(LocalDatePattern.Iso);
+
+		public override LocalDate Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options) {
+			return _inner.Read(ref reader, typeToConvert, options);
+		}
+
+		public override void Write(Utf8JsonWriter writer, LocalDate value, JsonSerializerOptions options) {
+			_inner.Write(writer, value, options);
+		}
+	}
+
+	public class PeriodConverter : JsonConverter<Period> {
+		private readonly JsonConverter<Period> _inner = new NodaPatternConverter<Period>(PeriodPattern.NormalizingIso);
+
+		public override Period? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options) {
+			return _inner.Read(ref reader, typeToConvert, options);
+		}
+
+		public override void Write(Utf8JsonWriter writer, Period value, JsonSerializerOptions options) {
+			_inner.Write(writer, value, options);
+		}
+	}
+
 	public static JsonSerializerOptions BusinessTransactions(params Type[] businessTransactionTypes) =>
 		new() {
 			IncludeFields = true,

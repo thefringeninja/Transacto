@@ -1,5 +1,5 @@
 @using Microsoft.AspNetCore.Components.Sections
-@using Transacto.Framework.Http
+@using Transacto.Framework.Http.Html
 @inherits LayoutComponentBase
 @inject ViewContext context
 <!DOCTYPE html>
@@ -9,9 +9,11 @@
 		table {
 			border-spacing: 0;
 		}
+
 		td {
 			padding: 5pt;
 		}
+
 		/* Style for even rows */
 		tbody tr:nth-child(even) {
 			background-color: #f2f2f2; /* Light gray for even rows */
@@ -22,17 +24,15 @@
 			background-color: #ffffff; /* White for odd rows */
 		}
 	</style>
-	<SectionOutlet SectionName="head" />
-	<SectionOutlet SectionName="styles" />
+	<SectionOutlet SectionName="head"/>
+	<SectionOutlet SectionName="styles"/>
 </head>
 <body>
 <header>
 	<section>
 		@{
-			foreach (var link in context._links)
-			{
-				<a href="@link.Href" rel="@link.Rel" name="@link.Name" hreflang="@link.HrefLang"
-				   title="@link.Title">@link.Title</a>
+			foreach (var link in context._links) {
+				<DynamicComponent Type="@context.GetTemplatedLink(link)" Parameters="@linkParameters(link)"/>
 			}
 		}
 	</section>
@@ -45,3 +45,9 @@
 </footer>
 </body>
 </html>
+
+@code {
+
+	private static Dictionary<string, object?> linkParameters(Hallo.Link link) => new() { ["Model"] = link };
+
+}

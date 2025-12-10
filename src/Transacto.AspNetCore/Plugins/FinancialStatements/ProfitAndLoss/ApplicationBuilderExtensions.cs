@@ -12,8 +12,11 @@ namespace Microsoft.AspNetCore.Builder;
 static partial class ApplicationBuilderExtensions {
 	public static IEndpointRouteBuilder UseProfitAndLoss(this IEndpointRouteBuilder builder) {
 		builder.MapGet("",
-			async ([FromQuery] ParseableLocalDate[] startingOn, [FromQuery] ParseablePeriod[] period,
-				[FromServices] GetProfitAndLossReportsAsync getProfitAndLossReportsAsync, CancellationToken ct) => {
+			async ([FromQuery] ParseableLocalDate[] startingOn, 
+				[FromQuery] ParseablePeriod[] period,
+				[FromServices] GetProfitAndLossReportsAsync getProfitAndLossReportsAsync, 
+				[FromServices] ProfitAndLossReportsRepresentation representation,
+				CancellationToken ct) => {
 				var reportRanges = new (LocalDate, Period)[Math.Min(startingOn.Length, period.Length)];
 
 				for (var i = 0; i < reportRanges.Length; i++) {
@@ -22,7 +25,7 @@ static partial class ApplicationBuilderExtensions {
 
 				var resource = await getProfitAndLossReportsAsync([..reportRanges], ct);
 
-				return Results.Hal(resource, Checkpoint.None, new ProfitAndLossReportsRepresentation());
+				return Results.Hal(resource, Checkpoint.None, representation);
 			});
 		return builder;
 	}

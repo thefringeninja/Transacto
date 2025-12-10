@@ -18,5 +18,6 @@ static partial class ServiceCollectionExtensions {
 			var getProfitAndLossReports = provider.GetRequiredService<GetProfitAndLossReportsAsync>();
 			return async (reportRanges, ct) =>
 				await Services.CashFlowReportsAsync(connectionFactory, getProfitAndLossReports, reportRanges, ct);
-		});
+		})
+		.AddTransient<CashFlowReportsRepresentation>();
 }

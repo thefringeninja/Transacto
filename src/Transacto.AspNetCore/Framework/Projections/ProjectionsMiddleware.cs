@@ -3,6 +3,7 @@ using System.Reactive.Linq;
 using System.Runtime.CompilerServices;
 using Microsoft.AspNetCore.Mvc;
 using Transacto.Framework.Http;
+using Transacto.Framework.Http.Html;
 
 namespace Transacto.Framework.Projections;
 

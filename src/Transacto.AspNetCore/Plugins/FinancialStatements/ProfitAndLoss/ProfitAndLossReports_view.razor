@@ -13,8 +13,7 @@
 		</tr>
 		<tr>
 			<th></th>
-			@foreach (var report in Model.Groups)
-			{
+			@foreach (var report in Model.Groups) {
 				<th>@LocalDatePattern.Iso.Format(report.ReportRange.StartingOn) - @PeriodPattern.NormalizingIso.Format(report.ReportRange.Period)</th>
 			}
 		</tr>
@@ -40,20 +39,17 @@
 			void RenderReportSection(
 				string name,
 				IDictionary<int, string> accounts,
-				Func<ReportGroup, Report> getReport)
-			{
+				Func<ReportGroup, Report> getReport) {
 				<thead>
 				<tr>
 					<th colspan="@colspan">@name</th>
 				</tr>
 				</thead>
 				<tbody>
-				@foreach (var (accountNumber, accountName) in accounts)
-				{
+				@foreach (var (accountNumber, accountName) in accounts) {
 					<tr>
 						<td>@accountNumber - @accountName</td>
-						@foreach (var reportGroup in Model.Groups)
-						{
+						@foreach (var reportGroup in Model.Groups) {
 							var report = getReport(reportGroup);
 
 							var line = report.Lines[accountNumber];
@@ -68,24 +64,24 @@
 				}
 				<tr>
 					<td>Total @name</td>
-					@foreach (var reportGroup in Model.Groups)
-					{
+					@foreach (var reportGroup in Model.Groups) {
 						var report = getReport(reportGroup);
-						<td style="text-align: right"><Balance Value="@report.Total"/></td>
+						<td style="text-align: right">
+							<Balance Value="@report.Total"/>
+						</td>
 					}
 				</tr>
 				</tbody>
 			}
 
-			void RenderSubtotal(string name, Func<ReportGroup, decimal> getSubtotal)
-			{
+			void RenderSubtotal(string name, Func<ReportGroup, decimal> getSubtotal) {
 				<tbody>
 				<tr>
 					<td>@name</td>
-					@foreach (var reportGroup in Model.Groups)
-					{
-						var subtotal = getSubtotal(reportGroup);
-						<td style="text-align: right"><Balance Value="@subtotal"/></td>
+					@foreach (decimal subtotal in Model.Groups.Select(getSubtotal)) {
+						<td style="text-align: right">
+							<Balance Value="@subtotal"/>
+						</td>
 					}
 				</tr>
 				</tbody>

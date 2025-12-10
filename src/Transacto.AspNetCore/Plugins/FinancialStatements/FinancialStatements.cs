@@ -14,7 +14,9 @@ public class FinancialStatements : IPlugin {
 		builder.MapGroup("/balance-sheet").UseBalanceSheet();
 		builder.MapGroup("/cash-flow").UseCashFlow();
 		builder.MapGet("/", ([FromServices] FinancialStatementsIndexRepresentation representation) => {
-			var startOfYear = LocalDate.FromDateTime(DateTime.Now);
+			var now = LocalDate.FromDateTime(DateTime.Now);
+			
+			var startOfYear = now.PlusDays(-now.DayOfYear+1);
 
 			return Results.Hal(
 				new FinancialStatementsIndex(startOfYear),

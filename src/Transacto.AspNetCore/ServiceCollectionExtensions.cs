@@ -2,16 +2,21 @@ using System.Collections;
 using System.Collections.Concurrent;
 using System.Data.SQLite;
 using System.Diagnostics.CodeAnalysis;
+using System.Globalization;
+using System.Text.RegularExpressions;
 using KurrentDB.Client;
 using Microsoft.AspNetCore.Hosting.Server;
 using Microsoft.AspNetCore.Hosting.Server.Features;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Primitives;
 using Npgsql;
 using SqlStreamStore;
 using Transacto.Framework;
 using Transacto.Framework.CommandHandling;
-using Transacto.Framework.Http;
+using Transacto.Framework.Http.Html;
 using Transacto.Framework.Projections;
 using Transacto.Infrastructure.EventStore;
 using Transacto.Infrastructure.Npgsql;
@@ -41,6 +46,8 @@ public static partial class WebApplicationBuilderExtensions {
 					.AddSingleton(messageTypeMapper)
 					// projections
 					.AddSingleton<Func<IPlugin, NpgsqlConnection>>(NpqsqlConnectonFactory)
+					.Configure<MvcOptions>(options =>
+						options.ValueProviderFactories.Insert(0, new KebabCaseQueryValueProviderFactory()))
 					.AddRazorComponents().Services
 					.AddScoped<ViewContext>()
 					.AddSingleton(GetRootUri)
@@ -69,6 +76,8 @@ public static partial class WebApplicationBuilderExtensions {
 						.AddSingleton<Func<NpgsqlConnection>>(() => NpqsqlConnectonFactory(plugin))
 						.AddSingleton<IConfiguration>(builder.Configuration)
 						.AddSingleton(builder.Environment)
+						.Configure<MvcOptions>(options =>
+							options.ValueProviderFactories.Insert(0, new KebabCaseQueryValueProviderFactory()))
 						.AddRazorComponents().Services
 						.AddScoped<ViewContext>()
 						.AddSingleton(GetPluginRootUri)
@@ -118,6 +127,47 @@ public static partial class WebApplicationBuilderExtensions {
 		public Task StopAsync(CancellationToken cancellationToken) =>
 			Task.WhenAll(serviceProvider.GetServices<IHostedService>()
 				.Select(service => service.StopAsync(cancellationToken)));
+	}
+
+	private class KebabCaseQueryValueProvider(
+		BindingSource bindingSource,
+		IQueryCollection values,
+		CultureInfo culture)
+		: QueryStringValueProvider(bindingSource, ConvertKeysToKebabCase(values), culture) {
+		private static IQueryCollection ConvertKeysToKebabCase(IQueryCollection values) {
+			var dict = new Dictionary<string, StringValues>(StringComparer.OrdinalIgnoreCase);
+
+			foreach (var kvp in values) {
+				// Convert kebab-case to PascalCase for matching
+				var pascalKey = ConvertKebabToPascal(kvp.Key);
+				dict[pascalKey] = kvp.Value;
+
+				// Also keep original key for backward compatibility
+				dict[kvp.Key] = kvp.Value;
+			}
+
+			return new QueryCollection(dict);
+		}
+
+		private static string ConvertKebabToPascal(string kebabCase) =>
+			Regex.Replace(kebabCase, "-(.)", m => m.Groups[1].Value.ToUpper());
+	}
+
+	private class KebabCaseQueryValueProviderFactory : IValueProviderFactory {
+		public Task CreateValueProviderAsync(ValueProviderFactoryContext context) {
+			ArgumentNullException.ThrowIfNull(context);
+
+			var query = context.ActionContext.HttpContext.Request.Query;
+			if (query.Count > 0) {
+				context.ValueProviders.Add(
+					new KebabCaseQueryValueProvider(
+						BindingSource.Query,
+						query,
+						CultureInfo.CurrentCulture));
+			}
+
+			return Task.CompletedTask;
+		}
 	}
 
 	private partial class PluginServiceCollection(ILogger logger) : IServiceCollection {

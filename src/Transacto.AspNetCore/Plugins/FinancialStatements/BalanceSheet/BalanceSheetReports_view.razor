@@ -13,8 +13,7 @@
 		</tr>
 		<tr>
 			<th></th>
-			@foreach (var report in Model.Groups)
-			{
+			@foreach (var report in Model.Groups) {
 				<th>@LocalDatePattern.Iso.Format(report.Thru)</th>
 			}
 		</tr>
@@ -27,8 +26,7 @@
 		<tfoot>
 		<tr>
 			<td>Total Equity &amp; Liabilities</td>
-			@foreach (var report in Model.Groups)
-			{
+			@foreach (var report in Model.Groups) {
 				<td style="text-align: right">
 					<Balance Value="@report.TotalEquityAndLiabilities"/>
 				</td>
@@ -43,8 +41,7 @@
 			IDictionary<int, string> accounts,
 			Func<ReportGroup, Report> getReport,
 			Func<ReportGroup, decimal>? getSubtotal = null,
-			bool includeIncomeSummary = false)
-		{
+			bool includeIncomeSummary = false) {
 			<thead>
 			@{
 				getSubtotal ??= group => getReport(group).Total;
@@ -54,24 +51,20 @@
 			</tr>
 			</thead>
 			<tbody>
-			@foreach (var (accountNumber, accountName) in accounts)
-			{
+			@foreach (var (accountNumber, accountName) in accounts) {
 				<tr>
 					<td>@accountNumber - @accountName</td>
-					@foreach (var reportGroup in Model.Groups)
-					{
+					@foreach (var reportGroup in Model.Groups) {
 						<td style="text-align: right">
 							<Balance Value="@getReport(reportGroup).Lines[accountNumber].Balance"/>
 						</td>
 					}
 				</tr>
 			}
-			@if (includeIncomeSummary)
-			{
+			@if (includeIncomeSummary) {
 				<tr>
 					<td>Income Summary</td>
-					@foreach (var report in Model.Groups)
-					{
+					@foreach (var report in Model.Groups) {
 						<td style="text-align: right">
 							<Balance Value="@report.IncomeSummary"/>
 						</td>
@@ -80,8 +73,7 @@
 			}
 			<tr>
 				<td>Total @name</td>
-				@foreach (var report in Model.Groups)
-				{
+				@foreach (var report in Model.Groups) {
 					<td style="text-align: right">
 						<Balance Value="@getSubtotal(report)"/>
 					</td>

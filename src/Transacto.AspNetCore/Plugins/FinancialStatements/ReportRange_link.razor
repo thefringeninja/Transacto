@@ -1,0 +1,18 @@
+@using Transacto.Views.Shared;
+@using Link = Hallo.Link
+@inherits ComponentBase<Hallo.Link>
+@implements ISomething
+
+@code {
+	public static bool IsMatch(Link link) => link is { Templated: true, Rel: "self" } && link.Href.EndsWith("?starting-on={starting-on}&period={period}");
+}
+
+<form method="get" action="@Model.Href">
+	<label>Starting On</label>
+	<input type="date" name="starting-on"/>
+
+	<label>Period</label>
+	<input type="text" name="period"/>
+
+	<input type="submit"/>
+</form>

@@ -1,7 +1,7 @@
 using Hallo;
 using NodaTime;
 using NodaTime.Text;
-using Transacto.Framework.Http;
+using Transacto.Framework.Http.Html;
 
 namespace Transacto.Plugins.FinancialStatements.BalanceSheet;
 
@@ -20,8 +20,12 @@ public class BalanceSheetReportsRepresentation(SiteRoot siteRoot) : Hal<BalanceS
 		yield return new Link(
 			"self",
 			$"{siteRoot.Uri.AbsolutePath}/balance-sheet?thru={LocalDatePattern.Iso.Format(report.Thru)}",
-			title: includeAll ? "Balance Sheet" : $"Balance Sheet thru {current}");
+			title: includeAll ? "Balance Sheet (Fiscal YTD)" : $"Balance Sheet thru {current}");
 
+		yield return new Link(
+			"self",
+			$"{siteRoot.Uri.AbsolutePath}/balance-sheet?thru={{thru}}",
+			title: "Select Balance Sheet");
 
 		for (var i = 0; i < 4; i++) {
 			var quarterly = current
@@ -34,6 +38,7 @@ public class BalanceSheetReportsRepresentation(SiteRoot siteRoot) : Hal<BalanceS
 				$"{siteRoot.Uri.AbsolutePath}/balance-sheet?thru={LocalDatePattern.Iso.Format(quarterly)}",
 				title: $"Balance Sheet thru Q{GetQuarter(quarterly)} {quarterly.Year}");
 		}
+		yield return new Link("index", siteRoot.Uri.AbsolutePath, title: "Financial Statements");
 	}
 
 	public object StateFor(BalanceSheetReports resource) => resource;

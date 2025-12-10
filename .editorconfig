@@ -10,7 +10,7 @@ indent_style = tab
 indent_size = 4
 
 # C# files
-[*.cs]
+[*.{cs,razor}]
 # New line preferences
 csharp_new_line_before_open_brace = none
 csharp_new_line_before_catch = false

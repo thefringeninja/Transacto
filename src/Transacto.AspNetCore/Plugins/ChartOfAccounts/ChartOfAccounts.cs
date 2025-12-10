@@ -3,19 +3,20 @@ using Hallo;
 using Microsoft.AspNetCore.Mvc;
 using Transacto.Framework;
 using Transacto.Framework.Http;
+using Transacto.Framework.Http.Html;
 using Transacto.Framework.Projections;
 using Transacto.Infrastructure.EventStore;
 using Transacto.Messages;
 
 namespace Transacto.Plugins.ChartOfAccounts;
 
-internal class ChartOfAccounts : IPlugin {
+public class ChartOfAccounts : IPlugin {
 	public string Name { get; } = nameof(ChartOfAccounts);
 
 	public void Configure(IEndpointRouteBuilder builder) {
 		builder.MapGet(string.Empty,
 			([FromServices] InMemoryProjectionDatabase database,
-					[FromServices] ChartOfAccountsRepresentation representation) => {
+				[FromServices] ChartOfAccountsRepresentation representation) => {
 				return database.Get<ReadModel>() switch {
 					{ HasValue: true } optional => Results.Hal(optional.Value,
 						optional.Value.Checkpoint.ToCheckpoint(), representation),
@@ -54,8 +55,12 @@ internal class ChartOfAccounts : IPlugin {
 	private class ChartOfAccountsRepresentation(SiteRoot siteRoot)
 		: Hal<ReadModel>, IHalLinks<ReadModel>, IHalState<ReadModel> {
 		public IEnumerable<Link> LinksFor(ReadModel resource) {
+			yield return new Link("index", "../", title: "Home");
+			yield return new Link("self", $"{siteRoot.Uri.AbsolutePath}", title: "Chart of Accounts");
+			yield return new Link("index", $"{siteRoot.Uri.AbsolutePath}", title: "Chart of Accounts");
 			foreach (var (accountNumber, (accountName, _)) in resource.ChartOfAccounts) {
-				yield return new Link("self", $"{siteRoot.Uri.AbsolutePath}/{accountNumber}", title: accountName);
+				yield return new Link("self", $"{siteRoot.Uri.AbsolutePath}/{accountNumber}",
+					title: $"{accountNumber} - {accountName}");
 			}
 		}
 
@@ -70,5 +75,3 @@ internal class ChartOfAccounts : IPlugin {
 			ImmutableSortedDictionary<int, AccountInfo>.Empty;
 	}
 }
-
-public record AccountInfo(string AccountName, bool Active = true);

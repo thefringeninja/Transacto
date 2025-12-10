@@ -1,6 +1,6 @@
 using System.Collections.Immutable;
 using Hallo;
-using Transacto.Framework.Http;
+using Transacto.Framework.Http.Html;
 
 namespace Transacto.Plugins.GeneralLedger.LedgerEntryIndex;
 

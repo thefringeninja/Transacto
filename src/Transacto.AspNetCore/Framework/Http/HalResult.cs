@@ -1,14 +1,19 @@
 using System.Net;
+using System.Reflection;
 using AngleSharp;
 using AngleSharp.Html;
 using AngleSharp.Html.Parser;
 using Hallo;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
+using Microsoft.AspNetCore.Html;
 using Microsoft.AspNetCore.Http.Headers;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Formatters;
 using Microsoft.Net.Http.Headers;
+using Transacto.Framework.Http.Html;
+using Transacto.Plugins.FinancialStatements;
+using Link = Transacto.Views.Shared.Link;
 
 namespace Transacto.Framework.Http;
 
@@ -84,6 +89,19 @@ internal class HalResult<T>(T? resource, Checkpoint checkpoint, IHal hal, HttpSt
 			NewLine = "\n"
 		};
 
+		private static IReadOnlyList<Type> GetLinkRenderers() =>
+			typeof(T).Namespace is null
+				? []
+				: typeof(T).Assembly.GetTypes().Where(type =>
+						type.Namespace is not null &&
+						type.IsAssignableTo(typeof(ISomething)) &&
+						type.Name.EndsWith("_link") &&
+						type.Namespace.Split('.').Any(typeof(T).Namespace!.StartsWith))
+					.ToList()
+					.AsReadOnly();
+
+		private static readonly IReadOnlyList<Type> s_LinkRenderers = GetLinkRenderers();
+
 		public async Task ExecuteAsync(HttpContext context) {
 			await using var htmlRenderer = new HtmlRenderer(context.RequestServices,
 				context.RequestServices.GetRequiredService<ILoggerFactory>());
@@ -94,6 +112,15 @@ internal class HalResult<T>(T? resource, Checkpoint checkpoint, IHal hal, HttpSt
 			var viewContext = context.RequestServices.GetRequiredService<ViewContext>();
 			viewContext._links = representation.Links.ToArray();
 			viewContext._embedded = representation.Embedded;
+			viewContext.GetTemplatedLink = link => {
+				foreach (var r in s_LinkRenderers) {
+					if ((bool)r.GetMethod("IsMatch", BindingFlags.Public | BindingFlags.Static)!
+					    .Invoke(null, [link])!) {
+						return r;
+					};
+				}
+				return typeof(Link);
+			};
 
 			var parameters = new Dictionary<string, object?> {
 				["Model"] = representation.State
