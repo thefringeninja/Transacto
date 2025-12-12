@@ -23,7 +23,7 @@ public class StreamStoreBusinessTransactionRepository<TBusinessTransaction>(
 			prefetchJsonData: true, cancellationToken: cancellationToken) switch {
 			{ Messages.Length: 0 } => BusinessTransactionEnvelope<TBusinessTransaction>.Empty,
 			var page => JsonSerializer.Deserialize<TBusinessTransaction>(await page.Messages[0]
-					.GetJsonData(cancellationToken))
+					.GetJsonData(cancellationToken), serializerOptions)
 				switch {
 					null => BusinessTransactionEnvelope<TBusinessTransaction>.Empty,
 					var businessTransaction => new(businessTransaction, page.Messages[0].StreamVersion)

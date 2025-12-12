@@ -11,7 +11,6 @@ public class ProfitAndLoss(AccountingPeriod accountingPeriod, ChartOfAccounts ch
 		EquityAccount retainedEarningsAccount, LocalDateTime closedOn,
 		GeneralLedgerEntryIdentifier closingGeneralLedgerEntryIdentifier) {
 		var entry = new GeneralLedgerEntry(closingGeneralLedgerEntryIdentifier,
-			new GeneralLedgerEntryNumber(new("jec"), new(int.Parse(accountingPeriod.ToString()))),
 			accountingPeriod,
 			closedOn);
 

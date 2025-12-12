@@ -11,10 +11,7 @@ public abstract class StreamStoreProjection : Projection<IStreamStore> {
 	protected string StreamName { get; }
 
 	protected StreamStoreProjection(string streamName) {
-		if (string.IsNullOrWhiteSpace(streamName)) {
-			throw new ArgumentException();
-		}
-
+		ArgumentException.ThrowIfNullOrWhiteSpace(streamName);
 		StreamName = streamName;
 	}
 

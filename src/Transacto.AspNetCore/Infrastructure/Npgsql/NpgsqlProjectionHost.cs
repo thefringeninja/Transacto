@@ -35,10 +35,10 @@ public partial class NpgsqlProjectionHost(
 		throw new NotImplementedException();
 	}
 
-
 	protected override async Task ExecuteAsync(CancellationToken stoppingToken) {
 		if (Interlocked.Exchange(ref _subscribed, 1) != 0) {
 			logger.LogWarning("Already running");
+			return;
 		}
 		
 		if (_projections.Length == 0) {

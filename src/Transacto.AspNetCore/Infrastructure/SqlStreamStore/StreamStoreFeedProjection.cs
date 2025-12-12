@@ -24,10 +24,14 @@ public abstract class StreamStoreFeedProjection<TFeedEntry>(
 					page.Messages[0].StreamVersion);
 
 			if (!messageTypeMapper.TryMap(typeof(TEvent), out var type)) {
-				type = "unknown";
+				return;
 			}
 
-			target.Events.Add(type);
+			if (e.Message is not TEvent o) {
+				return;
+			}
+
+			target = apply(o, target);
 
 			await streamStore.AppendToStream(StreamName, expectedVersion,
 				new NewStreamMessage(Guid.NewGuid(), messageTypeMapper.Map(typeof(TEvent)),

@@ -10,7 +10,7 @@
 	import validator from "@@rjsf/validator-ajv8";
 
 	const schema = JSON.parse("@JsonSerializer.Serialize(Model.Schema, SerializerOptions)");
-	const uiSchema = JSON.parse("@JsonSerializer.Serialize(Model.UiSchema, SerializerOptions)");
+	const uiSchema = JSON.parse("@JsonSerializer.Serialize(Model.UiSchema, SerializerOptions)") || {};
 	
 	const container = document.getElementById(schema.$id);
 	const root = createRoot(container);

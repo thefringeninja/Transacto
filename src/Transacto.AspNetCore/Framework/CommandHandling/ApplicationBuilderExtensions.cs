@@ -15,7 +15,8 @@ namespace Microsoft.AspNetCore.Builder;
 public static partial class ApplicationBuilderExtensions {
 	extension(IEndpointRouteBuilder builder) {
 		public IEndpointRouteBuilder MapCommands(string route, params Type[] commandTypes) =>
-			builder.MapCommandsInternal(route, TransactoHttpSerializerOptions.Commands, commandTypes);
+			builder
+				.MapCommandsInternal(route, TransactoHttpSerializerOptions.Commands, commandTypes);
 
 		public IEndpointRouteBuilder MapBusinessTransaction<T>(string route) where T : IBusinessTransaction =>
 			builder.MapCommandsInternal(route, TransactoHttpSerializerOptions.BusinessTransactions(typeof(T)),
@@ -27,7 +28,7 @@ public static partial class ApplicationBuilderExtensions {
 			var schemaCache = new JsonCommandSchemataCache(commandTypes);
 			builder.MapPost(route, async (HttpRequest request, [FromServices] CommandDispatcher dispatcher) => {
 				if (!MediaTypeHeaderValue.TryParse(request.ContentType, out var mediaType)) {
-					return Results.Text($"No media type specified.", statusCode: 415);
+					return Results.Text("No media type specified.", statusCode: 415);
 				}
 
 				if (!mediaType.MediaType.Equals("multipart/form-data", StringComparison.OrdinalIgnoreCase)) {

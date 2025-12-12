@@ -4,11 +4,12 @@ using System.Text.Json.Serialization;
 namespace Transacto.Domain;
 
 public partial class JournalEntry : IBusinessTransaction {
-	[JsonIgnore]
-	GeneralLedgerEntrySequenceNumber IBusinessTransaction.SequenceNumber => new(JournalEntryNumber);
-	public int JournalEntryNumber { get; init; }
 	public string? Description { get; init; }
 	public ImmutableArray<Item> Items { get; init; } = ImmutableArray<Item>.Empty;
+	public GeneralLedgerEntrySequenceNumber? SequenceNumber { get; init; }
+	public static GeneralLedgerEntryNumberPrefix Prefix { get; } = new("journalEntry");
+	public GeneralLedgerEntryNumber? ReferenceNumber =>
+		SequenceNumber.HasValue ? new GeneralLedgerEntryNumber(Prefix, SequenceNumber.Value) : null;
 
 	public IEnumerable<object> GetTransactionItems() {
 		foreach (var (accountNumber, amount, type) in Items.OrderBy(item => item.AccountNumber)) {

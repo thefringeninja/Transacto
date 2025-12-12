@@ -8,6 +8,8 @@ public readonly struct AccountingPeriod : IEquatable<AccountingPeriod>, ICompara
 	private static readonly YearMonthPattern Pattern = YearMonthPattern.CreateWithInvariantCulture("yyyyMM");
 
 	private readonly YearMonth _value;
+	
+	public int Year => _value.Year;
 
 	public static bool TryParse(string? period, out AccountingPeriod value) {
 		if (string.IsNullOrEmpty(period) || period.Length != 6 ||

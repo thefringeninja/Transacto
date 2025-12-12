@@ -80,14 +80,17 @@ public static class TransactoHttpSerializerOptions {
 		Converters = { new JsonStringEnumConverter(JsonNamingPolicy.CamelCase) }
 	};
 
-	private class BusinessTransactionConverter(params Type[] transactionTypes) : JsonConverter<IBusinessTransaction?> {
+	private class BusinessTransactionConverter(params Type[] transactionTypes) : JsonConverter<object?> {
 		private readonly Dictionary<string, Type> _transactionTypes =
 			transactionTypes.ToDictionary(GetBusinessTransactionPropertyName);
 
 		private static string GetBusinessTransactionPropertyName(Type type) =>
 			char.ToLower(type.Name[0]) + type.Name[1..];
 
-		public override IBusinessTransaction? Read(ref Utf8JsonReader reader, Type typeToConvert,
+		public override bool CanConvert(Type typeToConvert) =>
+			typeof(IBusinessTransaction).IsAssignableFrom(typeToConvert);
+
+		public override object? Read(ref Utf8JsonReader reader, Type typeToConvert,
 			JsonSerializerOptions options) {
 			if (reader.TokenType != JsonTokenType.StartObject || !reader.Read()) {
 				throw new JsonException();
@@ -104,13 +107,13 @@ public static class TransactoHttpSerializerOptions {
 				return null;
 			}
 
-			var businessTransaction = (IBusinessTransaction)JsonSerializer.Deserialize(ref reader, type, options)!;
+			var businessTransaction = JsonSerializer.Deserialize(ref reader, type, options)!;
 			reader.Read();
 
 			return businessTransaction;
 		}
 
-		public override void Write(Utf8JsonWriter writer, IBusinessTransaction? value,
+		public override void Write(Utf8JsonWriter writer, object? value,
 			JsonSerializerOptions options) {
 			if (value == null) {
 				writer.WriteNullValue();

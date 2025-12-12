@@ -39,18 +39,17 @@ public class GeneralLedger : AggregateRoot, IAggregateRoot<GeneralLedger> {
 	};
 
 	public GeneralLedgerEntry Create(GeneralLedgerEntryIdentifier identifier,
-		IBusinessTransaction businessTransaction, GeneralLedgerEntryNumberPrefix prefix,
-		LocalDateTime createdOn, AccountIsDeactivated accountIsDeactivated) =>
-		Create(identifier, businessTransaction, prefix, createdOn,
+		IBusinessTransaction businessTransaction, LocalDateTime createdOn, AccountIsDeactivated accountIsDeactivated) =>
+		Create(identifier, businessTransaction, createdOn,
 			(_state.PeriodClosing, _state.AccountingPeriod.Contains(createdOn.Date)) switch {
 				(true, _) or (false, false) => _state.AccountingPeriod.Next(),
 				_ => _state.AccountingPeriod
 			}, accountIsDeactivated);
 
 	private static GeneralLedgerEntry Create(GeneralLedgerEntryIdentifier identifier,
-		IBusinessTransaction businessTransaction, GeneralLedgerEntryNumberPrefix prefix,
+		IBusinessTransaction businessTransaction,
 		LocalDateTime createdOn, AccountingPeriod accountingPeriod, AccountIsDeactivated accountIsDeactivated) =>
-		new(identifier, businessTransaction, prefix, accountingPeriod, createdOn, accountIsDeactivated);
+		new(identifier, businessTransaction, accountingPeriod, createdOn, accountIsDeactivated);
 
 	public void BeginClosingPeriod(EquityAccount retainedEarningsAccount,
 		GeneralLedgerEntryIdentifier closingGeneralLedgerEntryIdentifier,
