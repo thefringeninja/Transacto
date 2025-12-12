@@ -5,13 +5,13 @@ using Transacto.Domain;
 namespace Transacto.Plugins.FinancialStatements.ProfitAndLoss;
 
 public abstract record Report {
-	public ImmutableDictionary<int, Line> Lines { get; }
+	public ImmutableSortedDictionary<int, Line> Lines { get; }
 
 	public string Name { get; }
 
 	protected Report(string name, ImmutableArray<Line> lines) {
 		Name = name;
-		Lines = lines.Where(IsMatch).ToImmutableDictionary(line => line.Account.Number);
+		Lines = lines.Where(IsMatch).ToImmutableSortedDictionary(line => line.Account.Number, line => line);
 	}
 
 	public decimal Total => Lines.Values.Sum(item => item.Balance);

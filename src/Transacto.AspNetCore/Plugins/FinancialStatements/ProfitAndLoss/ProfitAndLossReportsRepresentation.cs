@@ -4,49 +4,84 @@ using Transacto.Framework.Http.Html;
 
 namespace Transacto.Plugins.FinancialStatements.ProfitAndLoss;
 
-internal class ProfitAndLossReportsRepresentation(SiteRoot siteRoot)
+internal class ProfitAndLossReportsRepresentation(SiteRoot siteRoot, GetFormatSettings getFormatSettings)
 	: Hal<ProfitAndLossReports>, IHalState<ProfitAndLossReports>, IHalLinks<ProfitAndLossReports> {
 	public object StateFor(ProfitAndLossReports resource) => resource;
 
 	public IEnumerable<Link> LinksFor(ProfitAndLossReports resource) {
-		if (resource.Groups.Length == 0) {
-			yield break;
-		}
+		var now = LocalDate.FromDateTime(DateTime.Now);
+		var firstOfYear = now.PlusDays(-now.DayOfYear + 1);
 
-		var current = LocalDate.FromDateTime(DateTime.Now);
+		yield return new Link("index", "/", title: "Home");
 
-		yield return new Link(
-			"self",
-			$"{siteRoot.Uri.AbsolutePath}/profit-and-loss?{ReportRange.ToFormUrlEncoded(resource.Groups.Select(group => group.ReportRange))}",
-			title: $"Profit and Loss ({string.Join(", ", resource.Groups.Select(group => group.ReportRange))})");
+		yield return new Link("index", siteRoot.Uri.AbsolutePath, title: "Financial Statements");
 
-
-		var firstOfYear = current.PlusDays(-current.DayOfYear + 1);
 		for (var i = 0; i < 4; i++) {
 			var quarterly = firstOfYear.PlusMonths(i * 3);
 
-			var reportRange = new ReportRange(quarterly, Period.FromMonths(3));
+			var reportRange = new ReportRange(quarterly, Period.Quarterly);
 			yield return new Link(
-				"self",
+				FinancialStatements.Relation,
 				$"{siteRoot.Uri.AbsolutePath}/profit-and-loss?{reportRange.ToFormUrlEncoded()}",
 				title: $"Profit and Loss Q{GetQuarter(quarterly)} {quarterly.Year}");
 		}
 
 		yield return new Link(
-			"self",
-			$"{siteRoot.Uri.AbsolutePath}/profit-and-loss?{new ReportRange(firstOfYear, Period.FromYears(1)).ToFormUrlEncoded()}",
-			title: $"Profit and Loss {current.Year}");
+			FinancialStatements.Relation,
+			$"{siteRoot.Uri.AbsolutePath}/profit-and-loss?{new ReportRange(firstOfYear, Period.Yearly).ToFormUrlEncoded()}",
+			title: $"Profit and Loss {now.Year}");
 
 		yield return new Link(
-			"self",
-			$"{siteRoot.Uri.AbsolutePath}/profit-and-loss?{new ReportRange(firstOfYear, Period.FromDays(current.DayOfYear)).ToFormUrlEncoded()}",
-			title: $"Profit and Loss YTD");
+			FinancialStatements.Relation,
+			$"{siteRoot.Uri.AbsolutePath}/profit-and-loss?{new ReportRange(firstOfYear, Period.FromDays(now.DayOfYear)).ToFormUrlEncoded()}",
+			title: "Profit and Loss YTD");
 
 		yield return new Link(
-			"self",
+			FinancialStatements.Relation2,
 			$"{siteRoot.Uri.AbsolutePath}/profit-and-loss?starting-on={{starting-on}}&period={{period}}",
-			title: $"Profit and Loss YTD");
-		yield return new Link("index", siteRoot.Uri.AbsolutePath, title: "Financial Statements");
+			title: "Run Profit and Loss");
+
+		if (resource.Groups.Length == 0) {
+			yield break;
+		}
+
+		var current = resource.Groups.Select(group => group.ReportRange).ToArray();
+		var currentEncoded = ReportRange.ToFormUrlEncoded(current);
+		var (startingOn, period) = resource.Groups[0].ReportRange;
+		var withLastPeriod = $"{currentEncoded}&{new ReportRange(
+			period.Days == 0 ? startingOn.Minus(period) : firstOfYear, period).ToFormUrlEncoded()}";
+
+		yield return new Link(
+			"self",
+			$"{siteRoot.Uri.AbsolutePath}/profit-and-loss?{currentEncoded}",
+			title: $"Profit and Loss ({string.Join(", ", current)})");
+
+		yield return new Link(
+			FinancialStatements.Relation,
+			$"{siteRoot.Uri.AbsolutePath}/profit-and-loss?{currentEncoded}",
+			title: $"Profit and Loss ({string.Join(", ", current)})");
+
+		yield return new Link(
+			FinancialStatements.Relation,
+			$"{siteRoot.Uri.AbsolutePath}/profit-and-loss?{withLastPeriod}",
+			title: "Compare to Last Period");
+
+
+		if (period.Days != 0) {
+			yield break;
+		}
+
+		var prev = new ReportRange(startingOn.Minus(period), period);
+		var next = new ReportRange(startingOn.Plus(period), period);
+		var formatSettings = getFormatSettings();
+		yield return new Link(
+			"prev",
+			$"{siteRoot.Uri.AbsolutePath}/profit-and-loss?{prev.ToFormUrlEncoded()}",
+			title: $"Profit and Loss {formatSettings.ShortDatePattern.Format(prev.StartingOn)}");
+		yield return new Link(
+			"next",
+			$"{siteRoot.Uri.AbsolutePath}/profit-and-loss?{next.ToFormUrlEncoded()}",
+			title: $"Profit and Loss {formatSettings.ShortDatePattern.Format(next.StartingOn)}");
 	}
 
 	private static int GetQuarter(LocalDate date) => date.Month switch {

@@ -17,6 +17,8 @@ internal class GeneralLedger : IPlugin {
 	public string Name { get; } = nameof(GeneralLedger);
 	public IEnumerable<Type> MessageTypes => [];
 
+	public IEnumerable<LinkRelation> LinkRelations => [];
+
 	public void Configure(IEndpointRouteBuilder builder) {
 		builder
 			.MapBusinessTransaction<JournalEntry>("/entries")
@@ -176,7 +178,8 @@ internal class GeneralLedger : IPlugin {
 		public object StateFor(Index resource) => resource;
 
 		public IEnumerable<Link> LinksFor(Index resource) {
-			yield return new Link("self", siteRoot.Uri.AbsolutePath);
+			yield return new Link("index", "../", title: "Home");
+			yield return new Link("self", siteRoot.Uri.AbsolutePath, "General Ledger");
 		}
 	}
 }

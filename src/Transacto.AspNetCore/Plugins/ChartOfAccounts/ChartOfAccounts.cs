@@ -51,6 +51,8 @@ public class ChartOfAccounts : IPlugin {
 		.AddSingleton<ChartOfAccountsRepresentation>();
 
 	public IEnumerable<Type> MessageTypes => [];
+	
+	public IEnumerable<LinkRelation> LinkRelations => [];
 
 	private class ChartOfAccountsRepresentation(SiteRoot siteRoot)
 		: Hal<ReadModel>, IHalLinks<ReadModel>, IHalState<ReadModel> {

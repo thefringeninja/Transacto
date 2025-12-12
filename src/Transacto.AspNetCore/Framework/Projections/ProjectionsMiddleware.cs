@@ -2,6 +2,9 @@ using System.Collections.Concurrent;
 using System.Reactive.Linq;
 using System.Runtime.CompilerServices;
 using Microsoft.AspNetCore.Mvc;
+using Polly;
+using Polly.CircuitBreaker;
+using Polly.Retry;
 using Transacto.Framework.Http;
 using Transacto.Framework.Http.Html;
 
@@ -30,12 +33,12 @@ public static class ProjectionsMiddleware {
 					return Results.Hal(projectionsController.State[name], Checkpoint.None,
 						new ProjectionStateRepresentation());
 				});
-			ep.MapDelete("{name}", async (string name, 
+			ep.MapDelete("{name}", async (string name,
 				[FromServices] ProjectionsController projectionsController,
 				[FromServices] SiteRoot siteRoot) => {
 				await projectionsController.Delete(name);
 
-				return Results.Redirect($"{siteRoot.Uri.AbsolutePath}/projections");
+				return Results.SeeOther($"{siteRoot.Uri.AbsolutePath}/projections");
 			});
 		}));
 	}
@@ -86,9 +89,8 @@ public class ProjectionsController(IEnumerable<IProjectionsControl> projections)
 					yield break;
 				}
 
-				if (!cache.TryGetValue(state.Name, out var current) || current != state ) {
+				if (!cache.TryGetValue(state.Name, out var current) || current != state) {
 					yield return state;
-					
 				}
 
 				cache[state.Name] = state;
@@ -123,7 +125,6 @@ public class ProjectionsController(IEnumerable<IProjectionsControl> projections)
 			}
 
 			if (current != state) {
-
 				yield return state;
 			}
 
@@ -149,4 +150,25 @@ public class ProjectionsController(IEnumerable<IProjectionsControl> projections)
 
 public interface IProjectionsControl : IProjectionHostStatus {
 	public Task Delete(string name);
+}
+
+public static class ProjectionPolicy {
+	public static AsyncCircuitBreakerPolicy CircuitBreaker =>
+		Policy
+			.Handle<Exception>(ex => ex is not OperationCanceledException)
+			.CircuitBreakerAsync(
+				5,
+				TimeSpan.FromSeconds(30)
+			);
+
+	// 2. Define the Retry Policy with Exponential Backoff (Outermost)
+
+	public static AsyncRetryPolicy RetryExponentially(Action<Exception, TimeSpan> onRetry) =>
+		Policy
+			.Handle<Exception>(ex => ex is not OperationCanceledException)
+			.WaitAndRetryAsync(
+				retryCount: 5,
+				sleepDurationProvider: attempt => TimeSpan.FromMilliseconds(Math.Pow(2, attempt * 10)),
+				onRetry: onRetry
+			);
 }

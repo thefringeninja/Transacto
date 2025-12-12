@@ -6,7 +6,6 @@ using AngleSharp.Html.Parser;
 using Hallo;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
-using Microsoft.AspNetCore.Html;
 using Microsoft.AspNetCore.Http.Headers;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Formatters;
@@ -19,7 +18,7 @@ namespace Transacto.Framework.Http;
 
 internal abstract class HalResult {
 	protected const string HalJsonContentType = "application/hal+json";
-	protected const string HalHtmlContentType = "text/html";
+	protected const string HalHtmlContentType = "text/html; charset=utf-8";
 	protected static readonly MediaType HalJson = new(HalJsonContentType);
 	protected static readonly MediaType Html = new(HalHtmlContentType);
 }
@@ -94,7 +93,7 @@ internal class HalResult<T>(T? resource, Checkpoint checkpoint, IHal hal, HttpSt
 				? []
 				: typeof(T).Assembly.GetTypes().Where(type =>
 						type.Namespace is not null &&
-						type.IsAssignableTo(typeof(ISomething)) &&
+						type.IsAssignableTo(typeof(ILinkMatcher)) &&
 						type.Name.EndsWith("_link") &&
 						type.Namespace.Split('.').Any(typeof(T).Namespace!.StartsWith))
 					.ToList()

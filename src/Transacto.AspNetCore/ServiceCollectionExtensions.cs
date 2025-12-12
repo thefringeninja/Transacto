@@ -2,16 +2,14 @@ using System.Collections;
 using System.Collections.Concurrent;
 using System.Data.SQLite;
 using System.Diagnostics.CodeAnalysis;
-using System.Globalization;
-using System.Text.RegularExpressions;
+using System.Text.Encodings.Web;
+using System.Text.Unicode;
 using KurrentDB.Client;
 using Microsoft.AspNetCore.Hosting.Server;
 using Microsoft.AspNetCore.Hosting.Server.Features;
-using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging.Abstractions;
-using Microsoft.Extensions.Primitives;
+using Microsoft.Extensions.WebEncoders;
 using Npgsql;
 using SqlStreamStore;
 using Transacto.Framework;
@@ -32,12 +30,23 @@ public static partial class WebApplicationBuilderExtensions {
 			NpgsqlConnectionStringBuilder npgsqlConnectionStringBuilder,
 			Func<Type, SQLiteConnectionStringBuilder> sqliteConnectionStringBuilderFactory,
 			IStreamStore streamStore, params IPlugin[] plugins) {
+			var allPlugins = plugins.Concat(Standard.Plugins).ToArray();
+
+			var linkRelations = new LinkRelationCollection();
+			linkRelations.Add(new LinkRelation("self", "You are here:"));
+			linkRelations.Add(new LinkRelation("index", "Navigation"));
+			foreach (var plugin in allPlugins) {
+				foreach (var linkRelation in plugin.LinkRelations) {
+					linkRelations.Add(linkRelation);
+				}
+			}
+
 			var npgsqlConnectionStringBuilderCache = new ConcurrentDictionary<string, NpgsqlConnectionStringBuilder>();
 
 			var messageTypeMapper = MessageTypeMapper.Create(Array.ConvertAll(plugins,
 				plugin => new MessageTypeMapper(plugin.MessageTypes)));
 
-			_ = plugins.Concat(Standard.Plugins).Aggregate(builder.Services
+			_ = allPlugins.Aggregate(builder.Services
 					.AddSingleton(eventStore)
 					.AddSingleton(npgsqlConnectionStringBuilder)
 					.AddSingleton(streamStore)
@@ -45,11 +54,11 @@ public static partial class WebApplicationBuilderExtensions {
 					.AddRouting()
 					.AddSingleton(messageTypeMapper)
 					// projections
-					.AddSingleton<Func<IPlugin, NpgsqlConnection>>(NpqsqlConnectonFactory)
-					.Configure<MvcOptions>(options =>
-						options.ValueProviderFactories.Insert(0, new KebabCaseQueryValueProviderFactory()))
+					.AddSingleton<Func<IPlugin, NpgsqlConnection>>(NpgsqlConnectionFactory)
+					.AddSingleton<ISettingsRepository, EventStoreSettingsRepository>()
 					.AddRazorComponents().Services
 					.AddScoped<ViewContext>()
+					.AddSingleton(linkRelations)
 					.AddSingleton(GetRootUri)
 					.AddSingleton<IndexRepresentation>(),
 				(services, plugin) => {
@@ -73,14 +82,26 @@ public static partial class WebApplicationBuilderExtensions {
 						.AddHostedService<StreamStoreProjectionHost>()
 						.AddSingleton<ProjectionsController>()
 						.AddSingleton(sqliteConnectionStringBuilderFactory)
-						.AddSingleton<Func<NpgsqlConnection>>(() => NpqsqlConnectonFactory(plugin))
+						.AddSingleton<Func<NpgsqlConnection>>(() => NpgsqlConnectionFactory(plugin))
 						.AddSingleton<IConfiguration>(builder.Configuration)
 						.AddSingleton(builder.Environment)
-						.Configure<MvcOptions>(options =>
-							options.ValueProviderFactories.Insert(0, new KebabCaseQueryValueProviderFactory()))
+						.AddSingleton(linkRelations)
+						.Configure<WebEncoderOptions>(options =>
+							options.TextEncoderSettings = new TextEncoderSettings(UnicodeRanges.All))
 						.AddRazorComponents().Services
 						.AddScoped<ViewContext>()
 						.AddSingleton(GetPluginRootUri)
+						.AddSingleton<GetFormatSettings>(provider => () => provider
+							.GetRequiredService<InMemoryProjectionDatabase>()
+							.Get<FormatSettingsReadModel>() switch {
+							{ HasValue: true } readModel => readModel.Value.FormatSettings,
+							_ => FormatSettings.Default
+						})
+						.AddScoped<FormatSettings>(provider => provider.GetRequiredService<GetFormatSettings>()())
+						.AddInMemoryProjection<FormatSettingsReadModel>((readModel, e) => e switch {
+							FormatSettings settings => readModel with { FormatSettings = settings },
+							_ => readModel
+						})
 						.BuildServiceProvider();
 
 					return services
@@ -88,7 +109,7 @@ public static partial class WebApplicationBuilderExtensions {
 						.AddSingleton<IHostedService>(_ => new HostedServicesBackgroundService(plugin, pluginProvider));
 				});
 
-			NpgsqlConnection NpqsqlConnectonFactory(IPlugin plugin) =>
+			NpgsqlConnection NpgsqlConnectionFactory(IPlugin plugin) =>
 				new(npgsqlConnectionStringBuilderCache.GetOrAdd(plugin.Name, static (username, cs) =>
 					new NpgsqlConnectionStringBuilder(cs.ConnectionString) {
 						Username = username
@@ -116,6 +137,10 @@ public static partial class WebApplicationBuilderExtensions {
 		}
 	}
 
+	private record FormatSettingsReadModel : MemoryReadModel {
+		public FormatSettings FormatSettings { get; init; } = FormatSettings.Default;
+	}
+
 	private class HostedServicesBackgroundService(IPluginDescriptor plugin, IServiceProvider serviceProvider)
 		: IHostedService {
 		public string Name => plugin.Name;
@@ -127,47 +152,6 @@ public static partial class WebApplicationBuilderExtensions {
 		public Task StopAsync(CancellationToken cancellationToken) =>
 			Task.WhenAll(serviceProvider.GetServices<IHostedService>()
 				.Select(service => service.StopAsync(cancellationToken)));
-	}
-
-	private class KebabCaseQueryValueProvider(
-		BindingSource bindingSource,
-		IQueryCollection values,
-		CultureInfo culture)
-		: QueryStringValueProvider(bindingSource, ConvertKeysToKebabCase(values), culture) {
-		private static IQueryCollection ConvertKeysToKebabCase(IQueryCollection values) {
-			var dict = new Dictionary<string, StringValues>(StringComparer.OrdinalIgnoreCase);
-
-			foreach (var kvp in values) {
-				// Convert kebab-case to PascalCase for matching
-				var pascalKey = ConvertKebabToPascal(kvp.Key);
-				dict[pascalKey] = kvp.Value;
-
-				// Also keep original key for backward compatibility
-				dict[kvp.Key] = kvp.Value;
-			}
-
-			return new QueryCollection(dict);
-		}
-
-		private static string ConvertKebabToPascal(string kebabCase) =>
-			Regex.Replace(kebabCase, "-(.)", m => m.Groups[1].Value.ToUpper());
-	}
-
-	private class KebabCaseQueryValueProviderFactory : IValueProviderFactory {
-		public Task CreateValueProviderAsync(ValueProviderFactoryContext context) {
-			ArgumentNullException.ThrowIfNull(context);
-
-			var query = context.ActionContext.HttpContext.Request.Query;
-			if (query.Count > 0) {
-				context.ValueProviders.Add(
-					new KebabCaseQueryValueProvider(
-						BindingSource.Query,
-						query,
-						CultureInfo.CurrentCulture));
-			}
-
-			return Task.CompletedTask;
-		}
 	}
 
 	private partial class PluginServiceCollection(ILogger logger) : IServiceCollection {

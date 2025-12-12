@@ -1,9 +1,9 @@
 using Hallo;
-using Microsoft.AspNetCore.Html;
 
 namespace Transacto.Framework.Http.Html;
 
-public class ViewContext {
+public class ViewContext(LinkRelationCollection linkRelations) {
+	public LinkRelationCollection LinkRelations { get; } = linkRelations;
 	public Link[] _links { get; set; } = [];
 	public object? _embedded { get; set; }
 

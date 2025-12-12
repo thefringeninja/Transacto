@@ -9,6 +9,13 @@ public class FinancialStatements : IPlugin {
 	public string Name => nameof(FinancialStatements);
 	public IEnumerable<Type> MessageTypes { get; } = [];
 
+	public IEnumerable<LinkRelation> LinkRelations { get; } = [
+		new (Relation, "Financial Statements"),
+		new (Relation2, "Run Report")
+	];
+	public const string Relation = "t:financial-statement";
+	public const string Relation2 = "t:run-financial-statement";
+	
 	public void Configure(IEndpointRouteBuilder builder) {
 		builder.MapGroup("/profit-and-loss").UseProfitAndLoss();
 		builder.MapGroup("/balance-sheet").UseBalanceSheet();

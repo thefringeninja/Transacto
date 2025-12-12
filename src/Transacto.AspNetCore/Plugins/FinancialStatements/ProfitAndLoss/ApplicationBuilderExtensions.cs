@@ -12,7 +12,7 @@ namespace Microsoft.AspNetCore.Builder;
 static partial class ApplicationBuilderExtensions {
 	public static IEndpointRouteBuilder UseProfitAndLoss(this IEndpointRouteBuilder builder) {
 		builder.MapGet("",
-			async ([FromQuery] ParseableLocalDate[] startingOn, 
+			async ([FromQuery(Name = "starting-on")] ParseableLocalDate[] startingOn, 
 				[FromQuery] ParseablePeriod[] period,
 				[FromServices] GetProfitAndLossReportsAsync getProfitAndLossReportsAsync, 
 				[FromServices] ProfitAndLossReportsRepresentation representation,

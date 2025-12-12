@@ -14,6 +14,6 @@ public record ReportRange(LocalDate StartingOn, Period Period) {
 		string.Join('&', values.Select(value => value.ToFormUrlEncoded()));
 }
 
-public interface ISomething {
+public interface ILinkMatcher {
 	public static abstract bool IsMatch(Hallo.Link link);
 }

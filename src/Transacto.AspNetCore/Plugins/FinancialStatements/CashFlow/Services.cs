@@ -28,6 +28,7 @@ internal static class Services {
 		var netIncomes = await getProfitAndLossReportsAsync(reportRanges, ct);
 
 		var reports = await reportRanges.ToAsyncEnumerable()
+			.OrderBy(q => q.startingon)
 			.Select(GetReportAsync)
 			.ToArrayAsync(cancellationToken: ct);
 

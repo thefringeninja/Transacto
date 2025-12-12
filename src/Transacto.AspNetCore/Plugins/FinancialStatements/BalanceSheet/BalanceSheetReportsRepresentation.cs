@@ -5,40 +5,88 @@ using Transacto.Framework.Http.Html;
 
 namespace Transacto.Plugins.FinancialStatements.BalanceSheet;
 
-public class BalanceSheetReportsRepresentation(SiteRoot siteRoot) : Hal<BalanceSheetReports>,
-	IHalLinks<BalanceSheetReports>,
-	IHalState<BalanceSheetReports> {
+public class BalanceSheetReportsRepresentation(SiteRoot siteRoot, GetFormatSettings getFormatSettings)
+	: Hal<BalanceSheetReports>,
+		IHalLinks<BalanceSheetReports>,
+		IHalState<BalanceSheetReports> {
 	public IEnumerable<Link> LinksFor(BalanceSheetReports resource) {
+		var formatSettings = getFormatSettings();
+
+		var now = LocalDate.FromDateTime(DateTime.Now);
+
+		yield return new Link("index", "/", title: "Home");
+
+		yield return new Link("index", siteRoot.Uri.AbsolutePath, title: "Financial Statements");
+
+		yield return new Link(
+			FinancialStatements.Relation,
+			$"{siteRoot.Uri.AbsolutePath}/balance-sheet?thru={LocalDatePattern.Iso.Format(now)}",
+			title: "Balance Sheet (Fiscal YTD)");
+
+		yield return new Link(
+			FinancialStatements.Relation2,
+			$"{siteRoot.Uri.AbsolutePath}/balance-sheet?thru={{thru}}",
+			title: "Run Balance Sheet");
+
+
 		if (resource.Groups.Length == 0) {
 			yield break;
 		}
 
 		var report = resource.Groups[0];
 		var includeAll = report.Thru == LocalDate.MaxIsoValue;
-		var current = includeAll ? LocalDate.FromDateTime(DateTime.Now) : report.Thru;
+		var start = includeAll ? now : report.Thru;
 
-		yield return new Link(
-			"self",
-			$"{siteRoot.Uri.AbsolutePath}/balance-sheet?thru={LocalDatePattern.Iso.Format(report.Thru)}",
-			title: includeAll ? "Balance Sheet (Fiscal YTD)" : $"Balance Sheet thru {current}");
+		var currentEncoded = string.Join('&', resource.Groups.Select(group => $"thru={LocalDatePattern.Iso.Format(group.Thru)}"));
 
-		yield return new Link(
-			"self",
-			$"{siteRoot.Uri.AbsolutePath}/balance-sheet?thru={{thru}}",
-			title: "Select Balance Sheet");
+		yield return new Link(FinancialStatements.Relation,
+			$"{siteRoot.Uri.AbsolutePath}/balance-sheet?{currentEncoded}",
+			title: "Balance Sheet");
+		yield return new Link("self",
+			$"{siteRoot.Uri.AbsolutePath}/balance-sheet?{currentEncoded}",
+			title: "Balance Sheet");
 
 		for (var i = 0; i < 4; i++) {
-			var quarterly = current
-				.PlusDays(-current.DayOfYear + 1)
-				.PlusMonths((i * 3) + 3)
+			var quarterly = start
+				.PlusDays(-start.DayOfYear + 1)
+				.PlusMonths(i * 3 + 3)
 				.PlusDays(-1);
 
 			yield return new Link(
-				"self",
+				FinancialStatements.Relation,
 				$"{siteRoot.Uri.AbsolutePath}/balance-sheet?thru={LocalDatePattern.Iso.Format(quarterly)}",
-				title: $"Balance Sheet thru Q{GetQuarter(quarterly)} {quarterly.Year}");
+				title: $"Q{GetQuarter(quarterly)} {quarterly.Year}");
 		}
-		yield return new Link("index", siteRoot.Uri.AbsolutePath, title: "Financial Statements");
+
+		(LocalDate, string)[] prev = [
+			(new LocalDate(report.Thru.Year, 1, 1).PlusDays(-1), "Last Year"),
+			(report.Thru.FirstDayOfNextQuarter.Plus(-Period.Quarterly).PlusDays(-1), "Previous Quarter"),
+			(report.Thru.ToYearMonth().OnDayOfMonth(1).PlusDays(-1), "Last Month"),
+			(report.Thru.StartOfThisWeek, "Last Week"),
+			(report.Thru.PlusDays(-1), "Yesterday"),
+		];
+
+		foreach (var (link, title) in prev) {
+			yield return new Link(
+				"prev",
+				$"{siteRoot.Uri.AbsolutePath}/balance-sheet?thru={formatSettings.ShortDatePattern.Format(link)}",
+				title: title);
+		}
+
+		(LocalDate, string)[] nextLinks = [
+			(report.Thru.PlusDays(1), "Tomorrow"),
+			(report.Thru.StartOfThisWeek.Plus(Period.Weekly), "Next Week"),
+			(report.Thru.PlusMonths(2).ToYearMonth().OnDayOfMonth(1).PlusDays(-1), "Next Month"),
+			(report.Thru.FirstDayOfNextQuarter.Plus(Period.Quarterly).PlusDays(-1), "Next Quarter"),
+			(new LocalDate(report.Thru.PlusYears(1).Year, 1, 1).PlusDays(-1), "Next Year"),
+		];
+
+		foreach (var (next, title) in nextLinks) {
+			yield return new Link(
+				"next",
+				$"{siteRoot.Uri.AbsolutePath}/balance-sheet?thru={formatSettings.ShortDatePattern.Format(next)}",
+				title: title);
+		}
 	}
 
 	public object StateFor(BalanceSheetReports resource) => resource;

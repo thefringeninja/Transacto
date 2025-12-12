@@ -13,26 +13,26 @@ internal static class StreamSubscriptionResultExtensions {
 			SingleReader = true
 		});
 
-		var timer = new Timer(state => {
-			var channel = (Channel<SubscriptionControlMessage>)state!;
-			channel.Writer.TryWrite(SubscriptionControlMessage.Flush.Instance);
-		}, channel, period, period);
+		var timer = new Timer(async state => {
+			var (channel, ct) = ((Channel<SubscriptionControlMessage>, CancellationToken))state!;
+			await channel.Writer.WriteAsync(SubscriptionControlMessage.Flush.Instance, ct);
+		}, (channel, cancellationToken), period, Timeout.InfiniteTimeSpan);
 
-		Produce();
+		Produce(cancellationToken);
 
 		return channel.Reader.ReadAllAsync(cancellationToken);
 
-		async void Produce() {
+		async void Produce(CancellationToken ct) {
 			int count = 0;
 			try {
-				await foreach (var message in subscription.Messages.WithCancellation(cancellationToken)) {
-					timer.Change(period, period);
-					await channel.Writer.WriteAsync(new SubscriptionControlMessage.SubscriptionMessage(message),
-						cancellationToken);
-					if (count++ >= batchSize) {
-						count = 0;
-						await channel.Writer.WriteAsync(SubscriptionControlMessage.Flush.Instance, cancellationToken);
+				await foreach (var message in subscription.Messages.WithCancellation(ct)) {
+					timer.Change(period, Timeout.InfiniteTimeSpan);
+					await channel.Writer.WriteAsync(new SubscriptionControlMessage.SubscriptionMessage(message), ct);
+					if (count++ < batchSize) {
+						continue;
 					}
+					count = 0;
+					await channel.Writer.WriteAsync(SubscriptionControlMessage.Flush.Instance, ct);
 				}
 			} catch (Exception ex) {
 				channel.Writer.TryComplete(ex);

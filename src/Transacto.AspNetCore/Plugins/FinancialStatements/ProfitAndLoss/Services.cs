@@ -9,15 +9,8 @@ internal static class Services {
 		IEnumerable<(LocalDate startingon, Period period)> reportRanges, CancellationToken ct) {
 		await using var connection = connectionFactory();
 
-		var accounts = await connection
-			.QueryUnbufferedAsync<(int accountNumber, string accountName)>(
-				"""
-				SELECT account_number, account_name
-				FROM account_names
-				""")
-			.ToArrayAsync(ct);
-
 		var reports = await reportRanges.ToAsyncEnumerable()
+			.OrderBy(q => q.startingon)
 			.Select(GetReportAsync)
 			.ToArrayAsync(ct);
 

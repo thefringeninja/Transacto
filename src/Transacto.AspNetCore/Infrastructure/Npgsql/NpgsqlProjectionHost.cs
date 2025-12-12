@@ -46,16 +46,16 @@ public partial class NpgsqlProjectionHost(
 
 	private async Task Subscribe(CancellationToken ct) {
 		try {
-			await Policy.Handle<Exception>(ex => ex is not OperationCanceledException)
-				.WaitAndRetryAsync(5, attempt => TimeSpan.FromSeconds(Math.Pow(2, attempt)),
-					(ex, delay) => {
-						_state.UpdateAll((state, ex) => state with {
-							Status = ProjectionStatus.Faulted,
-							ErrorMessage = ex.Message
-						}, ex);
-						LogWillRetryAfterDelay(logger, ex, plugin.Name, delay);
-					})
+			await Policy.WrapAsync(ProjectionPolicy.CircuitBreaker, ProjectionPolicy.RetryExponentially(OnRetry))
 				.ExecuteAsync(SubscribeInternal, ct);
+
+			void OnRetry(Exception ex, TimeSpan delay) {
+				_state.UpdateAll((state, ex) => state with {
+					Status = ProjectionStatus.Faulted,
+					ErrorMessage = ex.Message
+				}, ex);
+				LogWillRetryAfterDelay(logger, ex, plugin.Name, delay);
+			}
 		} catch (OperationCanceledException) { }
 	}
 

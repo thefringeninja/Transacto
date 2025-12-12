@@ -62,17 +62,17 @@ public partial class SQLiteProjectionHost<T>(
 	private async Task Subscribe(CancellationToken ct) {
 		await _pauseSubscription.Task;
 		try {
-			await Policy.Handle<Exception>(ex => ex is not OperationCanceledException)
-				.WaitAndRetryAsync(5, attempt => TimeSpan.FromSeconds(Math.Pow(2, attempt)),
-					(ex, delay) => {
-						_state = _state with {
-							Status = ProjectionStatus.Faulted,
-							ErrorMessage = ex.Message
-						};
-						LogWillRetryAfterDelay(logger, ex, projection.Name,
-							delay);
-					})
+			await Policy.WrapAsync(ProjectionPolicy.CircuitBreaker, ProjectionPolicy.RetryExponentially(OnRetry))
 				.ExecuteAsync(SubscribeInternal, ct);
+
+			void OnRetry(Exception ex, TimeSpan delay) {
+				_state = _state with {
+					Status = ProjectionStatus.Faulted,
+					ErrorMessage = ex.Message
+				};
+				LogWillRetryAfterDelay(logger, ex, projection.Name, delay);
+			}
+			
 		} catch (OperationCanceledException) { }
 	}
 

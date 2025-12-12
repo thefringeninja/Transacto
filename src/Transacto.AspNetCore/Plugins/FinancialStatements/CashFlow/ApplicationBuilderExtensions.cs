@@ -13,7 +13,7 @@ static partial class ApplicationBuilderExtensions {
 	public static IEndpointRouteBuilder UseCashFlow(this IEndpointRouteBuilder builder) {
 		builder.MapGet("",
 			async (
-				[FromQuery] ParseableLocalDate[] startingOn,
+				[FromQuery(Name = "starting-on")] ParseableLocalDate[] startingOn,
 				[FromQuery] ParseablePeriod[] period,
 				[FromServices] GetCashFlowReportsAsync getCashFlowReportsAsync,
 				[FromServices] CashFlowReportsRepresentation representation,

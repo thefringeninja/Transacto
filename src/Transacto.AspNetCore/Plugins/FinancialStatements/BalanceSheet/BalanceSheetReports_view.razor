@@ -1,5 +1,6 @@
-@using NodaTime.Text
+@using Transacto.Framework.Http.Html
 @using Transacto.Views.Shared
+@inject FormatSettings formatSettings
 @{
 	var colspan = Model.Groups.Length + 1;
 }
@@ -14,7 +15,7 @@
 		<tr>
 			<th></th>
 			@foreach (var report in Model.Groups) {
-				<th>@LocalDatePattern.Iso.Format(report.Thru)</th>
+				<th>@formatSettings.ShortDatePattern.Format(report.Thru)</th>
 			}
 		</tr>
 		</thead>

@@ -19,9 +19,24 @@ public static class TransactoHttpSerializerOptions {
 			new HalRepresentationConverter(),
 			new JsonStringEnumConverter(JsonNamingPolicy.CamelCase),
 			new NodaPatternConverter<LocalDate>(LocalDatePattern.Iso),
-			new NodaPatternConverter<Period>(PeriodPattern.NormalizingIso)
+			new NodaPatternConverter<Period>(PeriodPattern.NormalizingIso),
+			new PatternConverter<LocalDatePattern, LocalDate>(LocalDatePattern.CreateWithInvariantCulture,
+				p => p.PatternText)
 		},
 	};
+
+	private class PatternConverter<T, T2>(Func<string, T> factory, Func<T, string> getPattern)
+		: JsonConverter<T> where T : class, IPattern<T2> {
+		public override T? Read(ref Utf8JsonReader reader, Type typeToConvert,
+			JsonSerializerOptions options) {
+			var pattern = reader.GetString();
+			return pattern is null ? null : factory(pattern);
+		}
+
+		public override void Write(Utf8JsonWriter writer, T value, JsonSerializerOptions options) {
+			writer.WriteStringValue(getPattern(value));
+		}
+	}
 
 	public class LocalDateConverter : JsonConverter<LocalDate> {
 		private readonly JsonConverter<LocalDate> _inner = new NodaPatternConverter<LocalDate>(LocalDatePattern.Iso);

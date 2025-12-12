@@ -1,6 +1,7 @@
-@using NodaTime.Text
+@using Transacto.Framework.Http.Html
 @using Transacto.Views.Shared
 @inherits ComponentBase<CashFlowReports>
+@inject FormatSettings formatSettings
 @{
 	var colspan = Model.Groups.Length + 1;
 }
@@ -14,7 +15,7 @@
 		<tr>
 			<th></th>
 			@foreach (var report in Model.Groups) {
-				<th>@LocalDatePattern.Iso.Format(report.ReportRange.StartingOn)</th>
+				<th>@formatSettings.ShortDatePattern.Format(report.ReportRange.StartingOn)</th>
 			}
 		</tr>
 		</thead>
@@ -54,7 +55,11 @@
 					<td>@accountNumber - @accountName</td>
 					@foreach (var reportGroup in Model.Groups) {
 						<td style="text-align: right">
-							<Balance Value="@getReport(reportGroup).Lines[accountNumber].Balance"/>
+							@if (getReport(reportGroup).Lines.TryGetValue(accountNumber, out var line)) {
+								<Balance Value="@line.Balance"/>
+							} else {
+								<Balance Value=0m />
+							}
 						</td>
 					}
 				</tr>

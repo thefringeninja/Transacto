@@ -41,16 +41,16 @@ public partial class InMemoryProjectionHost(
 
 	protected override async Task ExecuteAsync(CancellationToken stoppingToken) {
 		try {
-			await Policy.Handle<Exception>(ex => ex is not OperationCanceledException)
-				.WaitAndRetryAsync(5, attempt => TimeSpan.FromSeconds(Math.Pow(2, attempt)),
-					(ex, delay) => {
-						_state.UpdateAll(static (state, ex) => state with {
-							Status = ProjectionStatus.Faulted,
-							ErrorMessage = ex.Message
-						}, ex);
-						LogRetryAfterDelay(logger, ex, delay);
-					})
+			await Policy.WrapAsync(ProjectionPolicy.CircuitBreaker, ProjectionPolicy.RetryExponentially(OnRetry))
 				.ExecuteAsync(SubscribeInternal, stoppingToken);
+
+			void OnRetry(Exception ex, TimeSpan delay) {
+				_state.UpdateAll(static (state, ex) => state with {
+					Status = ProjectionStatus.Faulted,
+					ErrorMessage = ex.Message
+				}, ex);
+				LogRetryAfterDelay(logger, ex, delay);
+			}
 		} catch (OperationCanceledException) {
 		}
 	}

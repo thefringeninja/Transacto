@@ -1,6 +1,7 @@
 using System.Text.Json;
 using KurrentDB.Client;
 using Polly;
+using Transacto.Framework.Projections;
 
 namespace Transacto.Framework.ProcessManagers;
 
@@ -26,12 +27,16 @@ public partial class ProcessManagerHost(
 
 	private async Task Subscribe(CancellationToken ct) {
 		try {
-			await Policy.Handle<Exception>(ex => ex is not OperationCanceledException)
-				.WaitAndRetryAsync(5, attempt => TimeSpan.FromSeconds(Math.Pow(2, attempt)),
-					(ex, delay) => LogRetryAfterDelay(logger, ex, _name, delay))
+			await Policy.WrapAsync(ProjectionPolicy.CircuitBreaker, ProjectionPolicy.RetryExponentially(LogRetry))
 				.ExecuteAsync(SubscribeInternal, ct);
 		} catch (OperationCanceledException) {
 			LogOperationCancelled(logger);
+		}
+
+		return;
+
+		void LogRetry(Exception ex, TimeSpan delay) {
+			LogRetryAfterDelay(logger, ex, _name, delay);
 		}
 	}
 

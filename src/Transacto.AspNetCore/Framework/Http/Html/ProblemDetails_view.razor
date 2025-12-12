@@ -29,13 +29,11 @@
 			<span>@Model.Instance</span>
 		</section>
 
-		@if (Model.Extensions != null && Model.Extensions.Any())
-		{
+		@if (Model.Extensions != null && Model.Extensions.Any()) {
 			<section>
 				<label>Extensions:</label>
 				<ul>
-					@foreach (var extension in Model.Extensions)
-					{
+					@foreach (var extension in Model.Extensions) {
 						<li>
 							<strong>@extension.Key:</strong> @extension.Value
 						</li>

@@ -1,9 +1,11 @@
 @using Microsoft.AspNetCore.Components.Sections
+@using Transacto.Framework.Http.Html
 @using Transacto.Views.Shared
 @inherits ComponentBase<FinancialStatementsIndex>
+@inject FormatSettings formatSettings
 <LayoutView Layout="typeof(Layout)">
 	<section>
-		<h1>@Model.StartOfYear</h1>
+		<h1>@formatSettings.LongDatePattern.Format(Model.StartOfYear)</h1>
 	</section>
 	<SectionContent SectionName="footer">
 		<ProjectionStatus/>
