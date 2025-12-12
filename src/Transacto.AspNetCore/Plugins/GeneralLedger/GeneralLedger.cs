@@ -165,7 +165,8 @@ internal class GeneralLedger : IPlugin {
 				var type = businessTransaction.GetType();
 
 				return cache.GetOrAdd(type,
-					static (type, provider) => provider.GetRequiredKeyedService<IGeneralLedgerEntrySequenceNumberGenerator>(type),
+					static (type, provider) =>
+						provider.GetRequiredService<Func<Type, IGeneralLedgerEntrySequenceNumberGenerator>>()(type),
 					provider);
 			};
 		})

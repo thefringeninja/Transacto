@@ -51,6 +51,7 @@ public class Sales : IPlugin {
 	public IEnumerable<Type> MessageTypes { get; } = [typeof(Invoice), typeof(Payment)];
 
 	public void ConfigureServices(IServiceCollection services) {
+		services.AddBusinessTransaction<Invoice>().AddBusinessTransaction<Payment>();
 	}
 
 	public void Configure(IEndpointRouteBuilder builder) {

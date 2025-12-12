@@ -8,7 +8,7 @@ using Position = KurrentDB.Client.Position;
 namespace Transacto.Infrastructure.SqlStreamStore;
 
 public abstract class StreamStoreProjection : Projection<IStreamStore> {
-	protected string StreamName { get; }
+	public string StreamName { get; }
 
 	protected StreamStoreProjection(string streamName) {
 		ArgumentException.ThrowIfNullOrWhiteSpace(streamName);

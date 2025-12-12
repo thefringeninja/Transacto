@@ -19,7 +19,7 @@ public static partial class ServiceCollectionExtensions {
 		public IServiceCollection AddProjectionHost<T>(Func<IServiceProvider, T> factory)
 			where T : class, IHostedService, IProjectionsControl => services
 			.AddSingleton(factory)
-			.AddSingleton<IHostedService>(provider => provider.GetRequiredService<T>())
+			.AddHostedService<T>(provider => provider.GetRequiredService<T>())
 			.AddSingleton<IProjectionHostStatus, ProjectionHostStatusWrapper<T>>()
 			.AddSingleton<IProjectionsControl>(provider => provider.GetRequiredService<T>());
 	}

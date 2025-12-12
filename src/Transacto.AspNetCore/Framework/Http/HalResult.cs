@@ -44,30 +44,32 @@ internal class HalResult<T>(T? resource, Checkpoint checkpoint, IHal hal, HttpSt
 				}
 
 				context.Response.StatusCode = (int)HttpStatusCode.PreconditionFailed;
-				return NegotiateFromHeaders(requestHeaders, default).ExecuteAsync(context);
+				return NegotiateFromHeaders(requestHeaders, default, hal).ExecuteAsync(context);
 			}
 
 			context.Response.Headers.ETag = checkpoint.ToString();
 		}
 
-		var inner = NegotiateFromHeaders(requestHeaders, resource);
+		var inner = NegotiateFromHeaders(requestHeaders, resource, hal);
 
 		return inner.ExecuteAsync(context);
 
-		IResult NegotiateFromHeaders(RequestHeaders headers, T? resource) {
+		static IResult NegotiateFromHeaders(RequestHeaders headers, T? resource, IHal hal) {
 			return headers.Accept.Count switch {
 				0 => new HalJsonResult(resource, hal),
 				_ => headers.Accept.Select(MediaType).Select(NegotiateFromMediaType).FirstOrDefault() ??
 				     NotAcceptableResult.Instance
 			};
+			
+			IResult NegotiateFromMediaType(MediaType m) =>
+				(HalJson.IsSubsetOf(m), Html.IsSubsetOf(m) || m.SubTypeSuffix == "html") switch {
+					(true, false) => new HalJsonResult(resource, hal),
+					(false, true) => new HalHtmlResult(resource, hal),
+					_ => NotAcceptableResult.Instance
+				};
+
 		}
 
-		IResult NegotiateFromMediaType(MediaType m) =>
-			(HalJson.IsSubsetOf(m), Html.IsSubsetOf(m) || m.SubTypeSuffix == "html") switch {
-				(true, false) => new HalJsonResult(resource, hal),
-				(false, true) => new HalHtmlResult(resource, hal),
-				_ => NotAcceptableResult.Instance
-			};
 
 		static MediaType MediaType(MediaTypeHeaderValue value) => new(value.MediaType);
 	}
@@ -75,6 +77,7 @@ internal class HalResult<T>(T? resource, Checkpoint checkpoint, IHal hal, HttpSt
 	private class HalJsonResult(T? resource, IHal hal) : IResult {
 		public async Task ExecuteAsync(HttpContext context) {
 			var representation = await hal.RepresentationOfAsync(resource);
+			
 			await context.Response.WriteAsJsonAsync(representation,
 				TransactoHttpSerializerOptions.HalJsonSerializerOptions, HalJsonContentType, context.RequestAborted);
 		}

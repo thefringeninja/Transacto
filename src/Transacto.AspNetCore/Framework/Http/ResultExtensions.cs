@@ -33,7 +33,7 @@ public static class ResultExtensions {
 			var bufferingFeature = httpContext.Features.GetRequiredFeature<IHttpResponseBodyFeature>();
 			bufferingFeature.DisableBuffering();
 
-			var channel = Channel.CreateBounded<T>(new BoundedChannelOptions(2) {
+			var channel = Channel.CreateBounded<T>(new BoundedChannelOptions(1) {
 				SingleReader = true,
 				SingleWriter = true,
 				FullMode = BoundedChannelFullMode.DropOldest,
@@ -44,13 +44,26 @@ public static class ResultExtensions {
 				return Task.CompletedTask;
 			}, channel);
 
-			using var subscription = source.Subscribe(m => channel.Writer.TryWrite(m));
+			var lifetime = httpContext.RequestServices.GetRequiredService<IHostApplicationLifetime>();
 
-			await foreach (var m in channel.Reader.ReadAllAsync()) {
-				var json = JsonSerializer.Serialize(m, TransactoHttpSerializerOptions.HalJsonSerializerOptions);
-				await httpContext.Response.WriteAsync("data: ");
-				await httpContext.Response.WriteAsync(json);
-				await httpContext.Response.WriteAsync("\n\n");
+			using var cts = CancellationTokenSource.CreateLinkedTokenSource(
+				lifetime.ApplicationStopping,
+				httpContext.RequestAborted);
+
+			try {
+				using var subscription = source.Subscribe(m => channel.Writer.TryWrite(m));
+
+				await foreach (var m in channel.Reader.ReadAllAsync(cts.Token)) {
+					await httpContext.Response.WriteAsync("data: ", cancellationToken: cts.Token);
+
+					await httpContext.Response.WriteAsJsonAsync(m,
+						TransactoHttpSerializerOptions.HalJsonSerializerOptions, cts.Token);
+					await httpContext.Response.WriteAsync("\n\n", cancellationToken: cts.Token);
+				}
+			} catch (OperationCanceledException) {
+				// Shutdown or client disconnect
+			} catch (IOException) {
+				// Client disconnected
 			}
 		}
 	}

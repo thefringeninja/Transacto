@@ -13,7 +13,7 @@ internal class SomeCompanyConfiguration(string[] args, IDictionary environment) 
 
 	public Uri EventStore => field ??= new(_configuration.EventStore ?? "esdb://localhost:2113/?tls=false");
 
-	public NpgsqlConnectionStringBuilder Postgres => field ??= new(_configuration.Postgres ?? "Host=localhost;Password=Password");
+	public NpgsqlConnectionStringBuilder Postgres => field ??= new(_configuration.Postgres ?? "Host=localhost;Password=Password;Port=5432");
 
 	public Uri SqlStreamStore => field ??= new(_configuration.SqlStreamStore ?? "http://localhost:5002/");
 

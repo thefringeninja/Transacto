@@ -40,6 +40,7 @@ var logProvider = new SerilogLoggerProvider(new LoggerConfiguration()
 		_ => LogEventLevel.Information
 	})
 	.MinimumLevel.Override("Microsoft", LogEventLevel.Information)
+	.MinimumLevel.Override("Grpc.Net.Client.Internal.GrpcCall", LogEventLevel.Warning)
 	.Enrich.FromLogContext()
 	.WriteTo.Seq("http://localhost:5341")
 	.WriteTo.Console(
@@ -89,8 +90,10 @@ builder.Logging
 var salesPlugin = new Sales();
 var purchaseOrderPlugin = new PurchaseOrders();
 
-builder.AddTransacto(
-	new KurrentDBClient(KurrentDBClientSettings.Create(configuration.EventStore.ToString())),
+var eventStoreClientSettings = KurrentDBClientSettings.Create(configuration.EventStore.ToString());
+
+builder.Services.AddTransacto(
+	eventStoreClientSettings,
 	configuration.Postgres,
 	SQLiteConnectionStringBuilderFactories.OnDisk,
 	new HttpClientSqlStreamStore(new() { BaseAddress = configuration.SqlStreamStore }),
@@ -180,7 +183,7 @@ async Task Seed() {
 					.OnDayOfMonth(i % yearMonth.Calendar.GetDaysInMonth(yearMonth.Year, yearMonth.Month) + 1)
 					.AtMidnight();
 				await generalLedger.Handle(new PostGeneralLedgerEntry {
-					BusinessTransaction = invoice.ToJournalEntry(),
+					BusinessTransaction = invoice,
 					CreatedOn = invoiceDate.ToDateTimeUnspecified(),
 					GeneralLedgerEntryId = invoiceEntryId,
 					Period = period.ToString()
@@ -189,7 +192,7 @@ async Task Seed() {
 
 				var paymentEntryId = Guid.NewGuid();
 				await generalLedger.Handle(new PostGeneralLedgerEntry {
-					BusinessTransaction = payment.ToJournalEntry(),
+					BusinessTransaction = payment,
 					CreatedOn = invoiceDate.PlusDays(15).ToDateTimeUnspecified(),
 					GeneralLedgerEntryId = paymentEntryId,
 					Period = period.ToString()

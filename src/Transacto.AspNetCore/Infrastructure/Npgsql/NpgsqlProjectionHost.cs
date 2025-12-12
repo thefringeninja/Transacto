@@ -19,12 +19,10 @@ public partial class NpgsqlProjectionHost(
 	Func<NpgsqlConnection> connectionFactory,
 	ILogger<NpgsqlProjectionHost> logger,
 	params IEnumerable<NpgsqlProjection> projections)
-	: BackgroundService, IProjectionHostStatus, IProjectionsControl {
+	: BackgroundService, IProjectionsControl {
 	private readonly NpgsqlProjection[] _projections = projections.ToArray();
 
 	private readonly ConcurrentDictionary<string, ProjectionState> _state = [];
-
-	private int _subscribed;
 
 	public IReadOnlyList<ProjectionState> State => _state.Values.ToList();
 
@@ -36,11 +34,6 @@ public partial class NpgsqlProjectionHost(
 	}
 
 	protected override async Task ExecuteAsync(CancellationToken stoppingToken) {
-		if (Interlocked.Exchange(ref _subscribed, 1) != 0) {
-			logger.LogWarning("Already running");
-			return;
-		}
-		
 		if (_projections.Length == 0) {
 			return;
 		}
@@ -56,7 +49,7 @@ public partial class NpgsqlProjectionHost(
 				.ExecuteAsync(SubscribeInternal, ct);
 
 			void OnRetry(Exception ex, TimeSpan delay) {
-				_state.UpdateAll((state, ex) => state with {
+				_state.UpdateAll(static (state, ex) => state with {
 					Status = ProjectionStatus.Faulted,
 					ErrorMessage = ex.Message
 				}, ex);

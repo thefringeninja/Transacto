@@ -9,7 +9,6 @@ using Transacto.Framework.Http;
 using Transacto.Framework.Http.Html;
 
 namespace Transacto.Framework.Projections;
-
 public static class ProjectionsMiddleware {
 	public static void UseProjectionStatus(this IApplicationBuilder app) {
 		app.Map("/projections", inner => inner.UseRouting().UseEndpoints(ep => {
@@ -84,9 +83,17 @@ public class ProjectionsController(IEnumerable<IProjectionsControl> projections)
 		}
 
 		foreach (var item in array) {
-			foreach (var state in item.State) {
+			foreach (var s in item.State) {
 				if (ct.IsCancellationRequested) {
 					yield break;
+				}
+
+				var state = s;
+				
+				if (state is { Progress: >= 0.99, Status: ProjectionStatus.CatchingUp }) {
+					state = state with {
+						Status = ProjectionStatus.Live
+					};
 				}
 
 				if (!cache.TryGetValue(state.Name, out var current) || current != state) {
@@ -122,6 +129,12 @@ public class ProjectionsController(IEnumerable<IProjectionsControl> projections)
 
 			if (!item.TryGetState(name, out var state)) {
 				continue;
+			}
+
+			if (state is { Progress: >= 0.99, Status: ProjectionStatus.CatchingUp }) {
+				state = state with {
+					Status = ProjectionStatus.Live
+				};
 			}
 
 			if (current != state) {

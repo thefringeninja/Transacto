@@ -13,6 +13,8 @@ public class PurchaseOrders : IPlugin {
 		builder.UsePurchaseOrders();
 	}
 	public void ConfigureServices(IServiceCollection services) => services
+		.AddBusinessTransaction<PurchaseOrder>()
+		.AddBusinessTransaction<ReceiptOfGoods.ReceiptOfGoods>()
 		.AddSingleton<PurchaseOrderRepository>(provider => {
 			var connectionFactory = provider.GetRequiredService<Func<NpgsqlConnection>>();
 			return new PurchaseOrderRepository(

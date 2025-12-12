@@ -25,7 +25,6 @@ public partial class SQLiteProjectionHost<T>(
 	private KurrentDBClient.StreamSubscriptionResult? _subscription;
 	private TaskCompletionSource _pauseSubscription = new();
 
-	private int _subscribed = 0;
 	private static readonly SQLiteSyntax Sql = new();
 
 	public IReadOnlyList<ProjectionState> State => [_state];
@@ -42,21 +41,21 @@ public partial class SQLiteProjectionHost<T>(
 
 	public async Task Delete(string name) {
 		_pauseSubscription = new();
-		if (_subscription is { } subscription) {
-			await subscription.DisposeAsync();
-		}
+		try {
+			if (_subscription is { } subscription) {
+				await subscription.DisposeAsync();
+			}
 
-		using var connection = connectionFactory();
-		var fileName = new SQLiteConnectionStringBuilder(connection.ConnectionString).DataSource;
-		File.Delete(fileName);
-		CreateSchema();
-		_pauseSubscription.SetResult();
+			using var connection = connectionFactory();
+			var fileName = new SQLiteConnectionStringBuilder(connection.ConnectionString).DataSource;
+			File.Delete(fileName);
+			CreateSchema();
+		} finally {
+			_pauseSubscription.SetResult();
+		}
 	}
 
 	protected override async Task ExecuteAsync(CancellationToken stoppingToken) {
-		if (Interlocked.Exchange(ref _subscribed, 1) != 0) {
-			logger.LogWarning("Already running");
-		}
 		CreateSchema();
 
 		_pauseSubscription.SetResult();
