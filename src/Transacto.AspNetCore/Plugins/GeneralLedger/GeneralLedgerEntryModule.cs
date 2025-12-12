@@ -13,7 +13,7 @@ internal class GeneralLedgerEntryModule : CommandHandlerModule {
 		GetPrefix getPrefix, AccountIsDeactivated accountIsDeactivated, ILogger<GeneralLedgerEntryModule> logger) {
 		var handlers = new GeneralLedgerEntryHandlers(
 			new GeneralLedgerEventStoreRepository(eventStore, messageTypeMapper),
-			new GeneralLedgerEntryEventStoreRepository(eventStore, messageTypeMapper), getPrefix,
+			new GeneralLedgerEntryEventStoreRepository(eventStore, messageTypeMapper),
 			accountIsDeactivated);
 		Build<PostGeneralLedgerEntry>()
 			.Log(logger)

@@ -12,6 +12,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.WebEncoders;
 using Npgsql;
 using SqlStreamStore;
+using Transacto.Domain;
 using Transacto.Framework;
 using Transacto.Framework.CommandHandling;
 using Transacto.Framework.Http.Html;
@@ -68,9 +69,23 @@ public static partial class WebApplicationBuilderExtensions {
 						pluginServices.Add(sd);
 					}
 
+					pluginServices
+						.AddSingleton<Func<Type, IGeneralLedgerEntrySequenceNumberGenerator>>(provider => {
+							ConcurrentDictionary<Type, IGeneralLedgerEntrySequenceNumberGenerator> cache = [];
+
+							return type => cache.GetOrAdd(type,
+								static (type, provider) => new EventStoreSequenceNumberGenerator(
+									provider.GetRequiredService<KurrentDBClient>(),
+									provider.GetRequiredService<IMessageTypeMapper>(),
+									type,
+									provider.GetRequiredService<ILoggerFactory>()
+										.CreateLogger<EventStoreSequenceNumberGenerator>()), provider);
+						});
+
+
 					plugin.ConfigureServices(pluginServices);
 
-					var pluginProvider = pluginServices
+					pluginServices
 						.AddSingleton<CommandDispatcher>()
 						.AddSingleton(eventStore)
 						.AddSingleton(streamStore)
@@ -101,8 +116,10 @@ public static partial class WebApplicationBuilderExtensions {
 						.AddInMemoryProjection<FormatSettingsReadModel>((readModel, e) => e switch {
 							FormatSettings settings => readModel with { FormatSettings = settings },
 							_ => readModel
-						})
-						.BuildServiceProvider();
+						});
+
+
+					var pluginProvider = pluginServices.BuildServiceProvider();
 
 					return services
 						.AddKeyedSingleton<IServiceProvider>(plugin, pluginProvider)
@@ -145,9 +162,11 @@ public static partial class WebApplicationBuilderExtensions {
 		: IHostedService {
 		public string Name => plugin.Name;
 
-		public Task StartAsync(CancellationToken cancellationToken) =>
-			Task.WhenAll(serviceProvider.GetServices<IHostedService>()
+		public Task StartAsync(CancellationToken cancellationToken) {
+			var hostedServices = serviceProvider.GetServices<IHostedService>().ToArray();
+			return Task.WhenAll(hostedServices
 				.Select(service => service.StartAsync(cancellationToken)));
+		}
 
 		public Task StopAsync(CancellationToken cancellationToken) =>
 			Task.WhenAll(serviceProvider.GetServices<IHostedService>()

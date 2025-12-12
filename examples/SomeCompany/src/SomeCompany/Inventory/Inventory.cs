@@ -18,4 +18,5 @@ public class Inventory : IPlugin {
 		.AddNpgSqlProjection<InventoryLedgerProjection>();
 
 	public IEnumerable<Type> MessageTypes { get { yield return typeof(InventoryItemDefined); } }
+	public IEnumerable<LinkRelation> LinkRelations => [];
 }

@@ -5,6 +5,8 @@ namespace SomeCompany.Sales;
 
 public class Invoice(int invoiceNumber, Money sales, Money shipping, Money inventory, Percentage salesTaxRate)
 	: IBusinessTransaction {
+	public static GeneralLedgerEntryNumberPrefix Prefix { get; } = new("invoice");
+
 	public Percentage SalesTaxRate { get; } = salesTaxRate;
 	public Money Inventory { get; } = inventory;
 	public Money Shipping { get; } = shipping;
@@ -12,7 +14,10 @@ public class Invoice(int invoiceNumber, Money sales, Money shipping, Money inven
 	public int InvoiceNumber { get; } = invoiceNumber;
 	public Money Tax => Sales * SalesTaxRate;
 	public Money Total => Sales + Shipping + Tax;
-	public GeneralLedgerEntrySequenceNumber SequenceNumber { get; } = new(invoiceNumber);
+	public GeneralLedgerEntrySequenceNumber? SequenceNumber { get; init; }
+
+	public GeneralLedgerEntryNumber? ReferenceNumber =>
+		SequenceNumber.HasValue ? new GeneralLedgerEntryNumber(Prefix, SequenceNumber.Value) : null;
 
 	public IEnumerable<object> GetTransactionItems() {
 		var tax = Sales * SalesTaxRate;
@@ -29,7 +34,11 @@ public class Invoice(int invoiceNumber, Money sales, Money shipping, Money inven
 public class Payment(int paymentNumber, Money total) : IBusinessTransaction {
 	public Money Total { get; } = total;
 	public int PaymentNumber { get; } = paymentNumber;
-	public GeneralLedgerEntrySequenceNumber SequenceNumber { get; } = new(paymentNumber);
+
+	public GeneralLedgerEntrySequenceNumber? SequenceNumber { get; init; }
+	public static GeneralLedgerEntryNumberPrefix Prefix { get; } = new("payment");
+	public GeneralLedgerEntryNumber? ReferenceNumber =>
+		SequenceNumber.HasValue ? new GeneralLedgerEntryNumber(Prefix, SequenceNumber.Value) : null;
 
 	public IEnumerable<object> GetTransactionItems() {
 		yield return new Credit(new AccountNumber(1100), Total);
@@ -40,4 +49,14 @@ public class Payment(int paymentNumber, Money total) : IBusinessTransaction {
 public class Sales : IPlugin {
 	public string Name { get; } = nameof(Sales);
 	public IEnumerable<Type> MessageTypes { get; } = [typeof(Invoice), typeof(Payment)];
+
+	public void ConfigureServices(IServiceCollection services) {
+	}
+
+	public void Configure(IEndpointRouteBuilder builder) {
+		builder.MapBusinessTransaction<Invoice>("/invoices");
+		builder.MapBusinessTransaction<Payment>("/payments");
+	}
+
+	public IEnumerable<LinkRelation> LinkRelations => [];
 }

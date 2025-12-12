@@ -26,4 +26,5 @@ public class PurchaseOrders : IPlugin {
 			new PurchaseOrderFeed(provider.GetRequiredService<IMessageTypeMapper>()));
 
 	public IEnumerable<Type> MessageTypes { get { yield return typeof(PurchaseOrderPlaced); } }
+	public IEnumerable<LinkRelation> LinkRelations => [];
 }

@@ -17,12 +17,18 @@ internal class SomeCompanyConfiguration(string[] args, IDictionary environment) 
 	public string SqlStreamStore => _configuration.SqlStreamStore ?? "http://localhost:5002/";
 
 	public int TransactionsPerMonth => _configuration.TransactionsPerMonth ?? 100;
+	
+	public bool Seed => _configuration.Seed ?? false;
 
+	public LogLevel LogLevel => _configuration.LogLevel ?? LogLevel.Information;
+	
 	private class ConfigurationData(IConfigurationRoot configurationRoot) {
 		public string? EventStore => configurationRoot.GetValue<string>(nameof(EventStore));
 		public string? Postgres => configurationRoot.GetValue<string>(nameof(Postgres));
 		public string? SqlStreamStore => configurationRoot.GetValue<string>(nameof(SqlStreamStore));
 		public int? TransactionsPerMonth => configurationRoot.GetValue<int?>(nameof(TransactionsPerMonth));
+		public bool? Seed => configurationRoot.GetValue<bool?>(nameof(Seed));
+		public LogLevel? LogLevel => configurationRoot.GetValue<LogLevel?>(nameof(LogLevel));
 	}
 
 	private class CommandLineSource(IEnumerable<string> args) : IConfigurationSource {

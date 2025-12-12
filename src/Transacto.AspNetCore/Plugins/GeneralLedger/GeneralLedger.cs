@@ -2,6 +2,7 @@ using System.Collections.Concurrent;
 using System.Collections.Immutable;
 using System.Data.SQLite;
 using Hallo;
+using KurrentDB.Client;
 using Microsoft.AspNetCore.Mvc;
 using Transacto.Domain;
 using Transacto.Framework;
@@ -77,6 +78,7 @@ internal class GeneralLedger : IPlugin {
 	public void ConfigureServices(IServiceCollection services) => services
 		.AddCommandHandlerModule<GeneralLedgerEntryModule>()
 		.AddCommandHandlerModule<GeneralLedgerModule>()
+		.AddBusinessTransaction<JournalEntry>()
 		.AddSingleton<AccountIsDeactivated>(provider => accountNumber => provider
 			.GetRequiredService<InMemoryProjectionDatabase>()
 			.Get<DeactivatedAccounts>() switch {
@@ -155,7 +157,46 @@ internal class GeneralLedger : IPlugin {
 			}
 		})
 		.AddSingleton<IndexRepresentation>()
-		.AddProcessManager<AccountingPeriodClosingModule>("accountingPeriodClosingCheckpoint");
+		.AddProcessManager<AccountingPeriodClosingModule>("accountingPeriodClosingCheckpoint")
+		.AddSingleton<GetSequenceNumbers>(provider => {
+			var cache = new ConcurrentDictionary<Type, IGeneralLedgerEntrySequenceNumberGenerator>();
+
+			return businessTransaction => {
+				var type = businessTransaction.GetType();
+
+				return cache.GetOrAdd(type,
+					static (type, provider) => provider.GetRequiredKeyedService<IGeneralLedgerEntrySequenceNumberGenerator>(type),
+					provider);
+			};
+		})
+		.AddEventStoreProjection<GeneralLedgerEntrySequenceNumberAllocatorModule>(
+			provider => new GeneralLedgerEntrySequenceNumberAllocatorModule(
+				provider.GetRequiredService<KurrentDBClient>(),
+				provider.GetRequiredService<IMessageTypeMapper>(),
+				provider.GetRequiredService<GetSequenceNumbers>(),
+				provider.GetRequiredService<ILoggerFactory>()
+					.CreateLogger<GeneralLedgerEntrySequenceNumberAllocatorModule>()),
+			provider => {
+				var messageTypeMapper = provider.GetRequiredService<IMessageTypeMapper>();
+				return async (eventStore, ct) => {
+					await foreach (var message in eventStore
+						               .ReadAllAsync(Direction.Backwards, Position.End, cancellationToken: ct).Messages
+						               .WithCancellation(ct)) {
+						if (message is not StreamMessage.Event (var resolvedEvent)) {
+							continue;
+						}
+
+						if (messageTypeMapper.Map(typeof(GeneralLedgerEntryNumberAssigned)) !=
+						    resolvedEvent.Event.EventType) {
+							continue;
+						}
+
+						return FromAll.After(resolvedEvent.Event.Position);
+					}
+
+					return FromAll.Start;
+				};
+			});
 
 	private record DeactivatedAccounts : MemoryReadModel {
 		public ImmutableHashSet<int> AccountNumbers { get; init; } = ImmutableHashSet<int>.Empty;

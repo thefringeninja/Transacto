@@ -13,7 +13,7 @@ public class LedgerEntryIndexProjection : SQLiteProjection {
 			var createdOn = Time.Parse.LocalDateTime(e.CreatedOn).ToDateTimeUnspecified();
 			return [
 				Sql.Guid(e.GeneralLedgerEntryId).ToDbParameter(nameof(e.GeneralLedgerEntryId).Underscore()),
-				Sql.String(e.ReferenceNumber).ToDbParameter(nameof(e.ReferenceNumber).Underscore()),
+
 				Sql.DateTime(createdOn).ToDbParameter(nameof(createdOn).Underscore())
 			];
 		});

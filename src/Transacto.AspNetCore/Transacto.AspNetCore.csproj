@@ -7,6 +7,7 @@
 		<PackageReference Include="AngleSharp" Version="1.4.0"/>
 		<PackageReference Include="Corvus.Json.JsonSchema.Draft201909" Version="4.3.21"/>
 		<PackageReference Include="Dapper" Version="2.1.66"/>
+		<PackageReference Include="DeterministicGuids" Version="1.0.6"/> 
 		<PackageReference Include="KurrentDB.Client" Version="1.2.0"/>
 		<PackageReference Include="System.Reactive.Linq" Version="6.1.0"/>		
 		<PackageReference Include="System.Interactive.Async" Version="7.0.0"/>

@@ -24,6 +24,8 @@ public partial class NpgsqlProjectionHost(
 
 	private readonly ConcurrentDictionary<string, ProjectionState> _state = [];
 
+	private int _subscribed;
+
 	public IReadOnlyList<ProjectionState> State => _state.Values.ToList();
 
 	public bool TryGetState(string name, out ProjectionState state) =>
@@ -35,6 +37,10 @@ public partial class NpgsqlProjectionHost(
 
 
 	protected override async Task ExecuteAsync(CancellationToken stoppingToken) {
+		if (Interlocked.Exchange(ref _subscribed, 1) != 0) {
+			logger.LogWarning("Already running");
+		}
+		
 		if (_projections.Length == 0) {
 			return;
 		}

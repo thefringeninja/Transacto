@@ -4,7 +4,12 @@ using Transacto.Domain;
 namespace SomeCompany.ReceiptOfGoods;
 
 partial record ReceiptOfGoods : IBusinessTransaction {
-	public GeneralLedgerEntrySequenceNumber SequenceNumber => new(ReceiptOfGoodsNumber);
+	
+	public GeneralLedgerEntrySequenceNumber? SequenceNumber { get; init; }
+	public static GeneralLedgerEntryNumberPrefix Prefix { get; } = new("receiptOfGoods");
+
+	public GeneralLedgerEntryNumber? ReferenceNumber =>
+		SequenceNumber.HasValue ? new GeneralLedgerEntryNumber(Prefix, SequenceNumber.Value) : null;
 
 	public IEnumerable<object> GetTransactionItems() {
 		var (inventoryInTransit, inventoryOnHand) = Aggregate();

@@ -23,5 +23,4 @@ public class AccountingPeriodClosingModule : ProcessManagerEventHandlerModule {
 				return Checkpoint.None;
 			});
 	}
-
 }

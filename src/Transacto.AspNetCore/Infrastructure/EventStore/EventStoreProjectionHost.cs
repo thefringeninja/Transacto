@@ -56,7 +56,7 @@ public partial class EventStoreProjectionHost<TProcessManager>(
 					LogCaughtUp(logger, stopwatch.Elapsed);
 					break;
 				case StreamMessage.FellBehind:
-
+					LogFellBehind(logger);
 					continue;
 			}
 

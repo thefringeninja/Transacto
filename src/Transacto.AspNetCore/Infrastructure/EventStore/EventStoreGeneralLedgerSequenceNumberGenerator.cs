@@ -1,167 +1,186 @@
-using System.Diagnostics;
 using System.Text.Json;
 using System.Threading.Channels;
+using DeterministicGuids;
 using Inflector;
 using KurrentDB.Client;
-using Polly;
+using SqlStreamStore.Imports.AsyncEx.Nito.AsyncEx.Coordination;
 using Transacto.Domain;
 using Transacto.Framework;
-using Transacto.Framework.ProcessManagers;
-using Transacto.Framework.Projections;
 using Transacto.Messages;
-using EventTypeFilter = KurrentDB.Client.EventTypeFilter;
 
 namespace Transacto.Infrastructure.EventStore;
 
-public partial class EventStoreProjectionHost<TProcessManager>(
-	KurrentDBClient eventStore,
-	IMessageTypeMapper messageTypeMapper,
-	TProcessManager processManagerModule,
-	Func<KurrentDBClient, CancellationToken, ValueTask<FromAll>> readCheckpointAsync,
-	ILogger<EventStoreProjectionHost<TProcessManager>> logger) : BackgroundService where TProcessManager : ProcessManagerEventHandlerModule {
-	private readonly ProcessManagerEventDispatcher _dispatcher = new(processManagerModule);
+public class EventStoreSequenceNumberGenerator : IGeneralLedgerEntrySequenceNumberGenerator, IDisposable,
+	IAsyncDisposable {
+	private static readonly Guid s_namespace = Guid.Parse("51aadc0e-1045-4aab-9845-4cfbce83e7b3");
 
-	protected override async Task ExecuteAsync(CancellationToken stoppingToken) {
-		await Subscribe(stoppingToken);
-	}
+	private readonly string _streamNamePrefix;
 
-	private async Task Subscribe(CancellationToken ct) {
-		try {
-			await Policy.WrapAsync(ProjectionPolicy.CircuitBreaker, ProjectionPolicy.RetryExponentially(OnRetry))
-				.ExecuteAsync(SubscribeInternal, ct);
+	private readonly Dictionary<int, StreamState> _streamStates = [];
 
-			void OnRetry(Exception ex, TimeSpan delay) {
-				LogRetryAfterDelay(logger, ex, delay);
-			}
-		} catch (OperationCanceledException) { }
-	}
+	private readonly Channel<object> _channel = Channel.CreateUnbounded<object>(new() {
+		SingleReader = true,
+		SingleWriter = false
+	});
 
-	private async Task SubscribeInternal(CancellationToken ct) {
-		var checkpoint = await readCheckpointAsync(eventStore, ct);
-		
-		var stopwatch = Stopwatch.StartNew();
-
-		await foreach (var message in eventStore.SubscribeToAll(checkpoint,
-			               filterOptions: new SubscriptionFilterOptions(EventTypeFilter.ExcludeSystemEvents()),
-			               cancellationToken: ct).Messages.WithCancellation(ct)) {
-			LogSawMessage(logger, message);
-			switch (message) {
-				case StreamMessage.CaughtUp:
-					stopwatch.Stop();
-					LogCaughtUp(logger, stopwatch.Elapsed);
-					break;
-				case StreamMessage.FellBehind:
-
-					continue;
-			}
-
-			if (message is not StreamMessage.Event(var resolvedEvent)) {
-				continue;
-			}
-
-			using var ers = logger.BeginScope(Scopes.EventRecord.From(resolvedEvent.Event));
-
-			if (!messageTypeMapper.TryMap(resolvedEvent.Event.EventType, out var type)) {
-				LogDidNotUnderstandMessageType(logger, resolvedEvent.Event.EventType);
-				continue;
-			}
-
-			var e = JsonSerializer.Deserialize(resolvedEvent.Event.Data.Span, type, TransactoSerializerOptions.Events)!;
-
-			await _dispatcher.Handle(e, ct);
-		}
-	}
-	
-	private readonly record struct EventStoreProjectionScope(string Name);
-
-
-	[LoggerMessage(LogLevel.Information, "EventStoreProjectionHost encountered an issue. Will retry after {delay}")]
-	static partial void LogRetryAfterDelay(ILogger<EventStoreProjectionHost<TProcessManager>> logger, Exception ex, TimeSpan delay);
-
-	[LoggerMessage(LogLevel.Information, "EventStoreProjection resuming from checkpoint {checkpoint}.")]
-	static partial void LogResumingFromCheckpoint(ILogger<EventStoreProjectionHost<TProcessManager>> logger, FromAll checkpoint);
-
-	[LoggerMessage(LogLevel.Information, "EventStoreProjection caught up in {elapsed}.")]
-	static partial void LogCaughtUp(ILogger<EventStoreProjectionHost<TProcessManager>> logger, TimeSpan elapsed);
-
-	[LoggerMessage(LogLevel.Trace, "EventStoreProjection saw {message}")]
-	static partial void LogSawMessage(ILogger<EventStoreProjectionHost<TProcessManager>> logger, StreamMessage message);
-
-	[LoggerMessage(LogLevel.Debug, "EventStoreProjection did not understand type {type}.")]
-	static partial void LogDidNotUnderstandMessageType(ILogger<EventStoreProjectionHost<TProcessManager>> logger, string type);
-
-}
-
-public class EventStoreSequenceNumberGenerator<T>(
-	KurrentDBClient client,
-	IMessageTypeMapper messageTypeMapper,
-	int year)
-	: ISequenceNumberGenerator, IDisposable where T : IBusinessTransaction {
-	private readonly string _streamName = $"{typeof(T).Name.Underscore().Camelize()}-{year}";
+	private readonly KurrentDBClient _client;
+	private readonly IMessageTypeMapper _messageTypeMapper;
+	private readonly ILogger<EventStoreSequenceNumberGenerator> _logger;
 	private readonly CancellationTokenSource _cts = new();
+	private readonly Dictionary<int, List<EventData>> _batches = [];
+	private readonly Task _subscription;
+	private TaskCompletionSource _timerReset = new(TaskCreationOptions.RunContinuationsAsynchronously);
+	private readonly AsyncAutoResetEvent _activity = new();
+	private readonly TimeSpan _debounce = TimeSpan.FromMilliseconds(200);
 
-	private Channel<ulong> channel {
-		get {
-			return field ??= CreateChannel();
+	public EventStoreSequenceNumberGenerator(KurrentDBClient client,
+		IMessageTypeMapper messageTypeMapper,
+		Type businessTransactionType,
+		ILogger<EventStoreSequenceNumberGenerator> logger) {
+		_client = client;
+		_messageTypeMapper = messageTypeMapper;
+		_logger = logger;
+		_streamNamePrefix = $"{businessTransactionType.Name.Underscore().Camelize()}SequenceNumbers-";
+		_subscription = Task.WhenAll(Subscribe(), DebounceFlushLoop());
+	}
 
-			Channel<ulong> CreateChannel() {
-				var channel = Channel.CreateBounded<ulong>(new BoundedChannelOptions(1024));
+	private async Task Subscribe() {
+		await foreach (var message in _channel.Reader.ReadAllAsync(_cts.Token)) {
+			switch (message) {
+				case ValueTuple<int, EventData>(var year, var eventData): {
+					if (!_batches.TryGetValue(year, out var batch)) {
+						batch = _batches[year] = new List<EventData>(32);
+					}
 
-				_ = Subscribe(channel);
+					batch.Add(eventData);
 
-				return channel;
+					if (batch.Count < 32) {
+						break;
+					}
+
+					await FlushBatch(year, batch);
+
+					break;
+				}
+				case long: {
+					foreach (var year in _batches.Keys) {
+						var batch = _batches[year];
+
+						await FlushBatch(year, batch);
+					}
+
+					break;
+				}
+			}
+
+			_activity.Set();
+		}
+	}
+
+	private async Task DebounceFlushLoop() {
+		while (!_cts.Token.IsCancellationRequested) {
+			// 1. Sleep until *some event arrives*
+			await _activity.WaitAsync();
+
+			// 2. Now wait 200 ms of silence
+			while (true) {
+				var delayTask = Task.Delay(_debounce, _cts.Token);
+				var activityTask = _activity.WaitAsync();
+
+				var completed = await Task.WhenAny(delayTask, activityTask);
+
+				if (completed == delayTask) {
+					// Silence for 200 ms -> flush
+					await _channel.Writer.WriteAsync(long.MinValue);
+					break; // go back to waiting for new activity
+				}
+
+				// else: activity happened -> restart 200ms timer
 			}
 		}
 	}
 
-
-	async Task Subscribe(Channel<ulong> channel) {
-		var checkpoint = FromStream.Start;
-		await foreach (var message in client.ReadStreamAsync(Direction.Backwards, _streamName,
-			               StreamPosition.End, 1, cancellationToken: _cts.Token).Messages) {
-			if (message is not StreamMessage.Event (var resolvedEvent)) {
-				continue;
+	private async Task FlushBatch(int year, List<EventData> batch) {
+		try {
+			if (_logger.IsEnabled(LogLevel.Trace)) {
+				_logger.LogTrace("Flushing batch for year {year} with count {count}", year, batch.Count);
 			}
 
-			checkpoint = FromStream.After(resolvedEvent.Event.EventNumber);
-		}
+			if (batch.Count == 0) {
+				if (_logger.IsEnabled(LogLevel.Debug)) {
+					_logger.LogDebug("Flushing batch for year {year} empty", year);
+				}
 
-		await channel.Writer.WriteAsync(ulong.MaxValue, _cts.Token);
-
-		await foreach (var message in client.SubscribeToStream(_streamName, checkpoint).Messages) {
-			if (message is not StreamMessage.Event (var resolvedEvent) ||
-			    !messageTypeMapper.TryMap(resolvedEvent.Event.EventType, out var type) ||
-			    type != typeof(GeneralLedgerEntryNumberAllocated)) {
-				continue;
+				return;
 			}
 
-			await channel.Writer.WriteAsync(resolvedEvent.Event.EventNumber.ToUInt64());
+			var streamName = $"{_streamNamePrefix}{year}";
+			var state = _streamStates[year] == StreamState.NoStream
+				? StreamState.NoStream
+				: StreamState.StreamRevision((ulong)(_streamStates[year].ToInt64() - batch.Count));
+
+			await _client.AppendToStreamAsync(streamName, state, batch, cancellationToken: _cts.Token);
+
+			if (_logger.IsEnabled(LogLevel.Debug)) {
+				_logger.LogDebug("Flushed batch for year {year} with count {count} ", year, batch.Count);
+			}
+
+			batch.Clear();
+		} catch (Exception ex) {
+			_logger.LogError(ex, "Flushing batch for year {year} with count {count} failed", year, batch.Count);
 		}
 	}
 
 	public async ValueTask<GeneralLedgerEntrySequenceNumber> NextAsync(
-		GeneralLedgerEntryIdentifier generalLedgerEntryIdentifier, CancellationToken cancellationToken = default) {
-		var next = await channel.Reader.ReadAsync(cancellationToken);
+		GeneralLedgerEntry generalLedgerEntry, CancellationToken cancellationToken = default) {
+		var year = generalLedgerEntry.AccountingPeriod.Year;
+
+		var streamName = $"{_streamNamePrefix}{year}";
+
+		if (!_streamStates.TryGetValue(year, out var state)) {
+			var readResult = _client.ReadStreamAsync(Direction.Backwards, streamName, StreamPosition.End, 1,
+				cancellationToken: cancellationToken);
+			if (await readResult.ReadState == ReadState.StreamNotFound) {
+				state = StreamState.NoStream;
+			} else {
+				state = await readResult
+					.Select(re => new StreamState?(StreamState.StreamRevision(re.Event.EventNumber)))
+					.SingleOrDefaultAsync(cancellationToken) ?? StreamState.NoStream;
+			}
+		}
+
+		_streamStates[year] = state == StreamState.NoStream ? StreamState.StreamRevision(0) : state.Next();
+
+		var next = (int)_streamStates[year].Next().ToInt64(); // 2^32 transactions per year is unlikely
 
 		var assigned = new GeneralLedgerEntryNumberAllocated {
-			GeneralLedgerEntryId = generalLedgerEntryIdentifier.ToGuid()
+			GeneralLedgerEntryId = generalLedgerEntry.Identifier.ToGuid(),
+			GeneralLedgerEntrySequenceNumber = next
 		};
 
-		var eventData = new EventData(Uuid.NewUuid(), messageTypeMapper.Map(typeof(GeneralLedgerEntryNumberAllocated)),
+		var eventId = Uuid.FromGuid(DeterministicGuid.Create(s_namespace, generalLedgerEntry.Identifier.ToString(),
+			DeterministicGuid.Version.SHA256));
+
+		var eventData = new EventData(eventId, _messageTypeMapper.Map(typeof(GeneralLedgerEntryNumberAllocated)),
 			JsonSerializer.SerializeToUtf8Bytes(assigned, TransactoSerializerOptions.Events));
 
-		var streamState = next == ulong.MaxValue ? StreamState.NoStream : StreamState.StreamRevision(next);
+		await _channel.Writer.WriteAsync((year, eventData), cancellationToken);
 
-		var result = await client.AppendToStreamAsync(_streamName, streamState, [eventData],
-			cancellationToken: cancellationToken);
 
-		return !result.NextExpectedStreamState.HasPosition
-			? throw new InvalidOperationException()
-			: new GeneralLedgerEntrySequenceNumber(unchecked((int)result.NextExpectedStreamState.ToInt64()));
+		return new GeneralLedgerEntrySequenceNumber(next);
 	}
 
 	public void Dispose() {
-		channel.Writer.TryComplete();
+		_cts.Cancel();
+		_cts.Dispose();
+	}
+
+	public async ValueTask DisposeAsync() {
+		await _cts.CancelAsync();
+		await _subscription.ContinueWith(task => {
+			if (!task.IsFaulted) return;
+			_logger.LogError(task.Exception!.Flatten(), "Woops");
+		});
 		_cts.Dispose();
 	}
 }

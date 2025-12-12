@@ -25,6 +25,7 @@ public partial class SQLiteProjectionHost<T>(
 	private KurrentDBClient.StreamSubscriptionResult? _subscription;
 	private TaskCompletionSource _pauseSubscription = new();
 
+	private int _subscribed = 0;
 	private static readonly SQLiteSyntax Sql = new();
 
 	public IReadOnlyList<ProjectionState> State => [_state];
@@ -53,6 +54,9 @@ public partial class SQLiteProjectionHost<T>(
 	}
 
 	protected override async Task ExecuteAsync(CancellationToken stoppingToken) {
+		if (Interlocked.Exchange(ref _subscribed, 1) != 0) {
+			logger.LogWarning("Already running");
+		}
 		CreateSchema();
 
 		_pauseSubscription.SetResult();
