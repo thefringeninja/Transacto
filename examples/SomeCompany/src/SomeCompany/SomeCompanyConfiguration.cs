@@ -1,5 +1,6 @@
 using System.Collections;
 using Microsoft.Extensions.Configuration.CommandLine;
+using Npgsql;
 
 namespace SomeCompany;
 
@@ -10,11 +11,11 @@ internal class SomeCompanyConfiguration(string[] args, IDictionary environment) 
 			.Add(new EnvironmentVariablesSource(environment))
 			.Build());
 
-	public string EventStore => _configuration.EventStore ?? "esdb://localhost:2113/?tls=false";
+	public Uri EventStore => field ??= new(_configuration.EventStore ?? "esdb://localhost:2113/?tls=false");
 
-	public string Postgres => _configuration.Postgres ?? "Host=localhost";
+	public NpgsqlConnectionStringBuilder Postgres => field ??= new(_configuration.Postgres ?? "Host=localhost;Password=Password");
 
-	public string SqlStreamStore => _configuration.SqlStreamStore ?? "http://localhost:5002/";
+	public Uri SqlStreamStore => field ??= new(_configuration.SqlStreamStore ?? "http://localhost:5002/");
 
 	public int TransactionsPerMonth => _configuration.TransactionsPerMonth ?? 100;
 	

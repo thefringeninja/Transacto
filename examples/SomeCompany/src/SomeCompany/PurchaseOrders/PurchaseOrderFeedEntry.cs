@@ -2,4 +2,8 @@ using Transacto;
 
 namespace SomeCompany.PurchaseOrders;
 
-partial record PurchaseOrderFeedEntry : IFeedEntry;
+partial record PurchaseOrderFeedEntry : IFeedEntry {
+	public PurchaseOrderFeedEntry() {
+		Items = [];
+	}
+}

@@ -2,6 +2,7 @@ using System.Text.Json;
 using Dapper;
 using Npgsql;
 using SqlStreamStore;
+using Transacto.Framework.Http;
 using Transacto.Infrastructure.SqlStreamStore;
 
 namespace SomeCompany.PurchaseOrders;
@@ -16,7 +17,8 @@ public class PurchaseOrderRepository {
 		_schema = schema;
 		_connectionFactory = connectionFactory;
 		_inner = new StreamStoreBusinessTransactionRepository<PurchaseOrder>(streamStore,
-			order => GetStreamName(order.PurchaseOrderId), new JsonSerializerOptions());
+			order => GetStreamName(order.PurchaseOrderId),
+			TransactoHttpSerializerOptions.BusinessTransactions(typeof(PurchaseOrder)));
 	}
 
 	private static string GetStreamName(Guid purchaseOrderId) => $"purchaseorder-{purchaseOrderId:n}";

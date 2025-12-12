@@ -7,14 +7,19 @@ using Transacto.Framework.Http;
 namespace SomeCompany.PurchaseOrders;
 
 public static class PurchaseOrderMiddleware {
-	public static void UsePurchaseOrders(this IEndpointRouteBuilder builder, PurchaseOrderRepository purchaseOrders) {
-		builder.MapGet(string.Empty, async (CancellationToken ct) => {
+	public static void UsePurchaseOrders(this IEndpointRouteBuilder builder) {
+		builder.MapGet(string.Empty, async (
+			[FromServices] PurchaseOrderRepository purchaseOrders,
+			CancellationToken ct) => {
 			var orders = await purchaseOrders.List(ct);
 
 			return Results.Hal(orders, Checkpoint.None, PurchaseOrderListRepresentation.Instance);
 		});
 
-		builder.MapPost(string.Empty, async ([FromBody] PurchaseOrder purchaseOrder, CancellationToken ct) => {
+		builder.MapPost(string.Empty, async (
+			[FromBody] PurchaseOrder purchaseOrder,
+			[FromServices] PurchaseOrderRepository purchaseOrders,
+			CancellationToken ct) => {
 			if (purchaseOrder.PurchaseOrderId == Guid.Empty) {
 				purchaseOrder = purchaseOrder with {
 					PurchaseOrderId = Guid.NewGuid()
@@ -23,11 +28,14 @@ public static class PurchaseOrderMiddleware {
 
 			await purchaseOrders.Save(purchaseOrder, -1, ct);
 
-			return Results.Hal(purchaseOrder, 0.ToCheckpoint(),
-				PurchaseOrderRepresentation.Instance, HttpStatusCode.Created);
+			return Results.Hal(purchaseOrder, 0.ToCheckpoint(), PurchaseOrderRepresentation.Instance,
+				HttpStatusCode.Created);
 		});
 
-		builder.MapGet("{purchaseOrderId:guid}", async (Guid purchaseOrderId, CancellationToken ct) =>
+		builder.MapGet("{purchaseOrderId:guid}", async (
+				Guid purchaseOrderId,
+				[FromServices] PurchaseOrderRepository purchaseOrders, 
+				CancellationToken ct) =>
 			await purchaseOrders.Get(purchaseOrderId, ct) switch {
 				{ BusinessTransaction.HasValue: true } envelope => Results.Hal(
 					envelope.BusinessTransaction.Value, envelope.ExpectedRevision.ToCheckpoint(),
@@ -36,8 +44,12 @@ public static class PurchaseOrderMiddleware {
 					PurchaseOrderRepresentation.Instance, HttpStatusCode.NotFound)
 			});
 
-		builder.MapPut("{purchaseOrderId:guid}", async (Guid purchaseOrderId, DocumentRevision documentRevision,
-			[FromBody] PurchaseOrder purchaseOrder, CancellationToken ct) => {
+		builder.MapPut("{purchaseOrderId:guid}", async (
+			Guid purchaseOrderId, 
+			DocumentRevision documentRevision,
+			[FromBody] PurchaseOrder purchaseOrder, 
+			[FromServices] PurchaseOrderRepository purchaseOrders,
+			CancellationToken ct) => {
 			purchaseOrder = purchaseOrder with {
 				PurchaseOrderId = purchaseOrderId
 			};
