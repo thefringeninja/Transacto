@@ -22,6 +22,10 @@
 	</ItemGroup>
 
 	<ItemGroup>
+		<ProjectReference Include="..\Transacto.SourceGenerators\Transacto.SourceGenerators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false"/>
+	</ItemGroup>
+
+	<ItemGroup>
 		<ProjectReference Include="..\Projac\src\Projac.SQLite\Projac.SQLite.csproj" />
 		<ProjectReference Include="..\Projac\src\Projac\Projac.csproj"/>
 		<ProjectReference Include="..\Projac\src\Projac.Sql\Projac.Sql.csproj"/>

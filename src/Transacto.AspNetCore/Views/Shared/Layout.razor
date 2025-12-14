@@ -108,11 +108,21 @@
 		body:has(#drawer-toggle:checked) main, footer {
 			margin-left: 280px;
 		}
+		
+		header, footer {
+			> nav {
+				background: #16213e;
+			}
+		}
 
 		footer {
-			position: fixed;
+			position: relative;
 			bottom: 0;
 			right: 0;
+			
+			> nav {
+				display: inline-table;
+			}
 		}
 
 		header {
@@ -135,7 +145,6 @@
 				left: -280px;
 				width: 280px;
 				height: calc(100vh - 60px);
-				background: #16213e;
 				transition: left 0.3s ease;
 				overflow-y: auto;
 				z-index: 999;

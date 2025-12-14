@@ -7,6 +7,7 @@ using Projac.Sql;
 using Projac.Sql.Executors;
 using Projac.SQLite;
 using Transacto.Framework;
+using Transacto.Framework.Logging;
 using Transacto.Framework.Projections;
 using EventTypeFilter = KurrentDB.Client.EventTypeFilter;
 
@@ -16,14 +17,21 @@ public partial class SQLiteProjectionHost<T>(
 	KurrentDBClient eventStore,
 	IMessageTypeMapper messageTypeMap,
 	Func<SQLiteConnection> connectionFactory,
+	IPluginDescriptor plugin,
 	SQLiteProjection projection,
 	ILogger<SQLiteProjectionHost<T>> logger)
-	: BackgroundService, IProjectionsControl where T : SqlProjection {
+	: BackgroundService, IProjectionsControl, IAsyncDisposable where T : SqlProjection {
 	private readonly SqlProjectionHandlerResolver _resolver = Resolve.WhenEqualToHandlerMessageType(projection);
+
+	private readonly Scopes.Plugins _pluginScope = new(plugin.Name);
+	private readonly Scopes.Projections _projectionsScope = new(projection.Name);
+
 
 	private ProjectionState _state = ProjectionState.Named(projection.Name);
 	private KurrentDBClient.StreamSubscriptionResult? _subscription;
 	private TaskCompletionSource _pauseSubscription = new();
+	private readonly SQLiteExecutor _sqlExecutor = new(connectionFactory);
+	private SqlProjector sqlProjector => field ??= new SqlProjector(_resolver, _sqlExecutor);
 
 	private static readonly SQLiteSyntax Sql = new();
 
@@ -46,24 +54,37 @@ public partial class SQLiteProjectionHost<T>(
 				await subscription.DisposeAsync();
 			}
 
-			using var connection = connectionFactory();
-			var fileName = new SQLiteConnectionStringBuilder(connection.ConnectionString).DataSource;
-			File.Delete(fileName);
+			DropSchema();
 			CreateSchema();
 		} finally {
 			_pauseSubscription.SetResult();
 		}
 	}
 
+	public async ValueTask DisposeAsync() {
+		if (_subscription is not { } s) {
+			return;
+		}
+
+		await s.DisposeAsync();
+	}
+
+	public override void Dispose() {
+		_subscription?.Dispose();
+		base.Dispose();
+	}
+
 	protected override async Task ExecuteAsync(CancellationToken stoppingToken) {
-		CreateSchema();
+		using (logger.BeginScope(_pluginScope))
+		using (logger.BeginScope(_projectionsScope)) {
+			CreateSchema();
+		}
 
 		_pauseSubscription.SetResult();
 		await Subscribe(stoppingToken);
 	}
 
 	private async Task Subscribe(CancellationToken ct) {
-		await _pauseSubscription.Task;
 		try {
 			await Policy.WrapAsync(ProjectionPolicy.CircuitBreaker, ProjectionPolicy.RetryExponentially(OnRetry))
 				.ExecuteAsync(SubscribeInternal, ct);
@@ -73,14 +94,15 @@ public partial class SQLiteProjectionHost<T>(
 					Status = ProjectionStatus.Faulted,
 					ErrorMessage = ex.Message
 				};
-				LogWillRetryAfterDelay(logger, ex, projection.Name, delay);
+				LogWillRetryAfterDelay(logger, ex, delay);
 			}
-			
 		} catch (OperationCanceledException) { }
 	}
 
-	async Task SubscribeInternal(CancellationToken ct) {
-		var scope = new SQLiteProjectionScope(projection.Name);
+	private async Task SubscribeInternal(CancellationToken ct) {
+		await _pauseSubscription.Task;
+		using var ps = logger.BeginScope(_pluginScope);
+		using var pps = logger.BeginScope(_projectionsScope);
 
 		var checkpoint = ReadCheckpoint();
 
@@ -88,9 +110,7 @@ public partial class SQLiteProjectionHost<T>(
 
 		await FellBehind(ct);
 
-		using (logger.BeginScope(scope)) {
-			LogResumingFromCheckpoint(logger, checkpoint);
-		}
+		LogResumingFromCheckpoint(logger, checkpoint);
 
 		var stopwatch = Stopwatch.StartNew();
 
@@ -100,8 +120,6 @@ public partial class SQLiteProjectionHost<T>(
 		var batch = new List<ResolvedEvent>(110);
 
 		await foreach (var message in _subscription.Batch(100, TimeSpan.FromMilliseconds(20), ct)) {
-			using var sps = logger.BeginScope(scope);
-
 			switch (message) {
 				case SubscriptionControlMessage.SubscriptionMessage (var streamMessage): {
 					if (streamMessage is StreamMessage.CaughtUp) {
@@ -146,22 +164,24 @@ public partial class SQLiteProjectionHost<T>(
 					await using var connection = connectionFactory();
 					connection.Open();
 					await using var transaction = connection.BeginTransaction();
-					var sqlProjector = new SqlProjector(
-						_resolver, new ConnectedTransactionalSqlCommandExecutor(transaction));
-					var messages = batch.Select(re => JsonSerializer.Deserialize(re.Event.Data.Span,
+
+					new SqlProjector(_resolver, new ConnectedTransactionalSqlCommandExecutor(transaction))
+						.Project(batch.Select(re => JsonSerializer.Deserialize(
+							re.Event.Data.Span,
 							messageTypeMap.Map(re.Event.EventType),
-							TransactoSerializerOptions.Events) ?? throw new InvalidOperationException())
-						.ToArray();
-					sqlProjector.Project(messages);
+							TransactoSerializerOptions.Events) ?? throw new InvalidOperationException()));
+
 					var position = batch[^1].Event.Position;
 					WriteCheckpoint(transaction, position);
 					transaction.Commit();
+
 					batch.Clear();
 
 					await UpdateHead(ct);
 
 					stopwatch.Stop();
 					LogFlushedBatch(logger, position, batch.Count, stopwatch.Elapsed);
+					
 					break;
 				}
 			}
@@ -169,16 +189,19 @@ public partial class SQLiteProjectionHost<T>(
 	}
 
 	private void CreateSchema() {
-		using (logger.BeginScope(new SQLiteProjectionScope(projection.Name))) {
-			var executor = new SQLiteExecutor(connectionFactory);
+		_sqlExecutor.ExecuteNonQuery(Sql.NonQueryStatement(SQLiteScripts.CreateSchema));
 
-			executor.ExecuteNonQuery(Sql.NonQueryStatement(SQLiteScripts.CreateSchema));
+		sqlProjector.Project(new CreateSchema());
 
-			new SqlProjector(_resolver, executor).Project(new CreateSchema());
-
-			LogSchemaCreated(logger, projection.Name);
-		}
+		LogSchemaCreated(logger);
 	}
+
+	private void DropSchema() {
+		sqlProjector.Project(new DropSchema());
+
+		LogSchemaCreated(logger);
+	}
+
 
 	private FromAll ReadCheckpoint() {
 		using var connection = connectionFactory();
@@ -211,7 +234,6 @@ public partial class SQLiteProjectionHost<T>(
 		command.ExecuteNonQuery();
 	}
 
-
 	private async Task FellBehind(CancellationToken ct) {
 		await UpdateHead(ct);
 		_state = _state with { Status = ProjectionStatus.CatchingUp };
@@ -225,13 +247,9 @@ public partial class SQLiteProjectionHost<T>(
 		_state = _state.End(FromAll.After(last));
 	}
 
-
-	private readonly record struct SQLiteProjectionScope(string Name);
-
 	[LoggerMessage(LogLevel.Information,
-		"SQLiteProjection {SQLiteProjection} encountered an issue. Will retry after {delay}.")]
-	static partial void LogWillRetryAfterDelay(ILogger<SQLiteProjectionHost<T>> logger, Exception ex,
-		string SQLiteProjection, TimeSpan delay);
+		"SQLiteProjection encountered an issue. Will retry after {delay}.")]
+	static partial void LogWillRetryAfterDelay(ILogger<SQLiteProjectionHost<T>> logger, Exception ex, TimeSpan delay);
 
 	[LoggerMessage(LogLevel.Trace, "Operation cancelled.")]
 	static partial void LogOperationCancelled(ILogger<SQLiteProjectionHost<T>> logger);
@@ -259,6 +277,6 @@ public partial class SQLiteProjectionHost<T>(
 	static partial void LogFlushedBatch(ILogger<SQLiteProjectionHost<T>> logger, Position checkpoint, int count,
 		TimeSpan elapsed);
 
-	[LoggerMessage(LogLevel.Information, "Schema created {projection}")]
-	static partial void LogSchemaCreated(ILogger<SQLiteProjectionHost<T>> logger, string projection);
+	[LoggerMessage(LogLevel.Information, "SQLiteProjection schema created.")]
+	static partial void LogSchemaCreated(ILogger<SQLiteProjectionHost<T>> logger);
 }

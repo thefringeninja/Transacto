@@ -78,6 +78,7 @@ public class GeneralLedgerEntry : AggregateRoot, IAggregateRoot<GeneralLedgerEnt
 		IBusinessTransaction b => _state with {
 			BusinessTransaction = b
 		},
+		GeneralLedgerEntryNumberAssigned a => _state.AssignSequenceNumber(new(a.GeneralLedgerEntrySequenceNumber)),
 		_ => _state
 	};
 
@@ -166,5 +167,13 @@ public class GeneralLedgerEntry : AggregateRoot, IAggregateRoot<GeneralLedgerEnt
 		public IBusinessTransaction? BusinessTransaction { get; init; }
 
 		public Money Balance => Debits.Sum() - Credits.Sum();
+
+		public State AssignSequenceNumber(GeneralLedgerEntrySequenceNumber sequenceNumber) {
+			if (BusinessTransaction is null) {
+				return this;
+			}
+			BusinessTransaction.SequenceNumber = sequenceNumber;
+			return this;
+		}
 	}
 }

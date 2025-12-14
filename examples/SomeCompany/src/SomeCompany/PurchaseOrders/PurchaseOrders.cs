@@ -12,6 +12,7 @@ public class PurchaseOrders : IPlugin {
 	public void Configure(IEndpointRouteBuilder builder) {
 		builder.UsePurchaseOrders();
 	}
+
 	public void ConfigureServices(IServiceCollection services) => services
 		.AddBusinessTransaction<PurchaseOrder>()
 		.AddBusinessTransaction<ReceiptOfGoods.ReceiptOfGoods>()
@@ -30,6 +31,6 @@ public class PurchaseOrders : IPlugin {
 		.AddSingleton<StreamStoreProjection>(provider =>
 			new PurchaseOrderFeed(provider.GetRequiredService<IMessageTypeMapper>()));
 
-	public IEnumerable<Type> MessageTypes { get { yield return typeof(PurchaseOrderPlaced); } }
+	public IEnumerable<Type> MessageTypes { get; } = [typeof(PurchaseOrderPlaced), typeof(PurchaseOrder)];
 	public IEnumerable<LinkRelation> LinkRelations => [];
 }

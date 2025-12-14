@@ -1,6 +1,6 @@
 @using Transacto.Framework.Http.Html
 @using Transacto.Views.Shared
-@inject FormatSettings formatSettings
+@inject Formatter Formatter
 @{
 	var colspan = Model.Groups.Length + 1;
 }
@@ -15,7 +15,7 @@
 		<tr>
 			<th></th>
 			@foreach (var report in Model.Groups) {
-				<th>@formatSettings.ShortDatePattern.Format(report.Thru)</th>
+				<th>@Formatter.ShortDatePattern.Format(report.Thru)</th>
 			}
 		</tr>
 		</thead>

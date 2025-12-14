@@ -3,18 +3,13 @@ using Transacto.Domain;
 
 namespace SomeCompany.Sales;
 
-public class Invoice(int invoiceNumber, Money sales, Money shipping, Money inventory, Percentage salesTaxRate)
+public record Invoice(int InvoiceNumber, Money Sales, Money Shipping, Money Inventory, Percentage SalesTaxRate)
 	: IBusinessTransaction {
 	public static GeneralLedgerEntryNumberPrefix Prefix { get; } = new("invoice");
 
-	public Percentage SalesTaxRate { get; } = salesTaxRate;
-	public Money Inventory { get; } = inventory;
-	public Money Shipping { get; } = shipping;
-	public Money Sales { get; } = sales;
-	public int InvoiceNumber { get; } = invoiceNumber;
 	public Money Tax => Sales * SalesTaxRate;
 	public Money Total => Sales + Shipping + Tax;
-	public GeneralLedgerEntrySequenceNumber? SequenceNumber { get; init; }
+	public GeneralLedgerEntrySequenceNumber? SequenceNumber { get; set; }
 
 	public GeneralLedgerEntryNumber? ReferenceNumber =>
 		SequenceNumber.HasValue ? new GeneralLedgerEntryNumber(Prefix, SequenceNumber.Value) : null;
@@ -31,11 +26,8 @@ public class Invoice(int invoiceNumber, Money sales, Money shipping, Money inven
 	}
 }
 
-public class Payment(int paymentNumber, Money total) : IBusinessTransaction {
-	public Money Total { get; } = total;
-	public int PaymentNumber { get; } = paymentNumber;
-
-	public GeneralLedgerEntrySequenceNumber? SequenceNumber { get; init; }
+public record Payment(int PaymentNumber, Money Total) : IBusinessTransaction {
+	public GeneralLedgerEntrySequenceNumber? SequenceNumber { get; set; }
 	public static GeneralLedgerEntryNumberPrefix Prefix { get; } = new("payment");
 	public GeneralLedgerEntryNumber? ReferenceNumber =>
 		SequenceNumber.HasValue ? new GeneralLedgerEntryNumber(Prefix, SequenceNumber.Value) : null;

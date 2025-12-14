@@ -6,7 +6,7 @@ namespace Transacto.Domain;
 public partial class JournalEntry : IBusinessTransaction {
 	public string? Description { get; init; }
 	public ImmutableArray<Item> Items { get; init; } = ImmutableArray<Item>.Empty;
-	public GeneralLedgerEntrySequenceNumber? SequenceNumber { get; init; }
+	public GeneralLedgerEntrySequenceNumber? SequenceNumber { get; set; }
 	public static GeneralLedgerEntryNumberPrefix Prefix { get; } = new("journalEntry");
 	public GeneralLedgerEntryNumber? ReferenceNumber =>
 		SequenceNumber.HasValue ? new GeneralLedgerEntryNumber(Prefix, SequenceNumber.Value) : null;

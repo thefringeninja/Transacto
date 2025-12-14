@@ -1,11 +1,14 @@
 using Hallo;
 using NodaTime;
+using Transacto.Domain;
 using Transacto.Framework.Http.Html;
+using Transacto.Plugins.GeneralLedger;
 
 namespace Transacto.Plugins.FinancialStatements.ProfitAndLoss;
 
-internal class ProfitAndLossReportsRepresentation(SiteRoot siteRoot, GetFormatSettings getFormatSettings)
+internal class ProfitAndLossReportsRepresentation(SiteRoot siteRoot, GetFormatter getFormatter)
 	: Hal<ProfitAndLossReports>, IHalState<ProfitAndLossReports>, IHalLinks<ProfitAndLossReports> {
+	private readonly Formatter _formatter = getFormatter();
 	public object StateFor(ProfitAndLossReports resource) => resource;
 
 	public IEnumerable<Link> LinksFor(ProfitAndLossReports resource) {
@@ -73,15 +76,14 @@ internal class ProfitAndLossReportsRepresentation(SiteRoot siteRoot, GetFormatSe
 
 		var prev = new ReportRange(startingOn.Minus(period), period);
 		var next = new ReportRange(startingOn.Plus(period), period);
-		var formatSettings = getFormatSettings();
 		yield return new Link(
 			"prev",
 			$"{siteRoot.Uri.AbsolutePath}/profit-and-loss?{prev.ToFormUrlEncoded()}",
-			title: $"Profit and Loss {formatSettings.ShortDatePattern.Format(prev.StartingOn)}");
+			title: $"Profit and Loss {_formatter.ShortDatePattern.Format(prev.StartingOn)}");
 		yield return new Link(
 			"next",
 			$"{siteRoot.Uri.AbsolutePath}/profit-and-loss?{next.ToFormUrlEncoded()}",
-			title: $"Profit and Loss {formatSettings.ShortDatePattern.Format(next.StartingOn)}");
+			title: $"Profit and Loss {_formatter.ShortDatePattern.Format(next.StartingOn)}");
 	}
 
 	private static int GetQuarter(LocalDate date) => date.Month switch {

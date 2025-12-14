@@ -1,0 +1,12 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+  </PropertyGroup>
+
+	<ItemGroup>
+		<PackageReference Include="KurrentDB.Client" Version="1.3.0"/>
+		<PackageReference Include="DeterministicGuids" Version="1.0.6"/>
+	</ItemGroup>
+
+</Project>

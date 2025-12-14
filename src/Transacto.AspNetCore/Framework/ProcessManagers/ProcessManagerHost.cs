@@ -1,6 +1,7 @@
 using System.Text.Json;
 using KurrentDB.Client;
 using Polly;
+using Transacto.Framework.Logging;
 using Transacto.Framework.Projections;
 
 namespace Transacto.Framework.ProcessManagers;
@@ -10,10 +11,14 @@ public partial class ProcessManagerHost(
 	IMessageTypeMapper messageTypeMapper,
 	string checkpointStreamName,
 	ProcessManagerEventHandlerModule processManagerModule,
+	IPluginDescriptor plugin,
 	ILogger<ProcessManagerHost> logger)
 	: BackgroundService {
 	private readonly ProcessManagerEventDispatcher _dispatcher = new(processManagerModule);
 	private readonly string _name = processManagerModule.GetType().Name;
+
+	private readonly Scopes.ProcessManagers _loggingScope =
+		new Scopes.ProcessManagers(processManagerModule.GetType().Name, plugin.Name, checkpointStreamName);
 
 	protected override async Task ExecuteAsync(CancellationToken stoppingToken) {
 		await SetStreamMetadata(stoppingToken);
@@ -41,17 +46,17 @@ public partial class ProcessManagerHost(
 	}
 
 	private async Task SubscribeInternal(CancellationToken ct) {
-		var scope = new ProcessManagerScope(_name);
-
 		var checkpoint = await ReadCheckpoint(ct);
 
-		LogResumingFromCheckpoint(logger, checkpoint);
+		using (logger.BeginScope(_loggingScope)) {
+			LogResumingFromCheckpoint(logger, checkpoint);
+		}
 
 		await using var subscription = eventStore.SubscribeToAll(checkpoint.ToEventStoreCheckpoint(),
 			filterOptions: new SubscriptionFilterOptions(EventTypeFilter.ExcludeSystemEvents()), cancellationToken: ct);
 
 		await foreach (var message in subscription.Messages.WithCancellation(ct)) {
-			using var pms = logger.BeginScope(scope);
+			using var pms = logger.BeginScope(_loggingScope);
 			LogSawMessage(logger, message);
 			if (message is not StreamMessage.Event (var resolvedEvent)) {
 				continue;

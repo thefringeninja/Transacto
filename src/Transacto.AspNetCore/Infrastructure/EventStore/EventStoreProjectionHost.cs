@@ -3,6 +3,7 @@ using System.Text.Json;
 using KurrentDB.Client;
 using Polly;
 using Transacto.Framework;
+using Transacto.Framework.Logging;
 using Transacto.Framework.ProcessManagers;
 using Transacto.Framework.Projections;
 using EventTypeFilter = KurrentDB.Client.EventTypeFilter;

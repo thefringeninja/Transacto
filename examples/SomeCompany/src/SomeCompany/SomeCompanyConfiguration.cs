@@ -13,10 +13,11 @@ internal class SomeCompanyConfiguration(string[] args, IDictionary environment) 
 
 	public Uri EventStore => field ??= new(_configuration.EventStore ?? "esdb://localhost:2113/?tls=false");
 
-	public NpgsqlConnectionStringBuilder Postgres => field ??= new(_configuration.Postgres ?? "Host=localhost;Password=Password;Port=5432");
+	public NpgsqlConnectionStringBuilder Postgres => field ??= new(_configuration.Postgres ?? "Host=localhost;Username=Postgres;Password=Password;Port=5432");
 
 	public Uri SqlStreamStore => field ??= new(_configuration.SqlStreamStore ?? "http://localhost:5002/");
 
+	public Uri Seq => field ??= new(_configuration.Seq ?? "http://localhost:5341"); 
 	public int TransactionsPerMonth => _configuration.TransactionsPerMonth ?? 100;
 	
 	public bool Seed => _configuration.Seed ?? false;
@@ -27,6 +28,7 @@ internal class SomeCompanyConfiguration(string[] args, IDictionary environment) 
 		public string? EventStore => configurationRoot.GetValue<string>(nameof(EventStore));
 		public string? Postgres => configurationRoot.GetValue<string>(nameof(Postgres));
 		public string? SqlStreamStore => configurationRoot.GetValue<string>(nameof(SqlStreamStore));
+		public string? Seq => configurationRoot.GetValue<string>(nameof(Seq));
 		public int? TransactionsPerMonth => configurationRoot.GetValue<int?>(nameof(TransactionsPerMonth));
 		public bool? Seed => configurationRoot.GetValue<bool?>(nameof(Seed));
 		public LogLevel? LogLevel => configurationRoot.GetValue<LogLevel?>(nameof(LogLevel));

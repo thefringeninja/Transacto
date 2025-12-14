@@ -5,7 +5,7 @@ namespace SomeCompany.ReceiptOfGoods;
 
 partial record ReceiptOfGoods : IBusinessTransaction {
 	
-	public GeneralLedgerEntrySequenceNumber? SequenceNumber { get; init; }
+	public GeneralLedgerEntrySequenceNumber? SequenceNumber { get; set; }
 	public static GeneralLedgerEntryNumberPrefix Prefix { get; } = new("receiptOfGoods");
 
 	public GeneralLedgerEntryNumber? ReferenceNumber =>

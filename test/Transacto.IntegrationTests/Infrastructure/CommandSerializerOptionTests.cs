@@ -77,7 +77,10 @@ public class CommandSerializerOptionTests {
 	internal class TestBusinessTransaction : IBusinessTransaction {
 		public Guid TransactionId { get; set; }
 
-		public GeneralLedgerEntrySequenceNumber SequenceNumber { get; }
+		public GeneralLedgerEntrySequenceNumber? SequenceNumber { get; init; }
+		public static GeneralLedgerEntryNumberPrefix Prefix { get; } = new("test");
+		public GeneralLedgerEntryNumber? ReferenceNumber =>
+			SequenceNumber.HasValue ? new GeneralLedgerEntryNumber(Prefix, SequenceNumber.Value) : null;
 		public IEnumerable<object> GetTransactionItems() => [];
 	}
 }

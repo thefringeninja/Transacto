@@ -1,6 +1,5 @@
 using Inflector;
 using Transacto.Domain;
-using Transacto.Framework.Projections;
 using Transacto.Infrastructure.SQLite;
 using Transacto.Messages;
 
@@ -8,7 +7,6 @@ namespace Transacto.Plugins.FinancialStatements.CashFlow;
 
 internal class CashFlowProjection : SQLiteProjection {
 	public CashFlowProjection() : base(new Scripts()) {
-		When<CreateSchema>();
 		When<AccountDefined>(e => [
 			Sql.Int32(e.AccountNumber).ToDbParameter(nameof(e.AccountNumber).Underscore()),
 			Sql.String(e.AccountName).ToDbParameter(nameof(e.AccountName).Underscore()),

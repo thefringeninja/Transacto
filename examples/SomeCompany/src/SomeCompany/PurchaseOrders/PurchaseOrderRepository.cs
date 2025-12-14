@@ -1,4 +1,3 @@
-using System.Text.Json;
 using Dapper;
 using Npgsql;
 using SqlStreamStore;
@@ -21,7 +20,7 @@ public class PurchaseOrderRepository {
 			TransactoHttpSerializerOptions.BusinessTransactions(typeof(PurchaseOrder)));
 	}
 
-	private static string GetStreamName(Guid purchaseOrderId) => $"purchaseorder-{purchaseOrderId:n}";
+	private static string GetStreamName(Guid purchaseOrderId) => $"purchaseOrder-{purchaseOrderId:n}";
 
 	public ValueTask<BusinessTransactionEnvelope<PurchaseOrder>> Get(Guid purchaseOrderId,
 		CancellationToken cancellationToken = default) =>
@@ -29,7 +28,7 @@ public class PurchaseOrderRepository {
 
 	public async ValueTask<IEnumerable<PurchaseOrder>> List(CancellationToken cancellationToken) {
 		await using var connection = await _connectionFactory(cancellationToken);
-		return await connection.QueryAsync<PurchaseOrder>($"SELECT * FROM {_schema}.purchase_orders");
+		return await connection.QueryAsync<PurchaseOrder>($"SELECT * FROM purchase_orders");
 	}
 
 	public ValueTask Save(PurchaseOrder purchaseOrder, int expectedRevision,

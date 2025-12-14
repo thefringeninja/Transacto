@@ -19,10 +19,6 @@ public readonly record struct ProjectionState(
 				return 0;
 			}
 
-			if (Status == ProjectionStatus.Live) {
-				return 1;
-			}
-
 			return Current.Value / (double)Last;
 		}
 	}

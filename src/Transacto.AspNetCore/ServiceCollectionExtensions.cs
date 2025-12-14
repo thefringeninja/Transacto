@@ -7,6 +7,7 @@ using System.Text.Unicode;
 using Grpc.Core.Interceptors;
 using KurrentDB.Client;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Internal;
 using Microsoft.Extensions.WebEncoders;
 using Npgsql;
 using SqlStreamStore;
@@ -14,11 +15,13 @@ using Transacto.Domain;
 using Transacto.Framework;
 using Transacto.Framework.CommandHandling;
 using Transacto.Framework.Http.Html;
+using Transacto.Framework.Logging;
 using Transacto.Framework.Projections;
 using Transacto.Infrastructure.EventStore;
 using Transacto.Infrastructure.Npgsql;
 using Transacto.Infrastructure.SqlStreamStore;
 using Transacto.Plugins;
+using Transacto.Plugins.GeneralLedger;
 
 namespace Transacto;
 
@@ -28,13 +31,12 @@ public static partial class WebApplicationBuilderExtensions {
 		NpgsqlConnectionStringBuilder npgsqlConnectionStringBuilder,
 		Func<Type, SQLiteConnectionStringBuilder> sqliteConnectionStringBuilderFactory,
 		IStreamStore streamStore, params IPlugin[] plugins) {
-			
 		var sharedServices = new ServiceCollection();
 
 		foreach (var descriptor in serviceCollection) {
 			sharedServices.Add(descriptor);
 		}
-			
+
 		var sharedDependencies = sharedServices
 			.AddSingleton<Interceptor, DebuggerDeadlineInterceptor>()
 			.AddSingleton<KurrentDBClient>(provider => {
@@ -69,21 +71,25 @@ public static partial class WebApplicationBuilderExtensions {
 			.AddSingleton(npgsqlConnectionStringBuilder)
 			.AddSingleton(streamStore)
 			.AddSingleton(messageTypeMapper)
+			.AddSingleton<ISystemClock, SystemClock>()
 			.AddHostedService<EventLogging>()
 			.AddRouting()
-			// projections
 			.AddSingleton<Func<IPlugin, NpgsqlConnection>>(NpgsqlConnectionFactory)
 			.AddSingleton<ISettingsRepository, EventStoreSettingsRepository>()
 			.AddRazorComponents().Services
 			.AddScoped<ViewContext>()
 			.AddSingleton(linkRelations)
 			.AddSingleton(GetRootUri)
-			.AddSingleton<IndexRepresentation>();
+			.AddSingleton<IndexRepresentation>()
+			.AddSingleton<GetCurrentPeriodAsync>(provider =>
+				provider.GetRequiredKeyedService<IServiceProvider>(Standard.GeneralLedger)
+					.GetRequiredService<GetCurrentPeriodAsync>());
 
 		_ = allPlugins.Aggregate(serviceCollection,
 			(services, plugin) => {
 				var loggerFactory = sharedDependencies.GetRequiredService<ILoggerFactory>();
-				var pluginServices = new PluginServiceCollection(loggerFactory.CreateLogger<PluginServiceCollection>());
+				var pluginServices =
+					new PluginServiceCollection(plugin, loggerFactory.CreateLogger<PluginServiceCollection>());
 
 				pluginServices
 					.AddSingleton<Func<Type, IGeneralLedgerEntrySequenceNumberGenerator>>(provider => {
@@ -108,6 +114,7 @@ public static partial class WebApplicationBuilderExtensions {
 					.AddSingleton(streamStore)
 					.AddSingleton(messageTypeMapper)
 					.AddSingleton<IPluginDescriptor>(plugin)
+					.AddSingleton<ISystemClock, SystemClock>()
 					.AddSingleton<InMemoryProjectionDatabase>()
 					.AddProjectionHost<InMemoryProjectionHost>()
 					.AddProjectionHost<NpgsqlProjectionHost>()
@@ -123,18 +130,18 @@ public static partial class WebApplicationBuilderExtensions {
 					.AddRazorComponents().Services
 					.AddScoped<ViewContext>()
 					.AddSingleton(GetPluginRootUri)
-					.AddSingleton<GetFormatSettings>(provider => () => provider
+					.AddSingleton<GetFormatter>(provider => () => provider
 						.GetRequiredService<InMemoryProjectionDatabase>()
 						.Get<FormatSettingsReadModel>() switch {
-						{ HasValue: true } readModel => readModel.Value.FormatSettings,
-						_ => FormatSettings.Default
+						{ HasValue: true } readModel => readModel.Value.Formatter,
+						_ => Formatter.Default
 					})
-					.AddScoped<FormatSettings>(provider => provider.GetRequiredService<GetFormatSettings>()())
+					.AddScoped<Formatter>(provider => provider.GetRequiredService<GetFormatter>()())
 					.AddInMemoryProjection<FormatSettingsReadModel>((readModel, e) => e switch {
-						FormatSettings settings => readModel with { FormatSettings = settings },
+						Formatter settings => readModel with { Formatter = settings },
 						_ => readModel
 					});
-					
+
 				var pluginProvider = pluginServices.BuildServiceProvider();
 
 				return services
@@ -144,9 +151,8 @@ public static partial class WebApplicationBuilderExtensions {
 			});
 
 		NpgsqlConnection NpgsqlConnectionFactory(IPlugin plugin) =>
-			new(npgsqlConnectionStringBuilderCache.GetOrAdd(plugin.Name, static (username, cs) =>
+			new(npgsqlConnectionStringBuilderCache.GetOrAdd(plugin.Name, static (pluginName, cs) =>
 				new NpgsqlConnectionStringBuilder(cs.ConnectionString) {
-					Username = username
 				}, npgsqlConnectionStringBuilder).ConnectionString);
 	}
 
@@ -165,7 +171,7 @@ public static partial class WebApplicationBuilderExtensions {
 	}
 
 	private record FormatSettingsReadModel : MemoryReadModel {
-		public FormatSettings FormatSettings { get; init; } = FormatSettings.Default;
+		public Formatter Formatter { get; init; } = Formatter.Default;
 	}
 
 	private class HostedServicesBackgroundService(IPluginDescriptor plugin, IServiceProvider serviceProvider)
@@ -181,8 +187,10 @@ public static partial class WebApplicationBuilderExtensions {
 			await Task.WhenAll(Array.ConvertAll(_hostedServices, (service => service.StopAsync(cancellationToken))));
 	}
 
-	private partial class PluginServiceCollection(ILogger logger) : IServiceCollection {
+	private partial class PluginServiceCollection(IPluginDescriptor plugin, ILogger<PluginServiceCollection> logger)
+		: IServiceCollection {
 		private readonly ServiceCollection _inner = [];
+		private readonly Scope _scope = new(plugin.Name);
 
 		[ExcludeFromCodeCoverage]
 		public IEnumerator<ServiceDescriptor> GetEnumerator() => _inner.GetEnumerator();
@@ -191,13 +199,15 @@ public static partial class WebApplicationBuilderExtensions {
 		IEnumerator IEnumerable.GetEnumerator() => ((IEnumerable)_inner).GetEnumerator();
 
 		public void Add(ServiceDescriptor serviceDescriptor) {
-			LogAddition(logger, serviceDescriptor);
+			using (logger.BeginScope(_scope))
+				LogAddition(logger, serviceDescriptor);
 			_inner.Add(serviceDescriptor);
 		}
 
 		[ExcludeFromCodeCoverage]
 		public void Clear() {
-			LogCleared(logger);
+			using (logger.BeginScope(_scope))
+				LogCleared(logger);
 			_inner.Clear();
 		}
 
@@ -208,7 +218,8 @@ public static partial class WebApplicationBuilderExtensions {
 
 		[ExcludeFromCodeCoverage]
 		public bool Remove(ServiceDescriptor serviceDescriptor) {
-			LogRemoval(logger, serviceDescriptor);
+			using (logger.BeginScope(_scope))
+				LogRemoval(logger, serviceDescriptor);
 			return _inner.Remove(serviceDescriptor);
 		}
 
@@ -220,13 +231,15 @@ public static partial class WebApplicationBuilderExtensions {
 
 		[ExcludeFromCodeCoverage]
 		public void Insert(int index, ServiceDescriptor item) {
-			LogInsertion(logger, item, index);
+			using (logger.BeginScope(_scope))
+				LogInsertion(logger, item, index);
 			_inner.Insert(index, item);
 		}
 
 		[ExcludeFromCodeCoverage]
 		public void RemoveAt(int index) {
-			LogRemovingIndex(logger, index);
+			using (logger.BeginScope(_scope))
+				LogRemovingIndex(logger, index);
 			_inner.RemoveAt(index);
 		}
 
@@ -249,5 +262,8 @@ public static partial class WebApplicationBuilderExtensions {
 
 		[LoggerMessage(LogLevel.Trace, "Removing {index}")]
 		static partial void LogRemovingIndex(ILogger logger, int index);
+
+		[LoggingScope]
+		private partial record Scope(string Plugin);
 	}
 }

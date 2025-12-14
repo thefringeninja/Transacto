@@ -5,6 +5,7 @@ using System.Text.Json;
 using KurrentDB.Client;
 using Polly;
 using Projac;
+using Transacto.Framework.Logging;
 using EventTypeFilter = KurrentDB.Client.EventTypeFilter;
 
 namespace Transacto.Framework.Projections;
@@ -16,7 +17,7 @@ public partial class InMemoryProjectionHost(
 	InMemoryProjectionDatabase target,
 	ILogger<InMemoryProjectionHost> logger,
 	params IEnumerable<InMemoryProjection> projections)
-	: BackgroundService, IProjectionHostStatus, IProjectionsControl {
+	: BackgroundService, IProjectionsControl {
 	private readonly Projector<InMemoryProjectionDatabase> _projector = new(
 		EnvelopeResolve.WhenAssignableToHandlerMessageType(projections.SelectMany(_ => _).ToArray()));
 
@@ -58,7 +59,7 @@ public partial class InMemoryProjectionHost(
 	private async Task SubscribeInternal(CancellationToken ct) {
 		target.Clear();
 
-		var scope = new InMemoryProjectionScope(pluginDescriptor.Name);
+		var scope = new Scopes.Plugins(pluginDescriptor.Name); 
 
 		foreach (var projectionHandler in _projections) {
 			var key = $"{projectionHandler.Name}-Projection";
@@ -121,11 +122,7 @@ public partial class InMemoryProjectionHost(
 				value.End(FromAll.After(position)) with { Status = ProjectionStatus.CatchingUp },
 			last);
 	}
-
-
-	private readonly record struct InMemoryProjectionScope(string Name);
-
-
+	
 	[LoggerMessage(LogLevel.Information, "InMemoryProjectionHost encountered an issue. Will retry after {delay}")]
 	static partial void LogRetryAfterDelay(ILogger<InMemoryProjectionHost> logger, Exception ex, TimeSpan delay);
 

@@ -156,6 +156,16 @@ internal class GeneralLedger : IPlugin {
 				_ => readModel.Period
 			}
 		})
+		.AddSingleton<GetCurrentPeriodAsync>(provider => {
+			var database = provider.GetRequiredService<InMemoryProjectionDatabase>();
+
+			return _ => new ValueTask<AccountingPeriod?>(database.Get<CurrentPeriod>() switch {
+				{ HasValue: true } p => AccountingPeriod.TryParse(p.Value.Period, out var period)
+					? period
+					: null,
+				_ => new AccountingPeriod?()
+			});
+		})
 		.AddSingleton<IndexRepresentation>()
 		.AddProcessManager<AccountingPeriodClosingModule>("accountingPeriodClosingCheckpoint")
 		.AddSingleton<GetSequenceNumbers>(provider => {
@@ -179,16 +189,15 @@ internal class GeneralLedger : IPlugin {
 					.CreateLogger<GeneralLedgerEntrySequenceNumberAllocatorModule>()),
 			provider => {
 				var messageTypeMapper = provider.GetRequiredService<IMessageTypeMapper>();
+				var eventFilter = EventTypeFilter.OfType<GeneralLedgerEntryNumberAssigned>(messageTypeMapper);
+
 				return async (eventStore, ct) => {
 					await foreach (var message in eventStore
-						               .ReadAllAsync(Direction.Backwards, Position.End, cancellationToken: ct).Messages
+						               .ReadAllAsync(Direction.Backwards, Position.End,
+							               eventFilter: eventFilter,
+							               cancellationToken: ct).Messages
 						               .WithCancellation(ct)) {
 						if (message is not StreamMessage.Event (var resolvedEvent)) {
-							continue;
-						}
-
-						if (messageTypeMapper.Map(typeof(GeneralLedgerEntryNumberAssigned)) !=
-						    resolvedEvent.Event.EventType) {
 							continue;
 						}
 

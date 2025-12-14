@@ -1,17 +1,17 @@
 using Hallo;
 using NodaTime;
 using NodaTime.Text;
+using Transacto.Domain;
 using Transacto.Framework.Http.Html;
+using Transacto.Plugins.GeneralLedger;
 
 namespace Transacto.Plugins.FinancialStatements.BalanceSheet;
 
-public class BalanceSheetReportsRepresentation(SiteRoot siteRoot, GetFormatSettings getFormatSettings)
-	: Hal<BalanceSheetReports>,
-		IHalLinks<BalanceSheetReports>,
-		IHalState<BalanceSheetReports> {
-	public IEnumerable<Link> LinksFor(BalanceSheetReports resource) {
-		var formatSettings = getFormatSettings();
+internal class BalanceSheetReportsRepresentation(SiteRoot siteRoot, GetFormatter getFormatter)
+	: Hal<BalanceSheetReports>, IHalLinks<BalanceSheetReports>, IHalState<BalanceSheetReports> {
+	private readonly Formatter _formatter = getFormatter();
 
+	public IEnumerable<Link> LinksFor(BalanceSheetReports balanceSheetReports) {
 		var now = LocalDate.FromDateTime(DateTime.Now);
 
 		yield return new Link("index", "/", title: "Home");
@@ -29,15 +29,16 @@ public class BalanceSheetReportsRepresentation(SiteRoot siteRoot, GetFormatSetti
 			title: "Run Balance Sheet");
 
 
-		if (resource.Groups.Length == 0) {
+		if (balanceSheetReports.Groups.Length == 0) {
 			yield break;
 		}
 
-		var report = resource.Groups[0];
+		var report = balanceSheetReports.Groups[0];
 		var includeAll = report.Thru == LocalDate.MaxIsoValue;
 		var start = includeAll ? now : report.Thru;
 
-		var currentEncoded = string.Join('&', resource.Groups.Select(group => $"thru={LocalDatePattern.Iso.Format(group.Thru)}"));
+		var currentEncoded = string.Join('&',
+			balanceSheetReports.Groups.Select(group => $"thru={LocalDatePattern.Iso.Format(group.Thru)}"));
 
 		yield return new Link(FinancialStatements.Relation,
 			$"{siteRoot.Uri.AbsolutePath}/balance-sheet?{currentEncoded}",
@@ -69,7 +70,7 @@ public class BalanceSheetReportsRepresentation(SiteRoot siteRoot, GetFormatSetti
 		foreach (var (link, title) in prev) {
 			yield return new Link(
 				"prev",
-				$"{siteRoot.Uri.AbsolutePath}/balance-sheet?thru={formatSettings.ShortDatePattern.Format(link)}",
+				$"{siteRoot.Uri.AbsolutePath}/balance-sheet?thru={_formatter.ShortDatePattern.Format(link)}",
 				title: title);
 		}
 
@@ -78,13 +79,13 @@ public class BalanceSheetReportsRepresentation(SiteRoot siteRoot, GetFormatSetti
 			(report.Thru.StartOfThisWeek.Plus(Period.Weekly), "Next Week"),
 			(report.Thru.PlusMonths(2).ToYearMonth().OnDayOfMonth(1).PlusDays(-1), "Next Month"),
 			(report.Thru.FirstDayOfNextQuarter.Plus(Period.Quarterly).PlusDays(-1), "Next Quarter"),
-			(new LocalDate(report.Thru.PlusYears(1).Year, 1, 1).PlusDays(-1), "Next Year"),
+			(new LocalDate(report.Thru.PlusYears(1).Year, 1, 1).PlusDays(-1).PlusYears(1), "Next Year"),
 		];
 
 		foreach (var (next, title) in nextLinks) {
 			yield return new Link(
 				"next",
-				$"{siteRoot.Uri.AbsolutePath}/balance-sheet?thru={formatSettings.ShortDatePattern.Format(next)}",
+				$"{siteRoot.Uri.AbsolutePath}/balance-sheet?thru={_formatter.ShortDatePattern.Format(next)}",
 				title: title);
 		}
 	}

@@ -4,7 +4,7 @@ using Transacto.Framework.Http.Html;
 
 namespace Transacto.Plugins.FinancialStatements.CashFlow;
 
-internal class CashFlowReportsRepresentation(SiteRoot siteRoot, GetFormatSettings getFormatSettings)
+internal class CashFlowReportsRepresentation(SiteRoot siteRoot, GetFormatter getFormatter)
 	: Hal<CashFlowReports>, IHalState<CashFlowReports>, IHalLinks<CashFlowReports> {
 	
 	public object StateFor(CashFlowReports resource) => resource;
@@ -42,7 +42,7 @@ internal class CashFlowReportsRepresentation(SiteRoot siteRoot, GetFormatSetting
 
 			var prev = new ReportRange(startingOn.Minus(period), period);
 			var next = new ReportRange(startingOn.Plus(period), period);
-			var formatSettings = getFormatSettings();
+			var formatSettings = getFormatter();
 			yield return new Link(
 				"prev",
 				$"{siteRoot.Uri.AbsolutePath}/cash-flow?{prev.ToFormUrlEncoded()}",

@@ -4,13 +4,16 @@ using Microsoft.AspNetCore.Mvc;
 using NodaTime;
 using Transacto.Framework;
 using Transacto.Framework.Http;
+using Transacto.Plugins.FinancialStatements;
 using Transacto.Plugins.FinancialStatements.CashFlow;
+using Transacto.Plugins.GeneralLedger;
 
 namespace Microsoft.AspNetCore.Builder;
 // ReSharper restore CheckNamespace
 
 static partial class ApplicationBuilderExtensions {
 	public static IEndpointRouteBuilder UseCashFlow(this IEndpointRouteBuilder builder) {
+		var cachePolicy = CachePolicies.Range(builder.ServiceProvider.GetRequiredService<GetCurrentPeriodAsync>());
 		builder.MapGet("",
 			async (
 				[FromQuery(Name = "starting-on")] ParseableLocalDate[] startingOn,

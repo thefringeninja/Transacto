@@ -7,6 +7,7 @@ using Polly;
 using Projac.Sql;
 using Projac.Sql.Executors;
 using Transacto.Framework;
+using Transacto.Framework.Logging;
 using Transacto.Framework.Projections;
 using EventTypeFilter = KurrentDB.Client.EventTypeFilter;
 
@@ -23,6 +24,7 @@ public partial class NpgsqlProjectionHost(
 	private readonly NpgsqlProjection[] _projections = projections.ToArray();
 
 	private readonly ConcurrentDictionary<string, ProjectionState> _state = [];
+	private readonly Scopes.Plugins _loggingScope = new(plugin.Name);
 
 	public IReadOnlyList<ProjectionState> State => _state.Values.ToList();
 
@@ -35,6 +37,8 @@ public partial class NpgsqlProjectionHost(
 
 	protected override async Task ExecuteAsync(CancellationToken stoppingToken) {
 		if (_projections.Length == 0) {
+			using var sps = logger.BeginScope(_loggingScope);
+			logger.LogInformation("No projections registered.");
 			return;
 		}
 
@@ -59,8 +63,6 @@ public partial class NpgsqlProjectionHost(
 	}
 
 	private async Task SubscribeInternal(CancellationToken ct) {
-		var scope = new NpgSqlProjectionScope(plugin.Name);
-
 		FromAll checkpoint = FromAll.End;
 		var projectors = await LoadProjectors(ct);
 
@@ -70,7 +72,7 @@ public partial class NpgsqlProjectionHost(
 			_state[key] = ProjectionState.Named(key).Checkpoint(projector.Checkpoint);
 		}
 
-		using (logger.BeginScope(scope)) {
+		using (logger.BeginScope(_loggingScope)) {
 			LogResumingFromCheckpoint(logger, checkpoint);
 		}
 
@@ -85,7 +87,7 @@ public partial class NpgsqlProjectionHost(
 		var batch = new List<ResolvedEvent>(110);
 
 		await foreach (var message in subscription.Batch(100, TimeSpan.FromMilliseconds(20), ct)) {
-			using var sps = logger.BeginScope(scope);
+			using var sps = logger.BeginScope(_loggingScope);
 
 			switch (message) {
 				case SubscriptionControlMessage.SubscriptionMessage (var streamMessage): {
@@ -228,6 +230,6 @@ public partial class NpgsqlProjectionHost(
 	static partial void LogFlushedBatch(ILogger<NpgsqlProjectionHost> logger, Position checkpoint, int count,
 		TimeSpan elapsed);
 
-	[LoggerMessage(LogLevel.Information, "Schema created {projection}")]
+	[LoggerMessage(LogLevel.Information, "NpgSqlProjection schema created {projection}")]
 	static partial void LogSchemaCreated(ILogger<NpgsqlProjectionHost> logger, string projection);
 }

@@ -10,6 +10,20 @@ public readonly struct AccountingPeriod : IEquatable<AccountingPeriod>, ICompara
 	private readonly YearMonth _value;
 	
 	public int Year => _value.Year;
+	public int Month => _value.Month;
+	
+	public LocalDate FirstDay { get; }
+	public LocalDate LastDay { get; }
+
+	public LocalDate FirstDayOfQuarter { get; }
+	public LocalDate LastDayOfQuarter { get; }
+	
+	public int Quarter => _value.Month switch {
+		< 4 => 1,
+		>= 4 and < 7 => 2,
+		>= 7 and < 10 => 3,
+		_ => 4
+	};
 
 	public static bool TryParse(string? period, out AccountingPeriod value) {
 		if (string.IsNullOrEmpty(period) || period.Length != 6 ||
@@ -32,7 +46,19 @@ public readonly struct AccountingPeriod : IEquatable<AccountingPeriod>, ICompara
 
 	public static AccountingPeriod Open(LocalDate value) => new(value.ToYearMonth());
 
-	private AccountingPeriod(YearMonth value) => _value = value;
+	private AccountingPeriod(YearMonth value) {
+		var quarter = value.Month switch {
+			< 4 => 1,
+			>= 4 and < 7 => 2,
+			>= 7 and < 10 => 3,
+			_ => 4
+		};
+		_value = value;
+		FirstDay = value.OnDayOfMonth(1);
+		LastDay = FirstDay.PlusMonths(1).PlusDays(-1);
+		LastDayOfQuarter = new LocalDate(value.Year, quarter * 3, 1).PlusMonths(1).PlusDays(-1);
+		FirstDayOfQuarter = FirstDay.PlusMonths(-3).PlusDays(1);
+	}
 
 	public AccountingPeriod Next() => new(_value.OnDayOfMonth(1).Plus(Period.FromMonths(1)).ToYearMonth());
 

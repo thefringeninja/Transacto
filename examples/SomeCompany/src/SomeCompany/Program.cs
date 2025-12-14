@@ -9,11 +9,9 @@ using Ductus.FluentDocker.Services.Extensions;
 using KurrentDB.Client;
 using Microsoft.IO;
 using NodaTime;
-using Npgsql;
 using Polly;
 using Serilog;
 using Serilog.Events;
-using Serilog.Extensions.Logging;
 using SomeCompany;
 using SomeCompany.PurchaseOrders;
 using SomeCompany.Sales;
@@ -21,6 +19,8 @@ using SqlStreamStore;
 using Transacto;
 using Transacto.Domain;
 using Transacto.Framework.CommandHandling;
+using Transacto.Framework.Logging;
+using Transacto.Infrastructure.Logging;
 using Transacto.Messages;
 using Transacto.Plugins;
 
@@ -28,27 +28,22 @@ var configuration = new SomeCompanyConfiguration(args, Environment.GetEnvironmen
 DefaultTypeMap.MatchNamesWithUnderscores = true;
 Inflector.Inflector.SetDefaultCultureFunc = () => new CultureInfo("en-US");
 
-var openedOn = new LocalDate(2025, 11, 1);
-var period = AccountingPeriod.Open(openedOn);
-var logProvider = new SerilogLoggerProvider(new LoggerConfiguration()
-	.MinimumLevel.Is(configuration.LogLevel switch {
-		LogLevel.Trace => LogEventLevel.Verbose,
-		LogLevel.Debug => LogEventLevel.Debug,
-		LogLevel.Warning => LogEventLevel.Warning,
-		LogLevel.Error => LogEventLevel.Error,
-		LogLevel.Critical => LogEventLevel.Fatal,
-		_ => LogEventLevel.Information
-	})
+await using var logger = new LoggerConfiguration()
+	.MinimumLevel.Is(LogEventLevel.Verbose)
 	.MinimumLevel.Override("Microsoft", LogEventLevel.Information)
 	.MinimumLevel.Override("Grpc.Net.Client.Internal.GrpcCall", LogEventLevel.Warning)
 	.Enrich.FromLogContext()
-	.WriteTo.Seq("http://localhost:5341")
+	.Destructure.With<DestructuringPolicy>()
+	.WriteTo.Seq(configuration.Seq.ToString())
 	.WriteTo.Console(
 		applyThemeToRedirectedOutput: true,
 		restrictedToMinimumLevel: LogEventLevel.Information,
 		outputTemplate:
 		"[{Timestamp:HH:mm:ss} {Level:u3}] [{SourceContext}] {Message:lj} {Properties:j}{NewLine}{Exception}")
-	.CreateLogger());
+	.CreateLogger();
+
+var openedOn = new LocalDate(2025, 11, 1);
+var period = AccountingPeriod.Open(openedOn);
 
 var dockerHostUri = new DockerUri(Environment.GetEnvironmentVariable("DOCKER_HOST") ??
                                   "unix:///run/user/1000/docker.sock");
@@ -69,8 +64,8 @@ using var eventStore = BuildAndStartContainer(
 using var sqlStreamStore = BuildAndStartContainer(
 		"transacto-some-company-sss",
 		"sql-stream-store:latest",
-		configuration.SqlStreamStore.Port, 80)
-	.WaitForMessageInLogs("SqlStreamStore.HAL.SqlStreamStoreHalMiddleware", 10000);
+		configuration.SqlStreamStore.Port, 8080)
+	.WaitForMessageInLogs("Application started. Press Ctrl+C to shut down.", 10000);
 
 using var postgres = BuildAndStartContainer(
 		"transacto-some-company-pgsql",
@@ -79,13 +74,20 @@ using var postgres = BuildAndStartContainer(
 		("POSTGRES_PASSWORD", configuration.Postgres.Password ?? ""))
 	.WaitForMessageInLogs("database system is ready to accept connections", 10000);
 
+using var seq = BuildAndStartContainer(
+		"transacto-some-company-seq",
+		"datalust/seq:latest",
+		configuration.Seq.Port, 80,
+		("ACCEPT_EULA", "Y"),
+		("SEQ_FIRSTRUN_ADMINPASSWORD", "Password"))
+	.WaitForMessageInLogs("Ingestion enabled", 10000);
+
 var builder = WebApplication.CreateBuilder(args);
 builder.Environment.EnvironmentName = Environments.Development;
 
-builder.Logging
-	.ClearProviders()
-	.SetMinimumLevel(configuration.LogLevel)
-	.AddProvider(logProvider);
+builder.Host.UseSerilog(logger);
+
+builder.Logging.SetMinimumLevel(configuration.LogLevel);
 
 var salesPlugin = new Sales();
 var purchaseOrderPlugin = new PurchaseOrders();
@@ -135,7 +137,7 @@ var parser = new HtmlParser();
 // 		context.Response.Body = responseStream;
 // 	}
 // });
-app.UseTransacto(salesPlugin, purchaseOrderPlugin);
+app.UseTransacto([salesPlugin, purchaseOrderPlugin]);
 
 var client = app.Services.GetRequiredService<KurrentDBClient>();
 
@@ -172,13 +174,13 @@ async Task Seed() {
 	async Task CreateAndPayInvoices() {
 		int invoiceNumber = 0;
 		for (var month = 0; month < 12; month++) {
+			var yearMonth = openedOn.PlusMonths(month).ToYearMonth();
 			var ledgerEntryIds = new List<Guid>();
 			for (var i = 0; i < configuration.TransactionsPerMonth; i++) {
 				var invoice = new Invoice(++invoiceNumber, new(100m), new(7.5m), new(45m), Percentage.Of(8.25m));
 				var payment = new Payment(invoiceNumber, invoice.Total);
 
 				var invoiceEntryId = Guid.NewGuid();
-				var yearMonth = openedOn.PlusMonths(month).ToYearMonth();
 				var invoiceDate = yearMonth
 					.OnDayOfMonth(i % yearMonth.Calendar.GetDaysInMonth(yearMonth.Year, yearMonth.Month) + 1)
 					.AtMidnight();
@@ -199,6 +201,41 @@ async Task Seed() {
 				});
 				ledgerEntryIds.Add(paymentEntryId);
 			}
+
+			var purchaseOrder = new PurchaseOrder {
+				PurchaseOrderId = Guid.NewGuid(),
+				VendorId = Guid.NewGuid(),
+				PurchaseOrderReference = null,
+				PurchaseOrderNumber = month + 1,
+				ShippingAddress = new Address {
+					Name = "Three J",
+					Street = "123 Sesame St",
+					City = "Springfield",
+					Country = "USA"
+				},
+				BillingAddress = new Address {
+					Name = "Three J",
+					Street = "123 Sesame St",
+					City = "Springfield",
+					Country = "USA"
+				},
+				PurchaseOrderItems = [
+					new PurchaseOrderItem {
+						ItemId = Guid.NewGuid(),
+						Quantity = 1,
+						Sku = "A-1",
+						UnitPrice = 45 * configuration.TransactionsPerMonth
+					}
+				],
+			};
+			var purchaseOrderId = Guid.NewGuid();
+			ledgerEntryIds.Add(purchaseOrderId);
+			await generalLedger.Handle(new PostGeneralLedgerEntry {
+				BusinessTransaction = purchaseOrder,
+				CreatedOn = yearMonth.PlusMonths(1).OnDayOfMonth(1).PlusDays(-1).ToDateTimeUnspecified(),
+				GeneralLedgerEntryId = purchaseOrderId,
+				Period = period.ToString()
+			});
 
 			await using var subscription = client.SubscribeToStream(GeneralLedger.Identifier, FromStream.End);
 
@@ -230,16 +267,24 @@ async Task Seed() {
 			AccountNumberWidth = 4
 		});
 		await chartOfAccounts.Handle(new DefineAccount {
-			AccountName = "A/R", AccountNumber = 1100, AffectsCash = false,
+			AccountName = "Bank", AccountNumber = 1000, AffectsCash = true,
 			CashFlowCategory = DefineAccountCashFlowCategory.Operations
 		});
 		await chartOfAccounts.Handle(new DefineAccount {
-			AccountName = "Bank", AccountNumber = 1000, AffectsCash = true,
+			AccountName = "A/R", AccountNumber = 1100, AffectsCash = false,
 			CashFlowCategory = DefineAccountCashFlowCategory.Operations
 		});
 		await chartOfAccounts.Handle(new DefineAccount {
 			AccountName = "Inventory", AccountNumber = 1200, AffectsCash = false,
 			CashFlowCategory = DefineAccountCashFlowCategory.Investment
+		});
+		await chartOfAccounts.Handle(new DefineAccount {
+			AccountName = "A/P", AccountNumber = 2100, AffectsCash = false,
+			CashFlowCategory = DefineAccountCashFlowCategory.Operations
+		});
+		await chartOfAccounts.Handle(new DefineAccount {
+			AccountName = "Sales Tax Payable", AccountNumber = 2300, AffectsCash = false,
+			CashFlowCategory = DefineAccountCashFlowCategory.Operations
 		});
 		await chartOfAccounts.Handle(new DefineAccount {
 			AccountName = "Retained Earnings", AccountNumber = 3900, AffectsCash = false,
@@ -255,10 +300,6 @@ async Task Seed() {
 		});
 		await chartOfAccounts.Handle(new DefineAccount {
 			AccountName = "Shipping", AccountNumber = 4050, AffectsCash = false,
-			CashFlowCategory = DefineAccountCashFlowCategory.Operations
-		});
-		await chartOfAccounts.Handle(new DefineAccount {
-			AccountName = "Sales Tax Payable", AccountNumber = 2300, AffectsCash = false,
 			CashFlowCategory = DefineAccountCashFlowCategory.Operations
 		});
 	}

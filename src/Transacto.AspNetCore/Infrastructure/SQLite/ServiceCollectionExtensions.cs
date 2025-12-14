@@ -1,5 +1,6 @@
 using System.Data.SQLite;
 using KurrentDB.Client;
+using Transacto;
 using Transacto.Framework;
 using Transacto.Infrastructure.SQLite;
 
@@ -24,7 +25,9 @@ public static partial class ServiceCollectionExtensions {
 					})
 				.AddProjectionHost(provider => new SQLiteProjectionHost<T>(provider.GetRequiredService<KurrentDBClient>(),
 					provider.GetRequiredService<IMessageTypeMapper>(),
-					provider.GetRequiredKeyedService<Func<SQLiteConnection>>(projection.GetType()), projection,
+					provider.GetRequiredKeyedService<Func<SQLiteConnection>>(projection.GetType()),
+					provider.GetRequiredService<IPluginDescriptor>(),
+					projection,
 					provider.GetRequiredService<ILoggerFactory>().CreateLogger<SQLiteProjectionHost<T>>()));
 		}
 	}

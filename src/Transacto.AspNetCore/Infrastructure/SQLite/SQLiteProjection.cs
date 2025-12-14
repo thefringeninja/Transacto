@@ -3,13 +3,21 @@ using System.Data.Common;
 using System.Runtime.CompilerServices;
 using Projac.SQLite;
 using Projac.Sql;
+using Transacto.Framework.Projections;
 
 namespace Transacto.Infrastructure.SQLite;
 
-public abstract class SQLiteProjection(SQLiteScripts scripts, [CallerFilePath] string name = null!) : SqlProjection {
-	protected SQLiteScripts Scripts { get; } = scripts;
+public abstract class SQLiteProjection : SqlProjection {
+	protected SQLiteProjection(SQLiteScripts scripts, [CallerFilePath] string name = null!) {
+		Scripts = scripts;
+		Name = Path.GetFileNameWithoutExtension(name);
+		When<CreateSchema>();
+		When<DropSchema>();
+	}
+
+	protected SQLiteScripts Scripts { get; }
 	protected static readonly SQLiteSyntax Sql = new();
-	public string Name { get; } = Path.GetFileNameWithoutExtension(name);
+	public string Name { get; }
 
 	protected void When<TEvent>() =>
 		When<TEvent>(_ => Sql.NonQueryStatement(Scripts[typeof(TEvent)]));
