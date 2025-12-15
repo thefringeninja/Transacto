@@ -1,5 +1,4 @@
 using System.Globalization;
-using AngleSharp.Html.Parser;
 using Dapper;
 using Ductus.FluentDocker.Builders;
 using Ductus.FluentDocker.Common;
@@ -7,7 +6,6 @@ using Ductus.FluentDocker.Model.Common;
 using Ductus.FluentDocker.Services;
 using Ductus.FluentDocker.Services.Extensions;
 using KurrentDB.Client;
-using Microsoft.IO;
 using NodaTime;
 using Polly;
 using Serilog;
@@ -19,7 +17,6 @@ using SqlStreamStore;
 using Transacto;
 using Transacto.Domain;
 using Transacto.Framework.CommandHandling;
-using Transacto.Framework.Logging;
 using Transacto.Infrastructure.Logging;
 using Transacto.Messages;
 using Transacto.Plugins;
@@ -69,8 +66,9 @@ using var sqlStreamStore = BuildAndStartContainer(
 
 using var postgres = BuildAndStartContainer(
 		"transacto-some-company-pgsql",
-		"postgres:latest",
-		configuration.Postgres.Port, 5342,
+		"postgres:18-alpine",
+		configuration.Postgres.Port, 5432,
+		("POSTGRES_USER", configuration.Postgres.Username ?? ""),
 		("POSTGRES_PASSWORD", configuration.Postgres.Password ?? ""))
 	.WaitForMessageInLogs("database system is ready to accept connections", 10000);
 
@@ -81,6 +79,7 @@ using var seq = BuildAndStartContainer(
 		("ACCEPT_EULA", "Y"),
 		("SEQ_FIRSTRUN_ADMINPASSWORD", "Password"))
 	.WaitForMessageInLogs("Ingestion enabled", 10000);
+
 
 var builder = WebApplication.CreateBuilder(args);
 builder.Environment.EnvironmentName = Environments.Development;
@@ -103,8 +102,11 @@ builder.Services.AddTransacto(
 
 var app = builder.Build();
 
-var manager = new RecyclableMemoryStreamManager();
-var parser = new HtmlParser();
+//await CreateNpgsqlDatabaseAsync(configuration.Postgres.ConnectionString, app.Services.GetRequiredService<ILoggerFactory>());
+
+
+// var manager = new RecyclableMemoryStreamManager();
+// var parser = new HtmlParser();
 
 // app.Use(async (HttpContext context, Func<Task> next) => {
 // 	using var buffer = manager.GetStream();
@@ -268,39 +270,39 @@ async Task Seed() {
 		});
 		await chartOfAccounts.Handle(new DefineAccount {
 			AccountName = "Bank", AccountNumber = 1000, AffectsCash = true,
-			CashFlowCategory = DefineAccountCashFlowCategory.Operations
+			CashFlowCategory = CashFlowCategoryType.Operations
 		});
 		await chartOfAccounts.Handle(new DefineAccount {
 			AccountName = "A/R", AccountNumber = 1100, AffectsCash = false,
-			CashFlowCategory = DefineAccountCashFlowCategory.Operations
+			CashFlowCategory = CashFlowCategoryType.Operations
 		});
 		await chartOfAccounts.Handle(new DefineAccount {
 			AccountName = "Inventory", AccountNumber = 1200, AffectsCash = false,
-			CashFlowCategory = DefineAccountCashFlowCategory.Investment
+			CashFlowCategory = CashFlowCategoryType.Investment
 		});
 		await chartOfAccounts.Handle(new DefineAccount {
 			AccountName = "A/P", AccountNumber = 2100, AffectsCash = false,
-			CashFlowCategory = DefineAccountCashFlowCategory.Operations
+			CashFlowCategory = CashFlowCategoryType.Operations
 		});
 		await chartOfAccounts.Handle(new DefineAccount {
 			AccountName = "Sales Tax Payable", AccountNumber = 2300, AffectsCash = false,
-			CashFlowCategory = DefineAccountCashFlowCategory.Operations
+			CashFlowCategory = CashFlowCategoryType.Operations
 		});
 		await chartOfAccounts.Handle(new DefineAccount {
 			AccountName = "Retained Earnings", AccountNumber = 3900, AffectsCash = false,
-			CashFlowCategory = DefineAccountCashFlowCategory.Finance
+			CashFlowCategory = CashFlowCategoryType.Finance
 		});
 		await chartOfAccounts.Handle(new DefineAccount {
 			AccountName = "COGS", AccountNumber = 5000, AffectsCash = false,
-			CashFlowCategory = DefineAccountCashFlowCategory.Operations
+			CashFlowCategory = CashFlowCategoryType.Operations
 		});
 		await chartOfAccounts.Handle(new DefineAccount {
 			AccountName = "Sales", AccountNumber = 4000, AffectsCash = false,
-			CashFlowCategory = DefineAccountCashFlowCategory.Operations
+			CashFlowCategory = CashFlowCategoryType.Operations
 		});
 		await chartOfAccounts.Handle(new DefineAccount {
 			AccountName = "Shipping", AccountNumber = 4050, AffectsCash = false,
-			CashFlowCategory = DefineAccountCashFlowCategory.Operations
+			CashFlowCategory = CashFlowCategoryType.Operations
 		});
 	}
 
@@ -339,6 +341,25 @@ IContainerService BuildAndStartContainer(string name, string image, int hostPort
 		.FirstOrDefault(x => x.Name == name)?.Stop();
 }
 
+// async Task CreateNpgsqlDatabaseAsync(string connectionString, ILoggerFactory loggerFactory) {
+// 	var builder = new NpgsqlDataSourceBuilder(connectionString).UseLoggerFactory(loggerFactory);
+//
+// 	await using var dataSource = builder.Build();
+// 	
+// 	await using var connection = await dataSource.OpenConnectionAsync();
+//
+// 	var getExists = new NpgsqlCommand(
+// 		$"SELECT 1 FROM pg_database WHERE datname = '{builder.ConnectionStringBuilder.Database}'",
+// 		connection);
+// 	var exists = await getExists.ExecuteScalarAsync() != null;
+//
+// 	if (!exists) {
+// 		await using var command = new NpgsqlCommand(
+// 			$"CREATE DATABASE {builder.ConnectionStringBuilder.Database}",
+// 			connection);
+// 		await command.ExecuteNonQueryAsync();
+// 	}
+// }
 
 internal static class BusinessTransactionExtensions {
 	extension(IBusinessTransaction businessTransaction) {

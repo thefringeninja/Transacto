@@ -1,100 +1,111 @@
-using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
-using System.Threading;
-using System.Threading.Tasks;
+using System.Text.Json;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using NJsonSchema;
 using NJsonSchema.CodeGeneration.CSharp;
+using NJsonSchema.Generation;
+using NJsonSchema.Generation.TypeMappers;
 
-namespace Transacto;
+namespace Transacto.Schemo;
 
 [Generator]
-public class SchemoGenerator : ISourceGenerator {
-	public void Initialize(GeneratorInitializationContext context) {
-	}
+#pragma warning disable RS1036
+public class SchemoGenerator : IIncrementalGenerator {
+#pragma warning restore RS1036
+	public void Initialize(IncrementalGeneratorInitializationContext context) {
+		var rootNamespaceProvider = context.AnalyzerConfigOptionsProvider
+			.Select((provider, _) => {
+				provider.GlobalOptions.TryGetValue("build_property.RootNamespace", out var rootNamespace);
+				return rootNamespace;
+			});
 
-	public void Execute(GeneratorExecutionContext context) {
-		context.AnalyzerConfigOptions.GlobalOptions.TryGetValue("build_property.RootNamespace",
-			out var rootNamespace);
 
-		var cts = new CancellationTokenSource();
+		var schemata = context.AdditionalTextsProvider.Where(text => text.Path.EndsWith(".schema.json"));
+		var items = schemata
+			.Combine(context.AnalyzerConfigOptionsProvider)
+			.Combine(rootNamespaceProvider)
+			.Select((item, ct) => {
+				var ((text, optionsProvider), rootNamespace) = item;
 
-		var rewriter = new RewriteClassesToRecords();
+				var options = optionsProvider.GetOptions(text);
+				options.TryGetValue("build_metadata.AdditionalFiles.Namespace", out var fileNamespace);
 
-		foreach (var (name, source) in GenerateSchemas()) {
-			var syntaxTree = CSharpSyntaxTree.ParseText(source);
+				var effectiveNamespace = !string.IsNullOrWhiteSpace(fileNamespace)
+					? fileNamespace
+					: rootNamespace;
+
+				return (name: Path.GetFileNameWithoutExtension(text.Path), path: text.Path,
+					@namespace: effectiveNamespace,
+					source: text.GetText(ct)!.ToString());
+			});
+
+		context.RegisterSourceOutput(items, (spc, item) => {
+			var schema = JsonSchema.FromFileAsync(item.path, spc.CancellationToken).Result;
+			var generator = new CSharpGenerator(schema, new() {
+				Namespace = item.@namespace,
+				ClassStyle = CSharpClassStyle.Record,
+				SchemaType = SchemaType.JsonSchema,
+				JsonLibrary = CSharpJsonLibrary.SystemTextJson,
+				ArrayType = "System.Collections.Immutable.ImmutableArray",
+				ArrayInstanceType = "System.Collections.Immutable.ImmutableArray",
+				DictionaryType = "System.Collections.Immutable.ImmutableSortedDictionary",
+				DictionaryInstanceType = "System.Collections.Immutable.ImmutableSortedDictionary",
+				GenerateDataAnnotations = false,
+				UseRequiredKeyword = true,
+				SortConstructorParameters = false,
+				GenerateDefaultValues = false,
+				PropertySetterAccessModifier = "init",
+				GenerateNativeRecords = true,
+				TypeNameGenerator = new TypeNameGenerator()
+			});
+			var syntaxTree = CSharpSyntaxTree.ParseText(generator.GenerateFile());
+
+			var rewriter = new RewriteClassesToRecords();
 
 			var result = rewriter.Visit(syntaxTree.GetCompilationUnitRoot());
 
-			context.AddSource(name, result.NormalizeWhitespace().GetText(Encoding.UTF8));
-		}
-
-		GeneratedSchema[] GenerateSchemas() {
-			var fileTasks = (
-				from file in context.AdditionalFiles
-				where file.Path.EndsWith(".schema.json")
-				select GenerateSchema(file.Path, GetNamespace(file), cts.Token)).ToArray();
-
-			Task.WaitAll(fileTasks, cts.Token);
-			return Array.ConvertAll(fileTasks, fileTask => fileTask.Result);
-		}
-
-		string GetNamespace(AdditionalText file) =>
-			context.AnalyzerConfigOptions.GetOptions(file).TryGetValue("build_metadata.AdditionalFiles.Namespace",
-				out var @namespace)
-			&& !string.IsNullOrWhiteSpace(@namespace)
-				? @namespace
-				: rootNamespace!;
-	}
-
-	private static async Task<GeneratedSchema> GenerateSchema(string path, string @namespace,
-		CancellationToken cancellationToken) {
-		var name = Path.GetFileNameWithoutExtension(path).Split('.')[0];
-
-		var generator = new CSharpGenerator(await JsonSchema.FromFileAsync(path, cancellationToken), new() {
-			Namespace = @namespace,
-			ClassStyle = CSharpClassStyle.Poco,
-			SchemaType = SchemaType.JsonSchema,
-			JsonLibrary = CSharpJsonLibrary.SystemTextJson,
-			ArrayType = "System.Collections.Immutable.ImmutableArray",
-			ArrayInstanceType = "System.Collections.Immutable.ImmutableArray"
+			spc.AddSource(item.name, result.NormalizeWhitespace().GetText(Encoding.UTF8));
 		});
-
-		return new(name, generator.GenerateFile(name));
 	}
 
-	private record GeneratedSchema(string Name, string Source);
+	private class TypeNameGenerator : ITypeNameGenerator {
+		public string Generate(JsonSchema schema, string typeNameHint, IEnumerable<string> reservedTypeNames) {
+			return schema.Title?.Replace(" ", string.Empty)!;
+		}
+	}
 
 	private class RewriteClassesToRecords : CSharpSyntaxRewriter {
-		public override SyntaxNode VisitClassDeclaration(ClassDeclarationSyntax node) =>
+		public override SyntaxNode VisitRecordDeclaration(RecordDeclarationSyntax node) =>
 			SyntaxFactory.RecordDeclaration(
 					node.AttributeLists,
 					node.Modifiers,
 					SyntaxFactory.Token(SyntaxKind.RecordKeyword),
 					node.Identifier,
-					node.TypeParameterList, default, node.BaseList, node.ConstraintClauses,
+					node.TypeParameterList, null, node.BaseList, node.ConstraintClauses,
 					SyntaxFactory.Token(SyntaxKind.OpenBraceToken), default,
 					SyntaxFactory.Token(SyntaxKind.CloseBraceToken), node.SemicolonToken)
-				.AddMembers(node.Members.Select(member => member switch {
-					PropertyDeclarationSyntax prop => SyntaxFactory
-						.PropertyDeclaration(prop.Type, prop.Identifier)
-						.AddModifiers(prop.Modifiers.ToArray())
-						.AddModifiers(SyntaxFactory.Token(SyntaxKind.RequiredKeyword))
-						.AddAttributeLists(prop.AttributeLists.ToArray())
-						.AddAccessorListAccessors(
-							SyntaxFactory.AccessorDeclaration(SyntaxKind.GetAccessorDeclaration)
-								.WithSemicolonToken(SyntaxFactory.Token(SyntaxKind.SemicolonToken)),
-							SyntaxFactory.AccessorDeclaration(SyntaxKind.InitAccessorDeclaration)
-								.WithSemicolonToken(SyntaxFactory.Token(SyntaxKind.SemicolonToken))),
-					_ => member
-				}).Where(member => member switch {
-					PropertyDeclarationSyntax p => p.Identifier.Text != "AdditionalProperties",
-					_ => true
-				}).ToArray())
+				.AddMembers(node.Members.OfType<PropertyDeclarationSyntax>().Select(BuildProperty).Where(member =>
+					member switch {
+						PropertyDeclarationSyntax p => p.Identifier.Text != "AdditionalProperties",
+						_ => true
+					}).ToArray())
 				.NormalizeWhitespace();
+
+		private static PropertyDeclarationSyntax BuildProperty(PropertyDeclarationSyntax prop) {
+			return SyntaxFactory
+				.PropertyDeclaration(prop.Type, prop.Identifier)
+				.AddModifiers(prop.Modifiers.ToArray())
+				.AddAttributeLists(prop.AttributeLists.ToArray())
+				.AddAccessorListAccessors(
+					SyntaxFactory.AccessorDeclaration(SyntaxKind.GetAccessorDeclaration)
+						.WithSemicolonToken(SyntaxFactory.Token(SyntaxKind.SemicolonToken)),
+					SyntaxFactory.AccessorDeclaration(SyntaxKind.InitAccessorDeclaration)
+						.WithSemicolonToken(SyntaxFactory.Token(SyntaxKind.SemicolonToken)));
+		}
 	}
 }

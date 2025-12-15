@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using System.Data;
 using System.Diagnostics;
 using System.Text.Json;
 using KurrentDB.Client;
@@ -17,7 +18,7 @@ public partial class NpgsqlProjectionHost(
 	IPluginDescriptor plugin,
 	KurrentDBClient eventStore,
 	IMessageTypeMapper messageTypeMap,
-	Func<NpgsqlConnection> connectionFactory,
+	NpgsqlDataSource dataSource,
 	ILogger<NpgsqlProjectionHost> logger,
 	params IEnumerable<NpgsqlProjection> projections)
 	: BackgroundService, IProjectionsControl {
@@ -141,20 +142,17 @@ public partial class NpgsqlProjectionHost(
 							TransactoSerializerOptions.Events) ?? throw new InvalidOperationException())
 						.ToArray();
 
-					await using var connection = connectionFactory();
-					await connection.OpenAsync(ct);
+					await using var connection = await dataSource.OpenConnectionAsync(ct);
 					await using var transaction = await connection.BeginTransactionAsync(ct);
+					var executor = new ConnectedTransactionalSqlCommandExecutor(transaction);
 
 					var resolvedEvent = batch[0];
 					var position = batch[^1].Event.Position;
 
 					await Task.WhenAll(projectors
-						.Where(projection =>
-							projection.Checkpoint < FromAll.After(resolvedEvent.Event.Position))
+						.Where(projection => projection.Checkpoint < FromAll.After(resolvedEvent.Event.Position))
 						.Select(async projector => {
-							var sqlProjector = new AsyncSqlProjector(
-								projector.Resolver,
-								new ConnectedTransactionalSqlCommandExecutor(transaction));
+							var sqlProjector = new AsyncSqlProjector(projector.Resolver, executor);
 							await sqlProjector.ProjectAsync(messages, ct);
 							await projector.Projection.WriteCheckpoint(transaction, position, ct);
 						}));
@@ -181,23 +179,30 @@ public partial class NpgsqlProjectionHost(
 	}
 
 	async ValueTask<Projector[]> LoadProjectors(CancellationToken ct) {
-		await using var connection = connectionFactory();
-		await connection.OpenAsync(ct);
+		await using var connection = await dataSource.OpenConnectionAsync(ct);
 		return await Task.WhenAll(Array.ConvertAll(_projections, async projection => new Projector(projection,
 			await projection.ReadCheckpoint(connection, ct))));
 	}
 
-	private Task CreateSchema(CancellationToken ct) =>
-		Task.WhenAll(Array.ConvertAll(_projections,
-			p => new AsyncSqlProjector(Resolve.WhenEqualToHandlerMessageType(p), new NpgsqlExecutor(connectionFactory))
+	private async Task CreateSchema(CancellationToken ct) {
+		await using var connection = await dataSource.OpenConnectionAsync(ct);
+		await using var transaction = await connection.BeginTransactionAsync(ct);
+
+		var executor = new ConnectedTransactionalSqlCommandExecutor(transaction);
+
+		await executor.ExecuteNonQueryAsync(
+			new SqlNonQueryCommand(NpgsqlScripts.CreateCheckpoints, [], CommandType.Text), ct);
+
+		await Task.WhenAll(Array.ConvertAll(_projections,
+			p => new AsyncSqlProjector(Resolve.WhenEqualToHandlerMessageType(p), executor)
 				.ProjectAsync(new CreateSchema(), ct)));
+
+		await transaction.CommitAsync(ct);
+	}
 
 	private record Projector(NpgsqlProjection Projection, FromAll Checkpoint) {
 		public SqlProjectionHandlerResolver Resolver { get; } = Resolve.WhenEqualToHandlerMessageType(Projection);
 	}
-
-
-	private readonly record struct NpgSqlProjectionScope(string Name);
 
 	[LoggerMessage(LogLevel.Information,
 		"NpgSqlProjection {npgSqlProjection} encountered an issue. Will retry after {delay}.")]

@@ -1,3 +1,4 @@
+using System.Collections.Immutable;
 using System.Net;
 using Hallo;
 using Microsoft.AspNetCore.Mvc;
@@ -10,11 +11,17 @@ public static class PurchaseOrderMiddleware {
 	public static void UsePurchaseOrders(this IEndpointRouteBuilder builder) {
 		builder.MapGet(string.Empty, async (
 			[FromServices] PurchaseOrderRepository purchaseOrders,
-			CancellationToken ct) => {
-			var orders = await purchaseOrders.List(ct);
+			[FromQuery] int? page,
+			CancellationToken ct = default) => {
+			if (page is null or < 1) {
+				return Results.Redirect("?page=1", true, true);
+			}
 
-			return Results.Hal(orders, Checkpoint.None, PurchaseOrderListRepresentation.Instance);
-		});
+			var items = await purchaseOrders.List(page.Value, ct);
+
+			return Results.Hal(new PurchaseOrderListPage(items), Checkpoint.None,
+				PurchaseOrderListRepresentation.Instance);
+		}).CacheOutput();
 
 		builder.MapPost(string.Empty, async (
 			[FromBody] PurchaseOrder purchaseOrder,
@@ -34,7 +41,7 @@ public static class PurchaseOrderMiddleware {
 
 		builder.MapGet("{purchaseOrderId:guid}", async (
 				Guid purchaseOrderId,
-				[FromServices] PurchaseOrderRepository purchaseOrders, 
+				[FromServices] PurchaseOrderRepository purchaseOrders,
 				CancellationToken ct) =>
 			await purchaseOrders.Get(purchaseOrderId, ct) switch {
 				{ BusinessTransaction.HasValue: true } envelope => Results.Hal(
@@ -42,12 +49,12 @@ public static class PurchaseOrderMiddleware {
 					PurchaseOrderRepresentation.Instance),
 				_ => Results.Hal<PurchaseOrder>(null, Checkpoint.None,
 					PurchaseOrderRepresentation.Instance, HttpStatusCode.NotFound)
-			});
+			}).CacheOutput();
 
 		builder.MapPut("{purchaseOrderId:guid}", async (
-			Guid purchaseOrderId, 
+			Guid purchaseOrderId,
 			DocumentRevision documentRevision,
-			[FromBody] PurchaseOrder purchaseOrder, 
+			[FromBody] PurchaseOrder purchaseOrder,
 			[FromServices] PurchaseOrderRepository purchaseOrders,
 			CancellationToken ct) => {
 			purchaseOrder = purchaseOrder with {
@@ -63,16 +70,17 @@ public static class PurchaseOrderMiddleware {
 
 		builder.MapBusinessTransaction<PurchaseOrder>("{purchaseOrderId:guid}");
 	}
+}
 
+public record PurchaseOrderListPage(ImmutableArray<PurchaseOrderListItem> Items);
 
-	private class PurchaseOrderListRepresentation : Hal<IEnumerable<PurchaseOrder>>,
-		IHalState<IEnumerable<PurchaseOrder>> {
-		public static readonly PurchaseOrderListRepresentation Instance = new();
-		public object StateFor(IEnumerable<PurchaseOrder> resource) => resource.ToArray();
-	}
+public class PurchaseOrderListRepresentation : Hal<PurchaseOrderListPage>,
+	IHalState<PurchaseOrderListPage> {
+	public static readonly PurchaseOrderListRepresentation Instance = new();
+	public object StateFor(PurchaseOrderListPage resource) => resource;
+}
 
-	private class PurchaseOrderRepresentation : Hal<PurchaseOrder>, IHalState<PurchaseOrder> {
-		public object StateFor(PurchaseOrder resource) => resource;
-		public static readonly PurchaseOrderRepresentation Instance = new();
-	}
+public class PurchaseOrderRepresentation : Hal<PurchaseOrder>, IHalState<PurchaseOrder> {
+	public object StateFor(PurchaseOrder resource) => resource;
+	public static readonly PurchaseOrderRepresentation Instance = new();
 }

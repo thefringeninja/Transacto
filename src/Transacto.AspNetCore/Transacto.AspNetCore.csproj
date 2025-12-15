@@ -7,8 +7,9 @@
 		<PackageReference Include="AngleSharp" Version="1.4.0"/>
 		<PackageReference Include="Corvus.Json.JsonSchema.Draft201909" Version="4.3.21"/>
 		<PackageReference Include="Dapper" Version="2.1.66"/>
-		<PackageReference Include="DeterministicGuids" Version="1.0.6"/> 
+		<PackageReference Include="DeterministicGuids" Version="1.0.6"/>
 		<PackageReference Include="KurrentDB.Client" Version="1.2.0"/>
+		<PackageReference Include="NJsonSchema" Version="11.5.2"/>
 		<PackageReference Include="System.Reactive.Linq" Version="6.1.0"/>		
 		<PackageReference Include="System.Interactive.Async" Version="7.0.0"/>
 		<PackageReference Include="Hallo" Version="3.0.2"/>
@@ -33,14 +34,16 @@
 		<ProjectReference Include="..\Transacto\Transacto.csproj"/>
 	</ItemGroup>
 
-	<ItemGroup>
-		<ProjectReference Include="..\Transacto.Schemo\Transacto.Schemo.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false"/>
-	</ItemGroup>
 	<PropertyGroup>
 		<EmitCompilerGeneratedFiles>true</EmitCompilerGeneratedFiles>
 		<PreserveCompilationContext>true</PreserveCompilationContext>
 		<MvcRazorExcludeRefAssembliesFromPublish>false</MvcRazorExcludeRefAssembliesFromPublish>
 	</PropertyGroup>
+
+	<ItemGroup>
+		<ProjectReference Include="..\Transacto.Schemo\Transacto.Schemo.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false"/>
+	</ItemGroup>
+
 	<ItemGroup>
 		<!-- Don't include the output from a previous source generator execution into future runs; the */** trick here ensures that there's
 		at least one subdirectory, which is our key that it's coming from a source generator as opposed to something that is coming from
@@ -56,11 +59,16 @@
 		<EmbeddedResource Remove="node_modules\**"/>
 		<Compile Remove="node_modules\**"/>
 		<EmbeddedResource Include="Plugins\**\*.schema.json"/>
-		<AdditionalFiles Include="Plugins\BalanceSheet\**\*.schema.json" Namespace="Transacto.Plugins.BalanceSheet"/>
+		<AdditionalFiles Include="Plugins\FinancialStatements\**\*.schema.json" Namespace="Transacto.Plugins.FinancialStatements"/>
+		<AdditionalFiles Include="Plugins\FinancialStatements\BalanceSheet\**\*.schema.json" Namespace="Transacto.Plugins.FinancialStatements.BalanceSheet"/>
 		<AdditionalFiles Include="Plugins\ChartOfAccounts\**\*.schema.json" Namespace="Transacto.Plugins.ChartOfAccounts"/>
 		<AdditionalFiles Include="Plugins\GeneralLedger\**\*.schema.json" Namespace="Transacto.Plugins.GeneralLedger"/>
 		<CompilerVisibleProperty Include="RootNamespace"/>
 		<CompilerVisibleItemMetadata Include="AdditionalFiles" MetadataName="Namespace" Visible="false"/>
+	</ItemGroup>
+
+	<ItemGroup>
+	  <Folder Include="Framework\Schema\" />
 	</ItemGroup>
 
 </Project>

@@ -1,4 +1,5 @@
 using Npgsql;
+using SomeCompany.PurchaseOrders.PurchaseOrderList;
 using SqlStreamStore;
 using Transacto;
 using Transacto.Framework;
@@ -17,15 +18,11 @@ public class PurchaseOrders : IPlugin {
 		.AddBusinessTransaction<PurchaseOrder>()
 		.AddBusinessTransaction<ReceiptOfGoods.ReceiptOfGoods>()
 		.AddSingleton<PurchaseOrderRepository>(provider => {
-			var connectionFactory = provider.GetRequiredService<Func<NpgsqlConnection>>();
+			var dataSource = provider.GetRequiredService<NpgsqlDataSource>();
 			return new PurchaseOrderRepository(
 				provider.GetRequiredService<IStreamStore>(),
 				Name,
-				async ct => {
-					var connection = connectionFactory();
-					await connection.OpenAsync(ct);
-					return connection;
-				});
+				dataSource.OpenConnectionAsync);
 		})
 		.AddNpgSqlProjection<PurchaseOrderListProjection>()
 		.AddSingleton<StreamStoreProjection>(provider =>

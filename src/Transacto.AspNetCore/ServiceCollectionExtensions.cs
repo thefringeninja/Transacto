@@ -74,7 +74,7 @@ public static partial class WebApplicationBuilderExtensions {
 			.AddSingleton<ISystemClock, SystemClock>()
 			.AddHostedService<EventLogging>()
 			.AddRouting()
-			.AddSingleton<Func<IPlugin, NpgsqlConnection>>(NpgsqlConnectionFactory)
+			.AddOutputCache()
 			.AddSingleton<ISettingsRepository, EventStoreSettingsRepository>()
 			.AddRazorComponents().Services
 			.AddScoped<ViewContext>()
@@ -121,10 +121,11 @@ public static partial class WebApplicationBuilderExtensions {
 					.AddProjectionHost<StreamStoreProjectionHost>()
 					.AddSingleton<ProjectionsController>()
 					.AddSingleton(sqliteConnectionStringBuilderFactory)
-					.AddSingleton<Func<NpgsqlConnection>>(() => NpgsqlConnectionFactory(plugin))
+					.AddSingleton(NpgsqlDataSourceBuilderFactory(plugin).Build())
 					.AddSingleton(sharedDependencies.GetRequiredService<IConfiguration>())
 					.AddSingleton(sharedDependencies.GetRequiredService<IWebHostEnvironment>())
 					.AddSingleton(linkRelations)
+					.AddOutputCache(options => options.AddBasePolicy(policy => policy.Cache()))
 					.Configure<WebEncoderOptions>(options =>
 						options.TextEncoderSettings = new TextEncoderSettings(UnicodeRanges.All))
 					.AddRazorComponents().Services
@@ -149,11 +150,13 @@ public static partial class WebApplicationBuilderExtensions {
 						.AddSingleton<IHostedService>(new HostedServicesBackgroundService(plugin, pluginProvider))
 					;
 			});
+		return;
 
-		NpgsqlConnection NpgsqlConnectionFactory(IPlugin plugin) =>
-			new(npgsqlConnectionStringBuilderCache.GetOrAdd(plugin.Name, static (pluginName, cs) =>
-				new NpgsqlConnectionStringBuilder(cs.ConnectionString) {
-				}, npgsqlConnectionStringBuilder).ConnectionString);
+		NpgsqlDataSourceBuilder NpgsqlDataSourceBuilderFactory(IPluginDescriptor plugin) {
+			var cs = npgsqlConnectionStringBuilderCache.GetOrAdd(plugin.Name, static (pluginName, cs) =>
+				new NpgsqlConnectionStringBuilder(cs.ConnectionString), npgsqlConnectionStringBuilder);
+			return new NpgsqlDataSourceBuilder(cs.ConnectionString);
+		}
 	}
 
 	extension(WebApplicationBuilder) {

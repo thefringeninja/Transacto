@@ -7,7 +7,6 @@
 		"vendorId",
 		"shippingAddress",
 		"billingAddress",
-		"items",
 		"purchaseOrderReference",
 		"purchaseOrderNumber",
 		"purchaseOrderId",
@@ -38,6 +37,14 @@
 				"key": "vendorId",
 				"type": "uuid"
 			}
+		},
+		"memo": {
+			"title": "Memo",
+			"type": ["string", "null"]
+		},
+		"vendorNote": {
+			"title": "Memo",
+			"type": ["string", "null"]
 		},
 		"shippingAddress": {
 			"description": "Shipping Address",
@@ -86,7 +93,7 @@
 		},
 		"PurchaseOrderItem": {
 			"type": "object",
-			"title": "Item",
+			"title": "Purchase Order Item",
 			"additionalProperties": false,
 			"required": [
 				"sku",

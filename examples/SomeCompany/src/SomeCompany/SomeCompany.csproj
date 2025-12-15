@@ -16,10 +16,6 @@
 		<ProjectReference Include="..\..\..\..\src\Transacto.Schemo\Transacto.Schemo.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false"/>
 	</ItemGroup>
 
-	<PropertyGroup>
-		<EmitCompilerGeneratedFiles>true</EmitCompilerGeneratedFiles>
-	</PropertyGroup>
-
 	<ItemGroup>
 		<ProjectReference Include="..\..\..\..\src\Projac\src\Projac.Npgsql\Projac.Npgsql.csproj"/>
 		<ProjectReference Include="..\..\..\..\src\Transacto.AspNetCore\Transacto.AspNetCore.csproj"/>

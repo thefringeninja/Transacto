@@ -1,4 +1,4 @@
-INSERT INTO purchase_orders(purchase_order_id,
+INSERT INTO purchase_order_list(purchase_order_id,
 							purchase_order_number,
 							vendor_id)
 VALUES (@purchase_order_id,

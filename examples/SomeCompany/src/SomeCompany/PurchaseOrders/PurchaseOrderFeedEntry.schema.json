@@ -44,7 +44,7 @@
 	"definitions": {
 		"PurchaseOrderFeedEntryItem": {
 			"type": "object",
-			"title": "Item",
+			"title": "Purchase Order Feed Entry Item",
 			"additionalProperties": false,
 			"required": [
 				"sku",

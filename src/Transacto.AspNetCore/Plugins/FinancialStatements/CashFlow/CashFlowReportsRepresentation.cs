@@ -63,7 +63,5 @@ internal class CashFlowReportsRepresentation(SiteRoot siteRoot, GetFormatter get
 			FinancialStatements.Relation,
 			$"{siteRoot.Uri.AbsolutePath}/cash-flow?{new ReportRange(firstOfYear, Period.FromDays(now.DayOfYear)).ToFormUrlEncoded()}",
 			title: "Cash Flow YTD");
-		
-
 	}
 }

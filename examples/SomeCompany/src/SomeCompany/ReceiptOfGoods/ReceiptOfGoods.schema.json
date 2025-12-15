@@ -84,7 +84,7 @@
 		},
 		"receiptOfGoodsItem": {
 			"type": "object",
-			"title": "Item",
+			"title": "Receipt Of Goods Item",
 			"additionalProperties": false,
 			"required": [
 				"sku",

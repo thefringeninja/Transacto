@@ -17,7 +17,7 @@ internal static class Services {
 		var accounts = await connection.QueryUnbufferedAsync<(
 				int accountNumber,
 				string accountName,
-				DefineAccountCashFlowCategory cashFlowCategory)>(
+				CashFlowCategoryType cashFlowCategory)>(
 				"""
 				SELECT account_number, account_name, cash_flow_category
 				FROM accounts
@@ -51,7 +51,7 @@ internal static class Services {
 			var cashFlow = await connection.QueryUnbufferedAsync<(
 					int accountNumber,
 					decimal balance,
-					DefineAccountCashFlowCategory cashFlowCategory)>(
+					CashFlowCategoryType cashFlowCategory)>(
 					"""
 					SELECT c.account_number, SUM(c.balance)
 					FROM cash_flow_daily c

@@ -8,4 +8,6 @@ public class ViewContext(LinkRelationCollection linkRelations) {
 	public object? _embedded { get; set; }
 
 	public Func<Link, Type> GetTemplatedLink { get; set; } = _ => null!;
+	
+	public string? Title { get; set; }
 }

@@ -1,8 +1,10 @@
 @using Transacto.Framework.Http.Html
 @using Transacto.Views.Shared
 @inject Formatter Formatter
+@inject ViewContext context
 @{
 	var colspan = Model.Groups.Length + 1;
+	context.Title = "Balance Sheet";
 }
 
 

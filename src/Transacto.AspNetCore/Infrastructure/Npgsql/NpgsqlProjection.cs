@@ -1,31 +1,39 @@
+using System.Data;
 using System.Data.Common;
 using KurrentDB.Client;
 using Npgsql;
 using Projac.Npgsql;
 using Projac.Sql;
+using Transacto.Framework.Projections;
 
 namespace Transacto.Infrastructure.Npgsql;
 
-public abstract class NpgsqlProjection(NpgsqlScripts scripts) : SqlProjection {
-	protected NpgsqlScripts Scripts { get; } = scripts;
+public abstract class NpgsqlProjection : SqlProjection {
+	protected NpgsqlProjection(NpgsqlScripts scripts) {
+		Scripts = scripts;
+		When<CreateSchema>();
+		When<DropSchema>();
+	}
+
+	protected NpgsqlScripts Scripts { get; }
 	protected static readonly NpgsqlSyntax Sql = new();
 
 	protected void When<TEvent>() =>
-		When<TEvent>(_ => Sql.NonQueryStatement(Scripts[typeof(TEvent)], []));
+		When<TEvent>(_ => Sql.NonQueryStatement(Scripts[typeof(TEvent)]));
 
 	protected void When<TEvent>(Func<TEvent, DbParameter[]> handler) =>
-		When<TEvent>(e => Sql.NonQueryStatement(Scripts[typeof(TEvent)], handler(e)));
+		When<TEvent>(e => new SqlNonQueryCommand(Scripts[typeof(TEvent)], handler(e), CommandType.Text));
 
 	protected void When<TEvent>(Func<TEvent, DbParameter[][]> handler) =>
 		When<TEvent>(e =>
-			Array.ConvertAll(handler(e), parameters => Sql.NonQueryStatement(Scripts[typeof(TEvent)], parameters)));
+			Array.ConvertAll(handler(e),
+				parameters => new SqlNonQueryCommand(Scripts[typeof(TEvent)], parameters, CommandType.Text)));
 
 	public async Task<FromAll> ReadCheckpoint(NpgsqlConnection connection, CancellationToken cancellationToken) {
-		await connection.OpenAsync(cancellationToken);
-		var statement = Sql.QueryStatement(NpgsqlScripts.ReadCheckpoint, new { projection = GetType().Name });
-
-		await using var command = new NpgsqlCommand(statement.Text, connection) {
-			Parameters = { statement.Parameters }
+		await using var command = new NpgsqlCommand(NpgsqlScripts.ReadCheckpoint, connection) {
+			Parameters = {
+				Sql.VarChar(GetType().Name, new NpgsqlVarCharSize(256)).ToDbParameter("projection")
+			}
 		};
 		await using var reader = await command.ExecuteReaderAsync(cancellationToken);
 		return !await reader.ReadAsync(cancellationToken)
@@ -35,15 +43,12 @@ public abstract class NpgsqlProjection(NpgsqlScripts scripts) : SqlProjection {
 
 	public async Task WriteCheckpoint(NpgsqlTransaction transaction, Position checkpoint,
 		CancellationToken cancellationToken) {
-		var statement = unchecked(
-			Sql.QueryStatement(NpgsqlScripts.WriteCheckpoint, new {
-				projection = GetType().Name,
-				commit = (long)checkpoint.CommitPosition,
-				prepare = (long)checkpoint.PreparePosition
-			}));
-
-		await using var command = new NpgsqlCommand(statement.Text, transaction.Connection, transaction) {
-			Parameters = { statement.Parameters }
+		await using var command = new NpgsqlCommand(NpgsqlScripts.WriteCheckpoint, transaction.Connection, transaction) {
+			Parameters = {
+				unchecked(Sql.BigInt((long)checkpoint.CommitPosition).ToDbParameter("commit")),
+				unchecked(Sql.BigInt((long)checkpoint.PreparePosition).ToDbParameter("prepare")),
+				Sql.NVarChar(GetType().Name, new NpgsqlNVarCharSize(256)).ToDbParameter("projection")
+			}
 		};
 
 		await command.ExecuteNonQueryAsync(cancellationToken);

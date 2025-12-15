@@ -29,6 +29,7 @@ static partial class ApplicationBuilderExtensions {
 							return next();
 						})
 						.UseRouting()
+						.UseOutputCache()
 						.UseEndpoints(plugin.Configure)
 						.UseProjectionStatus()))
 				.Map("", inner => inner.UseTransactoIndex(plugins));

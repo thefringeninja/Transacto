@@ -2,7 +2,7 @@ using System.Collections.Immutable;
 using System.Text.Json.Serialization;
 using Transacto.Domain;
 using Transacto.Messages;
-
+using Transacto.Plugins.FinancialStatements;
 namespace Transacto.Plugins.FinancialStatements.CashFlow;
 
 public abstract record Report {
@@ -30,8 +30,8 @@ public abstract record Report {
 
 	private bool IsMatch(Line line) => IsMatch(Account.For(new(line.Account.Number),
 		cashFlowCategory: line.CashFlowCategory switch {
-			DefineAccountCashFlowCategory.Investment => CashFlowCategory.Investment,
-			DefineAccountCashFlowCategory.Finance => CashFlowCategory.Finance,
+			CashFlowCategoryType.Investment => CashFlowCategory.Investment,
+			CashFlowCategoryType.Finance => CashFlowCategory.Finance,
 			_ => CashFlowCategory.Operations,
 		}));
 
@@ -40,7 +40,7 @@ public abstract record Report {
 		..Lines.Values.Select(line => line.Account).Distinct()
 	];
 
-	public record Line(AccountInfo Account, decimal Balance, DefineAccountCashFlowCategory CashFlowCategory);
+	public record Line(AccountInfo Account, decimal Balance, CashFlowCategoryType CashFlowCategory);
 
 	public record Operations([property: JsonIgnore] ImmutableArray<Line> lines) : Report(nameof(Operations), lines) {
 		protected override bool IsMatch(Account account) => account.CashFlowCategory == CashFlowCategory.Operations &&
