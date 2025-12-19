@@ -11,7 +11,7 @@ public partial class JournalEntry : IBusinessTransaction {
 	public GeneralLedgerEntryNumber? ReferenceNumber =>
 		SequenceNumber.HasValue ? new GeneralLedgerEntryNumber(Prefix, SequenceNumber.Value) : null;
 
-	public IEnumerable<object> GetTransactionItems() {
+	public IEnumerable<object> GetTransactionItems(ChartOfAccounts chartOfAccounts) {
 		foreach (var (accountNumber, amount, type) in Items.OrderBy(item => item.AccountNumber)) {
 			yield return type switch {
 				Type.Credit => new Credit(new AccountNumber(accountNumber), new Money(amount)),

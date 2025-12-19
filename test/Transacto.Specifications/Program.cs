@@ -8,14 +8,14 @@ using Serilog;
 using Serilog.Extensions.Logging;
 using Serilog.Sinks.SystemConsole.Themes;
 using Transacto;
+using Transacto.Http;
 using Transacto.Specifications;
 
 Inflector.Inflector.SetDefaultCultureFunc = () => CultureInfo.CurrentCulture;
 
-Option<string> formatOption = new("--format") {
-};
+Option<string> formatOption = new("--format");
 
-var rootCommand = new RootCommand() {
+var rootCommand = new RootCommand {
 	formatOption
 };
 
@@ -71,7 +71,8 @@ return 0;
 static IEnumerable<Type> GetSpecificationGroupTypes<T>() =>
 	from containerType in typeof(T).Assembly.GetTypes()
 	where containerType.DeclaringType is null &&
-	      containerType.Namespace == typeof(GeneralLedgerSpecifications).Namespace
+	      (containerType.Namespace == typeof(GeneralLedgerSpecifications).Namespace ||
+	       containerType.Namespace == typeof(BalanceSheetHttpSpecifications).Namespace)
 	orderby containerType.Name
 	select containerType;
 

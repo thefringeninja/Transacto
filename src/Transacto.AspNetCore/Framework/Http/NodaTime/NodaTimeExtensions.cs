@@ -2,13 +2,14 @@
 
 namespace NodaTime;
 
-public static class Extensions {
+public static class NodaTimeExtensions {
 	extension(Period) {
 		public static Period Monthly => Period.FromMonths(1);
 		public static Period Weekly => Period.FromWeeks(1);
 		public static Period Quarterly => Period.FromMonths(3);
 		public static Period Yearly => Period.FromYears(1);
 	}
+
 	extension(LocalDate value) {
 		public LocalDate FirstDayOfNextQuarter {
 			get {

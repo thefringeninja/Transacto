@@ -18,9 +18,9 @@
 	<ItemGroup>
 		<EmbeddedResource Include="**\*.schema.json"/>
 		<EmbeddedResource Include="**\*.uischema.json"/>
-		<AdditionalFiles Include="**\*.schema.json" Namespace="Transacto.Messages"/>
+		<AdditionalFiles Include="**\*.schema.json"/>
 		<CompilerVisibleProperty Include="RootNamespace"/>
-		<CompilerVisibleItemMetadata Include="AdditionalFiles" MetadataName="Namespace" Visible="false"/>
+		<CompilerVisibleProperty Include="MSBuildProjectDirectory" />
 	</ItemGroup>
 
 </Project>

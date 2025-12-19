@@ -45,7 +45,7 @@ public class GeneralLedgerIntegrationTests : IntegrationTests {
 		for (var i = 0; i < 10; i++) {
 			checkpoint = await HttpClient.SendCommand("/general-ledger/entries",
 				new PostGeneralLedgerEntry {
-					BusinessTransaction = new BusinessTransaction(new(100 + i)).ToJournalEntry(),
+					BusinessTransaction = new BusinessTransaction().ToJournalEntry(),
 					GeneralLedgerEntryId = generalLedgerEntryIds[i],
 					Period = Period,
 					CreatedOn = _openedOn.ToDateTimeUnspecified()
@@ -62,8 +62,11 @@ public class GeneralLedgerIntegrationTests : IntegrationTests {
 			checkpoint)));	
 	}
 
-	private class BusinessTransaction(GeneralLedgerEntrySequenceNumber sequenceNumber) : IBusinessTransaction {
-		public GeneralLedgerEntrySequenceNumber SequenceNumber { get; } = sequenceNumber;
+	private class BusinessTransaction() : IBusinessTransaction {
+		public GeneralLedgerEntrySequenceNumber? SequenceNumber { get; set; }
+		public static GeneralLedgerEntryNumberPrefix Prefix { get; } = new("b");
+		public GeneralLedgerEntryNumber? ReferenceNumber =>
+			SequenceNumber.HasValue ? new GeneralLedgerEntryNumber(Prefix, SequenceNumber.Value) : null;
 
 		public IEnumerable<object> GetTransactionItems() {
 			yield return new Debit(new AccountNumber(1000), new Money(10m));

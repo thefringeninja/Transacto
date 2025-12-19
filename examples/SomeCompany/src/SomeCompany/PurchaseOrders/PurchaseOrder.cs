@@ -10,7 +10,7 @@ public partial record PurchaseOrder : IBusinessTransaction {
 	public GeneralLedgerEntryNumber? ReferenceNumber =>
 		SequenceNumber.HasValue ? new GeneralLedgerEntryNumber(Prefix, SequenceNumber.Value) : null;
 
-	public IEnumerable<object> GetTransactionItems() {
+	public IEnumerable<object> GetTransactionItems(ChartOfAccounts chartOfAccounts) {
 		var (accountsPayable, inventoryInTransit) = Aggregate();
 
 		yield return accountsPayable;

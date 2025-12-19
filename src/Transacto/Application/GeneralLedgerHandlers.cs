@@ -9,7 +9,7 @@ public class GeneralLedgerHandlers(
 	IGeneralLedgerRepository ledger,
 	IChartOfAccountsRepository ofAccounts) {
 	public ValueTask Handle(OpenGeneralLedger command, CancellationToken cancellationToken = default) {
-		ledger.Add(GeneralLedger.Open(LocalDate.FromDateTime(command.OpenedOn.LocalDateTime)));
+		ledger.Add(GeneralLedger.Open(command.OpenedOn));
 
 		return new ValueTask(Task.CompletedTask);
 	}
@@ -23,6 +23,6 @@ public class GeneralLedgerHandlers(
 			chartOfAccounts.Get<EquityAccount>(new AccountNumber(command.RetainedEarningsAccountNumber)),
 			new GeneralLedgerEntryIdentifier(command.ClosingGeneralLedgerEntryId),
 			ImmutableArray.CreateRange(command.GeneralLedgerEntryIds, id => new GeneralLedgerEntryIdentifier(id)),
-			LocalDateTime.FromDateTime(command.ClosingOn.DateTime));
+			command.ClosingOn);
 	}
 }

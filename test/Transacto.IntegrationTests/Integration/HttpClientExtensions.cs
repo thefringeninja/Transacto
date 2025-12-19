@@ -42,7 +42,7 @@ internal static class HttpClientExtensions {
 					using var request = new HttpRequestMessage(HttpMethod.Get, requestUri) {
 						Headers = {
 							IfMatch = {
-								new EntityTagHeaderValue($"""
+	w							new EntityTagHeaderValue($"""
 								                          "{checkpoint}"
 								                          """)
 							}

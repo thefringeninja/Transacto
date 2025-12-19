@@ -184,11 +184,10 @@ async Task Seed() {
 
 				var invoiceEntryId = Guid.NewGuid();
 				var invoiceDate = yearMonth
-					.OnDayOfMonth(i % yearMonth.Calendar.GetDaysInMonth(yearMonth.Year, yearMonth.Month) + 1)
-					.AtMidnight();
+					.OnDayOfMonth(i % yearMonth.Calendar.GetDaysInMonth(yearMonth.Year, yearMonth.Month) + 1);
 				await generalLedger.Handle(new PostGeneralLedgerEntry {
 					BusinessTransaction = invoice,
-					CreatedOn = invoiceDate.ToDateTimeUnspecified(),
+					CreatedOn = invoiceDate,
 					GeneralLedgerEntryId = invoiceEntryId,
 					Period = period.ToString()
 				});
@@ -197,7 +196,7 @@ async Task Seed() {
 				var paymentEntryId = Guid.NewGuid();
 				await generalLedger.Handle(new PostGeneralLedgerEntry {
 					BusinessTransaction = payment,
-					CreatedOn = invoiceDate.PlusDays(15).ToDateTimeUnspecified(),
+					CreatedOn = invoiceDate.PlusDays(15),
 					GeneralLedgerEntryId = paymentEntryId,
 					Period = period.ToString()
 				});
@@ -234,7 +233,7 @@ async Task Seed() {
 			ledgerEntryIds.Add(purchaseOrderId);
 			await generalLedger.Handle(new PostGeneralLedgerEntry {
 				BusinessTransaction = purchaseOrder,
-				CreatedOn = yearMonth.PlusMonths(1).OnDayOfMonth(1).PlusDays(-1).ToDateTimeUnspecified(),
+				CreatedOn = yearMonth.PlusMonths(1).OnDayOfMonth(1),
 				GeneralLedgerEntryId = purchaseOrderId,
 				Period = period.ToString()
 			});
@@ -247,7 +246,7 @@ async Task Seed() {
 				ClosingGeneralLedgerEntryId = closingGeneralLedgerEntryId,
 				GeneralLedgerEntryIds = [..ledgerEntryIds],
 				RetainedEarningsAccountNumber = 3900,
-				ClosingOn = openedOn.PlusMonths(month + 1).PlusDays(-1).AtMidnight().ToDateTimeUnspecified()
+				ClosingOn = openedOn.PlusMonths(month + 1).PlusDays(-1)
 			});
 
 			await foreach (var message in subscription.Messages) {
@@ -308,7 +307,7 @@ async Task Seed() {
 
 	async Task OpenBooks() {
 		await generalLedger.Handle(new OpenGeneralLedger {
-			OpenedOn = openedOn.AtMidnight().ToDateTimeUnspecified()
+			OpenedOn = openedOn
 		});
 	}
 }
@@ -374,7 +373,7 @@ internal static class BusinessTransactionExtensions {
 
 		private IEnumerable<JournalEntry.Item> Items {
 			get {
-				foreach (var t in businessTransaction.GetTransactionItems()) {
+				foreach (var t in businessTransaction.GetTransactionItems(ChartOfAccounts.Factory())) {
 					switch (t) {
 						case Debit debit:
 							yield return new JournalEntry.Item(debit.AccountNumber.Value, debit.Amount.ToDecimal(),

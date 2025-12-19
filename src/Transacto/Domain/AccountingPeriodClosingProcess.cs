@@ -5,7 +5,7 @@ namespace Transacto.Domain;
 public class AccountingPeriodClosingProcess(
 	ChartOfAccounts chartOfAccounts,
 	AccountingPeriod accountingPeriod,
-	LocalDateTime closingOn,
+	LocalDate closingOn,
 	IEnumerable<GeneralLedgerEntryIdentifier> generalLedgerEntryIdentifiers,
 	GeneralLedgerEntryIdentifier closingGeneralLedgerEntryIdentifier,
 	EquityAccount retainedEarningsAccount,

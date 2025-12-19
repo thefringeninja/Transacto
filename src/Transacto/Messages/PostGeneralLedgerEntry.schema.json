@@ -24,7 +24,7 @@
 		"createdOn": {
 			"title": "Created On",
 			"type": "string",
-			"format": "date-time"
+			"format": "date"
 		}
 	},
 	"definitions": {

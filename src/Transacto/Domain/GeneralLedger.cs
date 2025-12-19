@@ -39,32 +39,32 @@ public class GeneralLedger : AggregateRoot, IAggregateRoot<GeneralLedger> {
 	};
 
 	public GeneralLedgerEntry Create(GeneralLedgerEntryIdentifier identifier,
-		IBusinessTransaction businessTransaction, LocalDateTime createdOn, AccountIsDeactivated accountIsDeactivated) =>
-		Create(identifier, businessTransaction, createdOn,
-			(_state.PeriodClosing, _state.AccountingPeriod.Contains(createdOn.Date)) switch {
-				(true, _) or (false, false) => _state.AccountingPeriod.Next(),
-				_ => _state.AccountingPeriod
-			}, accountIsDeactivated);
+		IBusinessTransaction businessTransaction, ChartOfAccounts chartOfAccounts, LocalDate createdOn,
+		AccountIsDeactivated accountIsDeactivated) => Create(identifier, businessTransaction, chartOfAccounts,
+		createdOn, (_state.PeriodClosing, _state.AccountingPeriod.Contains(createdOn)) switch {
+			(true, _) or (false, false) => _state.AccountingPeriod.Next(),
+			_ => _state.AccountingPeriod
+		}, accountIsDeactivated);
 
 	private static GeneralLedgerEntry Create(GeneralLedgerEntryIdentifier identifier,
-		IBusinessTransaction businessTransaction,
-		LocalDateTime createdOn, AccountingPeriod accountingPeriod, AccountIsDeactivated accountIsDeactivated) =>
-		new(identifier, businessTransaction, accountingPeriod, createdOn, accountIsDeactivated);
+		IBusinessTransaction businessTransaction, ChartOfAccounts chartOfAccounts, LocalDate createdOn,
+		AccountingPeriod accountingPeriod, AccountIsDeactivated accountIsDeactivated) =>
+		new(identifier, businessTransaction, chartOfAccounts, accountingPeriod, createdOn, accountIsDeactivated);
 
 	public void BeginClosingPeriod(EquityAccount retainedEarningsAccount,
 		GeneralLedgerEntryIdentifier closingGeneralLedgerEntryIdentifier,
-		ImmutableArray<GeneralLedgerEntryIdentifier> generalLedgerEntryIdentifiers, LocalDateTime closingOn) {
+		ImmutableArray<GeneralLedgerEntryIdentifier> generalLedgerEntryIdentifiers, LocalDate closingOn) {
 		if (_state.PeriodClosing) {
 			throw new PeriodClosingInProcessException(_state.AccountingPeriod);
 		}
 
-		_state.AccountingPeriod.MustNotBeAfter(closingOn.Date);
+		_state.AccountingPeriod.MustNotBeAfter(closingOn);
 
 		Apply(new AccountingPeriodClosing {
 			Period = _state.AccountingPeriod.ToString(),
 			GeneralLedgerEntryIds =
 				ImmutableArray.CreateRange(generalLedgerEntryIdentifiers, identifier => identifier.ToGuid()),
-			ClosingOn = Time.Format.LocalDateTime(closingOn),
+			ClosingOn = Time.Format.LocalDate(closingOn),
 			RetainedEarningsAccountNumber = retainedEarningsAccount.AccountNumber.ToInt32(),
 			ClosingGeneralLedgerEntryId = closingGeneralLedgerEntryIdentifier.ToGuid()
 		});

@@ -35,7 +35,6 @@ public class LotsOfDataSmokeTests : SmokeTests {
 		await HttpClient.SendCommand("/general-ledger/entries", new PostGeneralLedgerEntry {
 				BusinessTransaction = new JournalEntry {
 					Description = "Opening Balance",
-					JournalEntryNumber = 1,
 					Items = [
 						new(3000, 1200.12m, JournalEntry.Type.Credit),
 						new(1220, 1000m, JournalEntry.Type.Debit),
@@ -61,7 +60,7 @@ public class LotsOfDataSmokeTests : SmokeTests {
 				if (sequenceNumber % 2 != 0) {
 					var invoiceId = Guid.NewGuid();
 					await HttpClient.SendCommand("/general-ledger/entries", new PostGeneralLedgerEntry {
-							BusinessTransaction = new Invoice(sequenceNumber, new Money(100m), new Money(7.95m),
+							BusinessTransaction = new Invoice(new Money(100m), new Money(7.95m),
 									Percentage.Of(8.25m), new Money(20m))
 								.ToJournalEntry(),
 							CreatedOn = current.ToDateTimeUnspecified().AddDays(day),
@@ -73,8 +72,7 @@ public class LotsOfDataSmokeTests : SmokeTests {
 				} else {
 					var paymentId = Guid.NewGuid();
 					await HttpClient.SendCommand("/general-ledger/entries", new PostGeneralLedgerEntry {
-							BusinessTransaction = new CreditCardPayment(
-									sequenceNumber, new Money(108.25m + 7.95m), new Money(.5m), Percentage.Of(1.25m))
+							BusinessTransaction = new CreditCardPayment(new Money(108.25m + 7.95m), new Money(.5m), Percentage.Of(1.25m))
 								.ToJournalEntry(),
 							CreatedOn = current.ToDateTimeUnspecified().AddDays(day),
 							GeneralLedgerEntryId = paymentId,
@@ -124,9 +122,12 @@ public class LotsOfDataSmokeTests : SmokeTests {
 		}));
 	}
 
-	private class Invoice(int number, Money subtotal, Money shipping, Percentage salesTaxRate, Money inventory)
+	private class Invoice(Money subtotal, Money shipping, Percentage salesTaxRate, Money inventory)
 		: IBusinessTransaction {
-		public GeneralLedgerEntrySequenceNumber SequenceNumber { get; } = new(number);
+		public GeneralLedgerEntrySequenceNumber? SequenceNumber { get; set; }
+		public static GeneralLedgerEntryNumberPrefix Prefix { get; } = new("invoice");
+		public GeneralLedgerEntryNumber? ReferenceNumber =>
+			SequenceNumber.HasValue ? new GeneralLedgerEntryNumber(Prefix, SequenceNumber.Value) : null;
 
 		public IEnumerable<object> GetTransactionItems() {
 			var tax = subtotal * salesTaxRate;
@@ -140,9 +141,12 @@ public class LotsOfDataSmokeTests : SmokeTests {
 		}
 	}
 
-	private class CreditCardPayment(int number, Money amount, Money flatFee, Percentage transactionFee)
+	private class CreditCardPayment(Money amount, Money flatFee, Percentage transactionFee)
 		: IBusinessTransaction {
-		public GeneralLedgerEntrySequenceNumber SequenceNumber { get; } = new(number);
+		public GeneralLedgerEntrySequenceNumber? SequenceNumber { get; set; }
+		public static GeneralLedgerEntryNumberPrefix Prefix { get; } = new("payment");
+		public GeneralLedgerEntryNumber? ReferenceNumber =>
+			SequenceNumber.HasValue ? new GeneralLedgerEntryNumber(Prefix, SequenceNumber.Value) : null;
 
 		public IEnumerable<object> GetTransactionItems() {
 			var processingFee = (flatFee + amount * transactionFee).Round(2);

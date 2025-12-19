@@ -22,7 +22,7 @@ public class AccountClosingProcessTests {
 	public Task unposted_entry_throws(LocalDate openedOn, GeneralLedgerEntryNumber generalLedgerEntryNumber,
 		EquityAccount retainedEarnings, GeneralLedgerEntryIdentifier generalLedgerEntryIdentifier,
 		GeneralLedgerEntryIdentifier closingGeneralLedgerEntryIdentifier) =>
-		new UnpostedEntryThrows(openedOn, generalLedgerEntryNumber, retainedEarnings, generalLedgerEntryIdentifier,
+		new UnpostedEntryThrows(openedOn, retainedEarnings, generalLedgerEntryIdentifier,
 				closingGeneralLedgerEntryIdentifier)
 			.Assert(_handler, _facts);
 

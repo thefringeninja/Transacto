@@ -75,7 +75,7 @@ public abstract class IntegrationTests : IAsyncDisposable {
 
 		//_webApplicationFactory = new IntegrationTestFactory();
 
-		KurrentDBClient = new KurrentDBClient(new KurrentDBClientSettings {
+		var eventStoreClientSettings = new KurrentDBClientSettings {
 			ConnectivitySettings = {
 				Address = new UriBuilder {
 					Port = _eventStorePort
@@ -92,7 +92,7 @@ public abstract class IntegrationTests : IAsyncDisposable {
 					}
 				}
 			}
-		});
+		};
 		_streamStoreClient = new HttpClientSqlStreamStore(new HttpClientSqlStreamStoreSettings {
 			CreateHttpClient = () => new HttpClient(new SocketsHttpHandler {
 				SslOptions = {
@@ -114,13 +114,14 @@ public abstract class IntegrationTests : IAsyncDisposable {
 		var builder = WebApplication.CreateBuilder();
 		builder.Logging.ClearProviders().AddProvider(serilogLoggerProvider);
 
-		builder.AddTransacto(
-			KurrentDBClient,
+		builder.Services.AddTransacto(
+			eventStoreClientSettings,
 			new NpgsqlConnectionStringBuilder(),
 			SQLiteInTempFolder,
 			_streamStoreClient);
 		builder.WebHost.UseTestServer();
 		_app = builder.Build();
+		KurrentDBClient = _app.Services.GetRequiredService<KurrentDBClient>();
 		_app.UseTransacto();
 		_app.Start();
 

@@ -7,7 +7,7 @@ using Transacto.Plugins.GeneralLedger;
 
 namespace Transacto.Plugins.FinancialStatements.BalanceSheet;
 
-internal class BalanceSheetReportsRepresentation(SiteRoot siteRoot, GetFormatter getFormatter)
+public class BalanceSheetReportsRepresentation(SiteRoot siteRoot, GetFormatter getFormatter)
 	: Hal<BalanceSheetReports>, IHalLinks<BalanceSheetReports>, IHalState<BalanceSheetReports> {
 	private readonly Formatter _formatter = getFormatter();
 

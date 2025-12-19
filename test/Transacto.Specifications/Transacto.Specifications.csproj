@@ -7,12 +7,16 @@
 	</PropertyGroup>
 
 	<ItemGroup>
+		<ProjectReference Include="..\..\src\Transacto.AspNetCore\Transacto.AspNetCore.csproj" />
 		<ProjectReference Include="..\..\src\Transacto\Transacto.csproj"/>
 	</ItemGroup>
 	
 	<ItemGroup>
 		<PackageReference Include="Bogus.Text" Version="35.6.5"/>
+		<PackageReference Include="Hallo" Version="3.0.2"/>
 		<PackageReference Include="Microsoft.AspNetCore.Html.Abstractions" Version="2.3.0"/>
+		<PackageReference Include="Microsoft.AspNetCore.Http" Version="2.3.0"/>
+		<PackageReference Include="Microsoft.AspNetCore.Http.Extensions" Version="2.3.0"/>
 		<PackageReference Include="RazorEngineCore" Version="2024.4.1"/>
 		<PackageReference Include="Serilog.Sinks.Console" Version="6.1.1"/>
 		<PackageReference Include="System.CommandLine" Version="2.0.0"/>
@@ -29,6 +33,4 @@
 		<Compile Remove="../Shared/Fixie/*.cs"/>
 		<Compile Include="../Shared/AutoFixture/*.cs"/>
 	</ItemGroup>
-
-
 </Project>

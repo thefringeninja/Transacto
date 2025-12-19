@@ -14,7 +14,7 @@ public record Invoice(int InvoiceNumber, Money Sales, Money Shipping, Money Inve
 	public GeneralLedgerEntryNumber? ReferenceNumber =>
 		SequenceNumber.HasValue ? new GeneralLedgerEntryNumber(Prefix, SequenceNumber.Value) : null;
 
-	public IEnumerable<object> GetTransactionItems() {
+	public IEnumerable<object> GetTransactionItems(ChartOfAccounts chartOfAccounts) {
 		var tax = Sales * SalesTaxRate;
 		var total = Sales + Shipping + tax;
 		yield return new Debit(new AccountNumber(1100), total);
@@ -32,7 +32,7 @@ public record Payment(int PaymentNumber, Money Total) : IBusinessTransaction {
 	public GeneralLedgerEntryNumber? ReferenceNumber =>
 		SequenceNumber.HasValue ? new GeneralLedgerEntryNumber(Prefix, SequenceNumber.Value) : null;
 
-	public IEnumerable<object> GetTransactionItems() {
+	public IEnumerable<object> GetTransactionItems(ChartOfAccounts chartOfAccounts) {
 		yield return new Credit(new AccountNumber(1100), Total);
 		yield return new Debit(new AccountNumber(1000), Total);
 	}

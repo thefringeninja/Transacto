@@ -10,7 +10,7 @@ public static class GeneralLedgerSpecifications {
 	public class OpeningThePeriod(LocalDate openedOn) : EventSpecification(new Scenario()
 		.GivenNone()
 		.When(new OpenGeneralLedger {
-			OpenedOn = openedOn.ToDateTimeUnspecified()
+			OpenedOn = openedOn
 		})
 		.Then(GeneralLedger.Identifier, new GeneralLedgerOpened {
 			OpenedOn = Time.Format.LocalDate(openedOn)
@@ -36,7 +36,7 @@ public static class GeneralLedgerSpecifications {
 			GeneralLedgerEntryIds =
 				ImmutableArray<Guid>.Empty.AddRange(Array.ConvertAll(generalLedgerEntryIdentifiers,
 					x => x.ToGuid())),
-			ClosingOn = openedOn.OnDayOfMonth(2).AtMidnight().ToDateTimeUnspecified(),
+			ClosingOn = openedOn.OnDayOfMonth(2),
 			RetainedEarningsAccountNumber = retainedEarnings.AccountNumber.ToInt32(),
 			ClosingGeneralLedgerEntryId = closingGeneralLedgerEntryIdentifier.ToGuid()
 		})
@@ -66,13 +66,13 @@ public static class GeneralLedgerSpecifications {
 			},
 			new AccountingPeriodClosing {
 				Period = AccountingPeriod.Open(openedOn.OnDayOfMonth(1)).ToString(),
-				ClosingOn = Time.Format.LocalDateTime(openedOn.OnDayOfMonth(2).AtMidnight()),
+				ClosingOn = Time.Format.LocalDate(openedOn.OnDayOfMonth(2)),
 				RetainedEarningsAccountNumber = retainedEarnings.AccountNumber.ToInt32(),
 				ClosingGeneralLedgerEntryId = closingGeneralLedgerEntryIdentifier.ToGuid(),
 				GeneralLedgerEntryIds = ImmutableArray<Guid>.Empty
 			})
 		.When(new BeginClosingAccountingPeriod {
-			ClosingOn = openedOn.OnDayOfMonth(2).AtMidnight().ToDateTimeUnspecified(),
+			ClosingOn = openedOn.OnDayOfMonth(2),
 			RetainedEarningsAccountNumber = retainedEarnings.AccountNumber.ToInt32(),
 			ClosingGeneralLedgerEntryId = closingGeneralLedgerEntryIdentifier.ToGuid(),
 			GeneralLedgerEntryIds = ImmutableArray<Guid>.Empty
@@ -95,7 +95,7 @@ public static class GeneralLedgerSpecifications {
 			OpenedOn = Time.Format.LocalDate(openedOn)
 		})
 		.When(new BeginClosingAccountingPeriod {
-			ClosingOn = openedOn.PlusMonths(-1).ToDateTimeUnspecified(),
+			ClosingOn = openedOn.PlusMonths(-1),
 			RetainedEarningsAccountNumber = retainedEarnings.AccountNumber.ToInt32(),
 			ClosingGeneralLedgerEntryId = closingGeneralLedgerEntryIdentifier.ToGuid(),
 			GeneralLedgerEntryIds = ImmutableArray<Guid>.Empty

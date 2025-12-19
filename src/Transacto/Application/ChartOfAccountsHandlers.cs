@@ -10,7 +10,11 @@ public class ChartOfAccountsHandlers(IChartOfAccountsRepository chartOfAccounts)
 		if (optionalChart.HasValue)
 			throw new ChartOfAccountsAlreadyConfiguredException();
 
-		var chart = ChartOfAccounts.Configure(new ChartOfAccountsSettings(command.AccountNumberWidth));
+		var chart = ChartOfAccounts.Configure(new ChartOfAccountsSettings(
+			command.AccountNumberWidth,
+			new(command.AccountsReceivable),
+			new(command.AccountsPayable),
+			new(command.RetainedEarnings)));
 
 		chartOfAccounts.Add(chart);
 	}

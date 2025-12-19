@@ -3,25 +3,25 @@ using Transacto.Testing;
 
 namespace Transacto.Application;
 
-internal class FactRecorderRepository<T>(IFactRecorder facts)
+internal class FactRecorderRepository<T>(IFactRecorder factRecorder)
 	where T : IAggregateRoot<T> {
-	public ValueTask<Optional<T>> GetOptional(string identifier,
-		CancellationToken cancellationToken = default) {
-		var facts1 = facts.GetFacts().Where(x => x.Identifier == identifier)
-			.ToArray();
+	public ValueTask<Optional<T>> GetOptional(string identifier, CancellationToken cancellationToken = default) =>
+		factRecorder.GetFacts().Where(x => x.Identifier == identifier)
+			.ToArray() switch {
+			{ Length: 0 } => new(Optional<T>.Empty),
+			_ => Load(factRecorder.GetFacts().Where(x => x.Identifier == identifier)
+				.ToArray())
+		};
 
-		if (facts1.Length == 0) {
-			return new(Optional<T>.Empty);
-		}
-
+	private ValueTask<Optional<T>> Load(Fact[] facts) {
 		var aggregateRoot = T.Factory();
-		foreach (var fact in facts1) {
+		foreach (var fact in facts) {
 			aggregateRoot.ReadFromHistory(fact.Event);
 		}
 
-		facts.Attach(aggregateRoot.Id, aggregateRoot);
+		factRecorder.Attach(aggregateRoot.Id, aggregateRoot);
 		return new(aggregateRoot);
 	}
 
-	public void Add(T aggregateRoot) => facts.Record(aggregateRoot.Id, aggregateRoot.GetChanges());
+	public void Add(T aggregateRoot) => factRecorder.Record(aggregateRoot.Id, aggregateRoot.GetChanges());
 }

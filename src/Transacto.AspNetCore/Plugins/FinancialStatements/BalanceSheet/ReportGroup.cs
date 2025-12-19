@@ -4,7 +4,7 @@ using Transacto.Domain;
 
 namespace Transacto.Plugins.FinancialStatements.BalanceSheet;
 
-public sealed record ReportGroup(
+public sealed partial record ReportGroup(
 	LocalDate Thru,
 	Report.Assets Assets,
 	Report.Liabilities Liabilities,

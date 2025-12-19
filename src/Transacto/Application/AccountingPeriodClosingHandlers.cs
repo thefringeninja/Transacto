@@ -16,9 +16,9 @@ public class AccountingPeriodClosingHandlers(
 		var chartOfAccounts = await ofAccounts.Get(cancellationToken);
 
 		var accountingPeriodClosingProcess = new AccountingPeriodClosingProcess(
-			chartOfAccounts, AccountingPeriod.Parse(@event.Period), Time.Parse.LocalDateTime(@event.ClosingOn),
+			chartOfAccounts, AccountingPeriod.Parse(@event.Period), Time.Parse.LocalDate(@event.ClosingOn),
 			generalLedgerEntryIdentifiers, new GeneralLedgerEntryIdentifier(@event.ClosingGeneralLedgerEntryId),
-			chartOfAccounts.Get<EquityAccount>(new AccountNumber(@event.RetainedEarningsAccountNumber)),
+			chartOfAccounts.RetainedEarnings,
 			accountIsDeactivated);
 
 		foreach (var identifier in generalLedgerEntryIdentifiers) {

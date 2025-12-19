@@ -25,7 +25,7 @@
 		"closingOn": {
 			"title": "Closing On",
 			"type": "string",
-			"format": "date-time"
+			"format": "date"
 		},
 		"generalLedgerEntryIds": {
 			"title": "General Ledger Entry Ids",

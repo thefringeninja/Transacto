@@ -13,5 +13,7 @@
 			https://www.myget.org/F/xunit/api/v3/index.json;
 		</RestoreSources>
 		<ImplicitUsings>enable</ImplicitUsings>
+
+		<EmitCompilerGeneratedFiles>true</EmitCompilerGeneratedFiles>
 	</PropertyGroup>
 </Project>

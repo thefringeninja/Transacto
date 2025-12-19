@@ -28,22 +28,22 @@ public class GeneralLedgerEntry : AggregateRoot, IAggregateRoot<GeneralLedgerEnt
 		$"generalLedgerEntry-{identifier}";
 
 	internal GeneralLedgerEntry(GeneralLedgerEntryIdentifier identifier, AccountingPeriod accountingPeriod,
-		LocalDateTime createdOn) : this() {
-		if (!accountingPeriod.Contains(createdOn.Date)) {
+		LocalDate createdOn) : this() {
+		if (!accountingPeriod.Contains(createdOn)) {
 			throw new GeneralLedgerEntryNotInPeriodException(identifier, createdOn, accountingPeriod);
 		}
 
 		Apply(new GeneralLedgerEntryCreated {
 			GeneralLedgerEntryId = identifier.ToGuid(),
-			CreatedOn = Time.Format.LocalDateTime(createdOn),
+			CreatedOn = Time.Format.LocalDate(createdOn),
 			Period = accountingPeriod.ToString()
 		});
 	}
 
 	internal GeneralLedgerEntry(GeneralLedgerEntryIdentifier identifier, IBusinessTransaction businessTransaction,
-		AccountingPeriod accountingPeriod, LocalDateTime createdOn, AccountIsDeactivated accountIsDeactivated) : this(
-		identifier, accountingPeriod, createdOn) {
-		foreach (var item in businessTransaction.GetTransactionItems()) {
+		ChartOfAccounts chartOfAccounts, AccountingPeriod accountingPeriod, LocalDate createdOn,
+		AccountIsDeactivated accountIsDeactivated) : this(identifier, accountingPeriod, createdOn) {
+		foreach (var item in businessTransaction.GetTransactionItems(chartOfAccounts)) {
 			switch (item) {
 				case Credit credit:
 					ApplyCredit(credit, accountIsDeactivated);
@@ -125,7 +125,7 @@ public class GeneralLedgerEntry : AggregateRoot, IAggregateRoot<GeneralLedgerEnt
 
 	public void AssignSequenceNumber(GeneralLedgerEntrySequenceNumber sequenceNumber) {
 		MustBePosted();
-		
+
 		Apply(new GeneralLedgerEntryNumberAssigned {
 			GeneralLedgerEntryId = _state.Identifier.ToGuid(),
 			GeneralLedgerEntrySequenceNumber = sequenceNumber.ToInt32()
@@ -133,7 +133,7 @@ public class GeneralLedgerEntry : AggregateRoot, IAggregateRoot<GeneralLedgerEnt
 	}
 
 	private void MustNotHaveAssignedGeneralLedgerEntrySequenceNumber(GeneralLedgerEntrySequenceNumber sequenceNumber) {
-		if (_state.SequenceNumber.HasValue  && _state.SequenceNumber.Value != sequenceNumber) {
+		if (_state.SequenceNumber.HasValue && _state.SequenceNumber.Value != sequenceNumber) {
 			throw new GeneralLedgerEntryAlreadyAssignedSequenceNumberException(_state.Identifier,
 				_state.SequenceNumber.Value, sequenceNumber);
 		}
@@ -172,6 +172,7 @@ public class GeneralLedgerEntry : AggregateRoot, IAggregateRoot<GeneralLedgerEnt
 			if (BusinessTransaction is null) {
 				return this;
 			}
+
 			BusinessTransaction.SequenceNumber = sequenceNumber;
 			return this;
 		}

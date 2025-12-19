@@ -9,7 +9,6 @@ namespace Transacto.Specifications;
 public static class AccountClosingProcessSpecifications {
 	public class UnpostedEntryThrows(
 		LocalDate openedOn,
-		GeneralLedgerEntryNumber generalLedgerEntryNumber,
 		EquityAccount retainedEarnings,
 		GeneralLedgerEntryIdentifier generalLedgerEntryIdentifier,
 		GeneralLedgerEntryIdentifier closingGeneralLedgerEntryIdentifier) : ExceptionSpecification(new Scenario()
@@ -34,7 +33,6 @@ public static class AccountClosingProcessSpecifications {
 		.Given(GeneralLedgerEntry.FormatStreamIdentifier(generalLedgerEntryIdentifier),
 			new GeneralLedgerEntryCreated {
 				GeneralLedgerEntryId = generalLedgerEntryIdentifier.ToGuid(),
-				ReferenceNumber = generalLedgerEntryNumber.ToString(),
 				Period = AccountingPeriod.Open(openedOn).ToString(),
 				CreatedOn = Time.Format.LocalDateTime(openedOn.AtMidnight())
 			})
@@ -71,7 +69,6 @@ public static class AccountClosingProcessSpecifications {
 					Array.ConvertAll(
 						new object[] {
 							new GeneralLedgerEntryCreated {
-								ReferenceNumber = $"sale-{index+1}",
 								Period = AccountingPeriod.Open(openedOn).ToString(),
 								CreatedOn = Time.Format.LocalDate(openedOn),
 								GeneralLedgerEntryId = identifier.ToGuid()
@@ -140,7 +137,6 @@ public static class AccountClosingProcessSpecifications {
 					new GeneralLedgerEntryCreated {
 						CreatedOn = Time.Format.LocalDateTime(openedOn.AtMidnight()),
 						GeneralLedgerEntryId = closingGeneralLedgerEntryIdentifier.ToGuid(),
-						ReferenceNumber = $"jec-{AccountingPeriod.Open(openedOn)}",
 						Period = AccountingPeriod.Open(openedOn).ToString()
 					},
 					new DebitApplied {

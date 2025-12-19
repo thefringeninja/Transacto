@@ -7,7 +7,6 @@ internal static class BusinessTransactionExtensions {
 		return businessTransaction switch {
 			JournalEntry entry => entry,
 			_ => new JournalEntry {
-				JournalEntryNumber = businessTransaction.SequenceNumber.ToInt32(),
 				Items = [..Items(businessTransaction)]
 			}
 		};

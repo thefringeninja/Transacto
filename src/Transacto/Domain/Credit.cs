@@ -15,8 +15,7 @@ public readonly struct Credit : IEquatable<Credit>,
 	public AccountNumber AccountNumber { get; }
 	public Money Amount { get; }
 
-	public Credit(AccountNumber accountNumber) : this(accountNumber, Money.Zero) {
-	}
+	public Credit(AccountNumber accountNumber) : this(accountNumber, Money.Zero) { }
 
 	public Credit(AccountNumber accountNumber, Money amount) {
 		ArgumentOutOfRangeException.ThrowIfLessThan(amount, Money.Zero);

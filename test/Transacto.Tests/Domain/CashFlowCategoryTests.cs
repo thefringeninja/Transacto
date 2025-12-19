@@ -13,12 +13,12 @@ public class CashFlowCategoryTests : ValueObjectTests<CashFlowCategory> {
 		Assert.Equal(expected, sut.ToString());
 
 	private static IEnumerable<object[]> ToEnumCases() {
-		yield return [CashFlowCategory.Operations, DefineAccountCashFlowCategory.Operations];
-		yield return [CashFlowCategory.Investment, DefineAccountCashFlowCategory.Investment];
-		yield return [CashFlowCategory.Finance, DefineAccountCashFlowCategory.Finance];
+		yield return [CashFlowCategory.Operations, CashFlowCategoryType.Operations];
+		yield return [CashFlowCategory.Investment, CashFlowCategoryType.Investment];
+		yield return [CashFlowCategory.Finance, CashFlowCategoryType.Finance];
 	}
 
 	[MemberData(nameof(ToEnumCases))]
-	public void ToEnumReturnsExpectedResult(CashFlowCategory sut, DefineAccountCashFlowCategory expected) =>
+	public void ToEnumReturnsExpectedResult(CashFlowCategory sut, CashFlowCategoryType expected) =>
 		Assert.Equal(expected, sut.ToEnum());
 }

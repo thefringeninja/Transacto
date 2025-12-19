@@ -3,6 +3,7 @@ using System.Net;
 using System.Threading.Channels;
 using Hallo;
 using Microsoft.AspNetCore.Http.Features;
+using Microsoft.AspNetCore.Http.HttpResults;
 
 namespace Transacto.Framework.Http;
 
@@ -11,6 +12,10 @@ public static class ResultExtensions {
 		public static IResult SeeOther([StringSyntax(StringSyntaxAttribute.Uri)] string location) {
 			return new SeeOtherResult(location);
 		}
+
+		public static IResult Hal<T>(Optional<T> optionalResource, Checkpoint checkpoint, IHal hal) =>
+			Hal(optionalResource.HasValue ? optionalResource.Value : default, checkpoint, hal,
+				optionalResource.HasValue ? HttpStatusCode.OK : HttpStatusCode.NotFound);
 
 		public static IResult Hal<T>(T? resource, Checkpoint checkpoint, IHal hal,
 			HttpStatusCode statusCode = HttpStatusCode.OK) =>

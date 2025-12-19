@@ -10,7 +10,7 @@ internal struct ParseablePeriod(Period value) : IParsable<ParseablePeriod> {
 	public static ParseablePeriod Parse(string s, IFormatProvider? provider) =>
 		new(PeriodPattern.Roundtrip.Parse(s).GetValueOrThrow());
 
-	public static bool TryParse([NotNullWhen(true)] string? s, IFormatProvider? provider,
+	public static bool TryParse(string? s, IFormatProvider? provider,
 		out ParseablePeriod result) {
 		if (s is null) {
 			result = default;

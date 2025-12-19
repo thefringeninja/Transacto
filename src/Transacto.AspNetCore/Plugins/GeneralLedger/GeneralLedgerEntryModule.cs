@@ -14,6 +14,7 @@ internal class GeneralLedgerEntryModule : CommandHandlerModule {
 		var handlers = new GeneralLedgerEntryHandlers(
 			new GeneralLedgerEventStoreRepository(eventStore, messageTypeMapper),
 			new GeneralLedgerEntryEventStoreRepository(eventStore, messageTypeMapper),
+			new ChartOfAccountsEventStoreRepository(eventStore, messageTypeMapper),
 			accountIsDeactivated);
 		Build<PostGeneralLedgerEntry>()
 			.Log(logger)

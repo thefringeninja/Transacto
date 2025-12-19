@@ -8,7 +8,7 @@ public class ProfitAndLoss(AccountingPeriod accountingPeriod, ChartOfAccounts ch
 	private readonly AccountBalanceCollection _current = new();
 
 	public GeneralLedgerEntry GetClosingEntry(AccountIsDeactivated accountIsDeactivated,
-		EquityAccount retainedEarningsAccount, LocalDateTime closedOn,
+		EquityAccount retainedEarningsAccount, LocalDate closedOn,
 		GeneralLedgerEntryIdentifier closingGeneralLedgerEntryIdentifier) {
 		var entry = new GeneralLedgerEntry(closingGeneralLedgerEntryIdentifier,
 			accountingPeriod,

@@ -6,8 +6,10 @@ namespace Transacto.Integration;
 [DataContract]
 internal class BusinessTransaction : IBusinessTransaction {
 	[DataMember(Name = "transactionId")] public Guid TransactionId { get; set; }
-	[DataMember(Name = "referenceNumber")] public int TransactionNumber { get; set; }
-	public GeneralLedgerEntrySequenceNumber SequenceNumber => new(TransactionNumber);
+	public GeneralLedgerEntrySequenceNumber? SequenceNumber { get; set; }
+	public static GeneralLedgerEntryNumberPrefix Prefix { get; } = new("transaction");
+	public GeneralLedgerEntryNumber? ReferenceNumber =>
+		SequenceNumber.HasValue ? new GeneralLedgerEntryNumber(Prefix, SequenceNumber.Value) : null;
 
 	public IEnumerable<object> GetTransactionItems() {
 		yield return new Debit(new AccountNumber(1000), new Money(5m));

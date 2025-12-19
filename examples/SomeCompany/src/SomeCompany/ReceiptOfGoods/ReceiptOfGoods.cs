@@ -11,7 +11,7 @@ partial record ReceiptOfGoods : IBusinessTransaction {
 	public GeneralLedgerEntryNumber? ReferenceNumber =>
 		SequenceNumber.HasValue ? new GeneralLedgerEntryNumber(Prefix, SequenceNumber.Value) : null;
 
-	public IEnumerable<object> GetTransactionItems() {
+	public IEnumerable<object> GetTransactionItems(ChartOfAccounts chartOfAccounts) {
 		var (inventoryInTransit, inventoryOnHand) = Aggregate();
 
 		yield return inventoryInTransit;

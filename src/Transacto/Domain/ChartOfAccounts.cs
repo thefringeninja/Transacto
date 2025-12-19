@@ -12,11 +12,18 @@ public class ChartOfAccounts : AggregateRoot, IAggregateRoot<ChartOfAccounts> {
 
 	private State _state;
 
+	public AssetAccount AccountsReceivable => Get<AssetAccount>(_state.AccountsReceivable);
+	public LiabilityAccount AccountsPayable => Get<LiabilityAccount>(_state.AccountsPayable);
+	public EquityAccount RetainedEarnings => Get<EquityAccount>(_state.RetainedEarnings);
+
 	public static ChartOfAccounts Configure(ChartOfAccountsSettings settings) {
 		var chartOfAccounts = Factory();
 
 		chartOfAccounts.Apply(new ChartOfAccountsConfigured {
-			AccountNumberWidth = settings.AccountNumberWidth
+			AccountNumberWidth = settings.AccountNumberWidth,
+			AccountsReceivable = settings.AccountsReceivable.ToInt32(),
+			AccountsPayable = settings.AccountsPayable.ToInt32(),
+			RetainedEarnings = settings.RetainedEarnings.ToInt32(),
 		});
 
 		return chartOfAccounts;
@@ -36,7 +43,10 @@ public class ChartOfAccounts : AggregateRoot, IAggregateRoot<ChartOfAccounts> {
 
 	protected override void ApplyEvent(object _) => _state = _ switch {
 		ChartOfAccountsConfigured e => _state with {
-			Settings = new ChartOfAccountsSettings(e.AccountNumberWidth)
+			Settings = new ChartOfAccountsSettings(e.AccountNumberWidth,
+				new(e.AccountsReceivable),
+				new(e.AccountsPayable),
+				new(e.RetainedEarnings))
 		},
 		AccountDefined e => _state with {
 			Accounts = _state.Accounts.Add(new AccountNumber(e.AccountNumber),
@@ -111,6 +121,14 @@ public class ChartOfAccounts : AggregateRoot, IAggregateRoot<ChartOfAccounts> {
 		});
 	}
 
+	public void MustBeActive(AccountNumber accountNumber) {
+		if (_state.Accounts[accountNumber].IsActive) {
+			return;
+		}
+
+		throw new Exception();
+	}
+
 	private void MustNotContainAccountNumber(AccountNumber accountNumber) {
 		if (_state.Accounts.ContainsKey(accountNumber)) {
 			throw new AccountExistsException(accountNumber);
@@ -134,6 +152,10 @@ public class ChartOfAccounts : AggregateRoot, IAggregateRoot<ChartOfAccounts> {
 	private record State {
 		public ImmutableDictionary<AccountNumber, AccountInfo> Accounts { get; init; }
 			= ImmutableDictionary<AccountNumber, AccountInfo>.Empty;
+
+		public AccountNumber AccountsReceivable { get; init; }
+		public AccountNumber AccountsPayable { get; init; }
+		public AccountNumber RetainedEarnings { get; init; }
 
 		public record AccountInfo(Account Account, bool IsActive = true);
 
