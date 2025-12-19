@@ -64,16 +64,6 @@ public class SchemoGenerator : IIncrementalGenerator {
 		var resolverFactory = (JsonSchema jsonSchema) => {
 			return new JsonReferenceResolver(new JsonSchemaResolver(jsonSchema,
 				new SystemTextJsonSchemaGeneratorSettings {
-					TypeMappers = {
-						new PrimitiveTypeMapper(typeof(LocalDate), s => {
-							s.Type = JsonObjectType.String;
-							s.Format = "date";
-						}),
-						new PrimitiveTypeMapper(typeof(OffsetDateTime), s => {
-							s.Type = JsonObjectType.String;
-							s.Format = "date-time";
-						}),
-					},
 					TypeNameGenerator = new TypeNameGenerator()
 				}));
 		};

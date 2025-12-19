@@ -3,12 +3,13 @@
 	<PropertyGroup>
 		<TargetFramework>netstandard2.0</TargetFramework>
 		<LangVersion>latest</LangVersion>
+		<Nullable>enable</Nullable>
 		<TreatWarningsAsErrors>true</TreatWarningsAsErrors>
 		<GeneratePackageOnBuild>true</GeneratePackageOnBuild>
 		<IsPackable>true</IsPackable>
 		<IsRoslynComponent>true</IsRoslynComponent>
 		<EnforceExtendedAnalyzerRules>true</EnforceExtendedAnalyzerRules>
-		<Nullable>enable</Nullable>
+		<CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
 	</PropertyGroup>
 	
 	<ItemGroup>
@@ -22,39 +23,20 @@
 			<IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
 		</PackageReference>
 	</ItemGroup>
-
 	<ItemGroup>
 		<!-- Generator dependencies -->
-		<PackageReference Include="Fluid.Core" Version="2.30.0" GeneratePathProperty="true" PrivateAssets="all"/>
-		<PackageReference Include="IndexRange" Version="1.1.0" GeneratePathProperty="true" PrivateAssets="all"/>
-		<PackageReference Include="Microsoft.Extensions.FileProviders.Abstractions" Version="6.0.1" GeneratePathProperty="true" PrivateAssets="all"/>
-		<PackageReference Include="NodaTime" Version="3.1.5" GeneratePathProperty="true" PrivateAssets="all"/>
-		<PackageReference Include="Namotion.Reflection" Version="3.4.3" GeneratePathProperty="true" PrivateAssets="all"/>
-		<PackageReference Include="Newtonsoft.Json" Version="13.0.4" GeneratePathProperty="true" PrivateAssets="all"/>
-		<PackageReference Include="NJsonSchema" Version="11.5.2" GeneratePathProperty="true" PrivateAssets="all"/>
-		<PackageReference Include="NJsonSchema.Annotations" Version="11.5.2" GeneratePathProperty="true" PrivateAssets="all"/>
-		<PackageReference Include="NJsonSchema.CodeGeneration" Version="11.5.2" GeneratePathProperty="true" PrivateAssets="all"/>
-		<PackageReference Include="NJsonSchema.CodeGeneration.CSharp" Version="11.5.2" GeneratePathProperty="true" PrivateAssets="all"/>
-		<PackageReference Include="Parlot" Version="1.4.0" GeneratePathProperty="true" PrivateAssets="all" />
+		<PackageReference Include="IndexRange" Version="1.1.0" PrivateAssets="all"/>
+		<PackageReference Include="NodaTime" Version="3.1.5" PrivateAssets="all"/>
+		<PackageReference Include="NJsonSchema.CodeGeneration.CSharp" Version="11.5.2" PrivateAssets="all"/>
 	</ItemGroup>
 
 	<PropertyGroup>
 		<GetTargetPathDependsOn>$(GetTargetPathDependsOn);GetDependencyTargetPaths</GetTargetPathDependsOn>
 	</PropertyGroup>
 
-	<Target Name="GetDependencyTargetPaths">
+	<Target Name="GetDependencyTargetPaths" AfterTargets="ResolvePackageDependenciesForBuild">
 		<ItemGroup>
-			<TargetPathWithTargetPlatformMoniker Include="$(PKGFluid_Core)\lib\netstandard2.0\Fluid.dll" IncludeRuntimeDependency="false"/>
-			<TargetPathWithTargetPlatformMoniker Include="$(PKGIndexRange)\lib\netstandard2.0\IndexRange.dll" IncludeRuntimeDependency="false"/>
-			<TargetPathWithTargetPlatformMoniker Include="$(PKGMicrosoft_Extensions_FileProviders_Abstractions)\lib\netstandard2.0\Microsoft.Extensions.FileProviders.Abstractions.dll" IncludeRuntimeDependency="false"/>
-			<TargetPathWithTargetPlatformMoniker Include="$(PKGNodaTime)\lib\netstandard2.0\NodaTime.dll" IncludeRuntimeDependency="false"/>
-			<TargetPathWithTargetPlatformMoniker Include="$(PKGNewtonsoft_Json)\lib\netstandard1.0\Newtonsoft.Json.dll" IncludeRuntimeDependency="false"/>
-			<TargetPathWithTargetPlatformMoniker Include="$(PKGNamotion_Reflection)\lib\netstandard2.0\Namotion.Reflection.dll" IncludeRuntimeDependency="false"/>
-			<TargetPathWithTargetPlatformMoniker Include="$(PKGNJsonSchema_Annotations)\lib\netstandard2.0\NJsonSchema.Annotations.dll" IncludeRuntimeDependency="false"/>
-			<TargetPathWithTargetPlatformMoniker Include="$(PKGNJsonSchema)\lib\netstandard2.0\NJsonSchema.dll" IncludeRuntimeDependency="false"/>
-			<TargetPathWithTargetPlatformMoniker Include="$(PKGNJsonSchema_CodeGeneration)\lib\netstandard2.0\NJsonSchema.CodeGeneration.dll" IncludeRuntimeDependency="false"/>
-			<TargetPathWithTargetPlatformMoniker Include="$(PKGNJsonSchema_CodeGeneration_CSharp)\lib\netstandard2.0\NJsonSchema.CodeGeneration.CSharp.dll" IncludeRuntimeDependency="false"/>
-			<TargetPathWithTargetPlatformMoniker Include="$(PKGParlot)\lib\netstandard2.0\Parlot.dll" IncludeRuntimeDependency="false"/>
+			<TargetPathWithTargetPlatformMoniker Include="@(ResolvedCompileFileDefinitions)" IncludeRuntimeDependency="false" />
 		</ItemGroup>
 	</Target>
 </Project>
