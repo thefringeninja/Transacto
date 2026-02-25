@@ -1,17 +1,15 @@
-using System.Diagnostics.CodeAnalysis;
 using NodaTime.Text;
 
 // ReSharper disable once CheckNamespace
 namespace NodaTime;
 
-internal struct ParseablePeriod(Period value) : IParsable<ParseablePeriod> {
+public struct ParseablePeriod(Period value) : IParsable<ParseablePeriod> {
 	private readonly Period _value = value;
 
 	public static ParseablePeriod Parse(string s, IFormatProvider? provider) =>
 		new(PeriodPattern.Roundtrip.Parse(s).GetValueOrThrow());
 
-	public static bool TryParse(string? s, IFormatProvider? provider,
-		out ParseablePeriod result) {
+	public static bool TryParse(string? s, IFormatProvider? provider, out ParseablePeriod result) {
 		if (s is null) {
 			result = default;
 			return false;

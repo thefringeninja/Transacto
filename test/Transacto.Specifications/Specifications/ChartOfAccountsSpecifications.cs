@@ -5,22 +5,34 @@ using Transacto.Testing;
 namespace Transacto.Specifications;
 
 public static class ChartOfAccountsSpecifications {
-	public class ConfiguringTheChartOfAccounts(int accountNumberWidth) : EventSpecification(new Scenario()
+	public class ConfiguringTheChartOfAccounts(AccountNumberWidth accountNumberWidth) : EventSpecification(new Scenario()
 		.GivenNone()
 		.When(new ConfigureChartOfAccounts {
-			AccountNumberWidth = accountNumberWidth
+			AccountNumberWidth = accountNumberWidth.ToInt32(),
+			AccountsReceivable = 1200,
+			AccountsPayable = 2000,
+			RetainedEarnings = 3090
 		})
 		.Then(ChartOfAccounts.Identifier, new ChartOfAccountsConfigured {
-			AccountNumberWidth = accountNumberWidth
+			AccountNumberWidth = accountNumberWidth.ToInt32(),
+			AccountsReceivable = 1200,
+			AccountsPayable = 2000,
+			RetainedEarnings = 3090
 		}));
 
-	public class ConfiguringTheChartOfAccountsMoreThanOnce(int accountNumberWidth) : ExceptionSpecification(
+	public class ConfiguringTheChartOfAccountsMoreThanOnce(AccountNumberWidth accountNumberWidth) : ExceptionSpecification(
 		new Scenario()
 			.Given(ChartOfAccounts.Identifier, new ChartOfAccountsConfigured {
-				AccountNumberWidth = ChartOfAccountsSettings.MinAccountNumberWidth
+				AccountNumberWidth = AccountNumberWidth.Min.ToInt32(),
+				AccountsReceivable = 1200,
+				AccountsPayable = 2000,
+				RetainedEarnings = 3090
 			})
 			.When(new ConfigureChartOfAccounts {
-				AccountNumberWidth = accountNumberWidth
+				AccountNumberWidth = accountNumberWidth.ToInt32(),
+				AccountsReceivable = 1200,
+				AccountsPayable = 2000,
+				RetainedEarnings = 3090
 			})
 			.Throws(new ChartOfAccountsAlreadyConfiguredException()));
 
@@ -36,7 +48,10 @@ public static class ChartOfAccountsSpecifications {
 
 	public class DefiningAnAccount(Account account) : EventSpecification(new Scenario()
 		.Given(ChartOfAccounts.Identifier, new ChartOfAccountsConfigured {
-			AccountNumberWidth = ChartOfAccountsSettings.MinAccountNumberWidth
+			AccountNumberWidth = AccountNumberWidth.Min.ToInt32(),
+			AccountsReceivable = 1200,
+			AccountsPayable = 2000,
+			RetainedEarnings = 3090
 		})
 		.When(new DefineAccount {
 			AccountName = account.AccountName.ToString(),
@@ -54,7 +69,10 @@ public static class ChartOfAccountsSpecifications {
 	public class DefiningAnAccountWhenAccountNumberWrongLengthThrows(Account account, string paramName)
 		: ExceptionSpecification(new Scenario()
 			.Given(ChartOfAccounts.Identifier, new ChartOfAccountsConfigured {
-				AccountNumberWidth = ChartOfAccountsSettings.MinAccountNumberWidth
+				AccountNumberWidth = AccountNumberWidth.Min.ToInt32(),
+				AccountsReceivable = 1200,
+				AccountsPayable = 2000,
+				RetainedEarnings = 3090
 			})
 			.When(new DefineAccount {
 				AccountName = account.AccountName.ToString(),
@@ -65,14 +83,17 @@ public static class ChartOfAccountsSpecifications {
 			})
 			.Throws(new AccountNumberLengthOutOfRangeException(
 				AccountNumberWithWrongLength(account),
-				ChartOfAccountsSettings.MinAccountNumberWidth, paramName)));
+				AccountNumberWidth.Min, paramName)));
 
 	private static AccountNumber AccountNumberWithWrongLength(Account sourceAccount) =>
 		new(sourceAccount.AccountNumber.ToInt32() * 10);
 
 	public class DefiningASecondAccount(Account account, Account secondAccount) : EventSpecification(new Scenario()
 		.Given(ChartOfAccounts.Identifier, new ChartOfAccountsConfigured {
-			AccountNumberWidth = ChartOfAccountsSettings.MinAccountNumberWidth
+			AccountNumberWidth = AccountNumberWidth.Min.ToInt32(),
+			AccountsReceivable = 1200,
+			AccountsPayable = 2000,
+			RetainedEarnings = 3090
 		}, new AccountDefined {
 			AccountName = account.AccountName.ToString(),
 			AccountNumber = account.AccountNumber.ToInt32(),
@@ -95,7 +116,10 @@ public static class ChartOfAccountsSpecifications {
 	public class DefiningTheSameAccountThrows(Account account)
 		: ExceptionSpecification(new Scenario()
 			.Given(ChartOfAccounts.Identifier, new ChartOfAccountsConfigured {
-				AccountNumberWidth = ChartOfAccountsSettings.MinAccountNumberWidth
+				AccountNumberWidth = AccountNumberWidth.Min.ToInt32(),
+				AccountsReceivable = 1200,
+				AccountsPayable = 2000,
+				RetainedEarnings = 3090
 			}, new AccountDefined {
 				AccountName = account.AccountName.ToString(),
 				AccountNumber = account.AccountNumber.ToInt32(),
@@ -112,7 +136,10 @@ public static class ChartOfAccountsSpecifications {
 
 	public class RenamingAnAccount(Account account, AccountName secondAccountName) : EventSpecification(new Scenario()
 		.Given(ChartOfAccounts.Identifier, new ChartOfAccountsConfigured {
-			AccountNumberWidth = ChartOfAccountsSettings.MinAccountNumberWidth
+			AccountNumberWidth = AccountNumberWidth.Min.ToInt32(),
+			AccountsReceivable = 1200,
+			AccountsPayable = 2000,
+			RetainedEarnings = 3090
 		}, new AccountDefined {
 			AccountName = account.AccountName.ToString(),
 			AccountNumber = account.AccountNumber.ToInt32(),
@@ -130,7 +157,10 @@ public static class ChartOfAccountsSpecifications {
 
 	public class DeactivatingAnAccount(Account account) : EventSpecification(new Scenario()
 		.Given(ChartOfAccounts.Identifier, new ChartOfAccountsConfigured {
-			AccountNumberWidth = ChartOfAccountsSettings.MinAccountNumberWidth
+			AccountNumberWidth = AccountNumberWidth.Min.ToInt32(),
+			AccountsReceivable = 1200,
+			AccountsPayable = 2000,
+			RetainedEarnings = 3090
 		}, new AccountDefined {
 			AccountName = account.AccountName.ToString(),
 			AccountNumber = account.AccountNumber.ToInt32(),
@@ -146,7 +176,10 @@ public static class ChartOfAccountsSpecifications {
 
 	public class ReactivatingADeactivatedAccount(Account account) : EventSpecification(new Scenario()
 		.Given(ChartOfAccounts.Identifier, new ChartOfAccountsConfigured {
-			AccountNumberWidth = ChartOfAccountsSettings.MinAccountNumberWidth
+			AccountNumberWidth = AccountNumberWidth.Min.ToInt32(),
+			AccountsReceivable = 1200,
+			AccountsPayable = 2000,
+			RetainedEarnings = 3090
 		}, new AccountDefined {
 			AccountName = account.AccountName.ToString(),
 			AccountNumber = account.AccountNumber.ToInt32(),
@@ -164,7 +197,10 @@ public static class ChartOfAccountsSpecifications {
 
 	public class ReactivatingAnActiveAccount(Account account) : EventSpecification(new Scenario()
 		.Given(ChartOfAccounts.Identifier, new ChartOfAccountsConfigured {
-			AccountNumberWidth = ChartOfAccountsSettings.MinAccountNumberWidth
+			AccountNumberWidth = AccountNumberWidth.Min.ToInt32(),
+			AccountsReceivable = 1200,
+			AccountsPayable = 2000,
+			RetainedEarnings = 3090
 		}, new AccountDefined {
 			AccountName = account.AccountName.ToString(),
 			AccountNumber = account.AccountNumber.ToInt32(),
@@ -178,7 +214,10 @@ public static class ChartOfAccountsSpecifications {
 
 	public class DeactivatingADeactivatedAccount(Account account) : EventSpecification(new Scenario()
 		.Given(ChartOfAccounts.Identifier, new ChartOfAccountsConfigured {
-			AccountNumberWidth = ChartOfAccountsSettings.MinAccountNumberWidth
+			AccountNumberWidth = AccountNumberWidth.Min.ToInt32(),
+			AccountsReceivable = 1200,
+			AccountsPayable = 2000,
+			RetainedEarnings = 3090
 		}, new AccountDefined {
 			AccountName = account.AccountName.ToString(),
 			AccountNumber = account.AccountNumber.ToInt32(),
@@ -213,7 +252,10 @@ public static class ChartOfAccountsSpecifications {
 	public class RenamingAnAccountWhenItWasNotDefinedThrows(Account account, Account secondAccount)
 		: ExceptionSpecification(new Scenario()
 			.Given(ChartOfAccounts.Identifier, new ChartOfAccountsConfigured {
-				AccountNumberWidth = ChartOfAccountsSettings.MinAccountNumberWidth
+				AccountNumberWidth = AccountNumberWidth.Min.ToInt32(),
+				AccountsReceivable = 1200,
+				AccountsPayable = 2000,
+				RetainedEarnings = 3090
 			}, new AccountDefined {
 				AccountName = account.AccountName.ToString(),
 				AccountNumber = account.AccountNumber.ToInt32(),
@@ -238,7 +280,10 @@ public static class ChartOfAccountsSpecifications {
 		Account account,
 		AccountNumber secondAccountNumber) : ExceptionSpecification(new Scenario()
 		.Given(ChartOfAccounts.Identifier, new ChartOfAccountsConfigured {
-			AccountNumberWidth = ChartOfAccountsSettings.MinAccountNumberWidth
+			AccountNumberWidth = AccountNumberWidth.Min.ToInt32(),
+			AccountsReceivable = 1200,
+			AccountsPayable = 2000,
+			RetainedEarnings = 3090
 		}, new AccountDefined {
 			AccountName = account.AccountName.ToString(),
 			AccountNumber = account.AccountNumber.ToInt32(),
@@ -262,7 +307,10 @@ public static class ChartOfAccountsSpecifications {
 		Account account,
 		AccountNumber secondAccountNumber) : ExceptionSpecification(new Scenario()
 		.Given(ChartOfAccounts.Identifier, new ChartOfAccountsConfigured {
-			AccountNumberWidth = ChartOfAccountsSettings.MinAccountNumberWidth
+			AccountNumberWidth = AccountNumberWidth.Min.ToInt32(),
+			AccountsReceivable = 1200,
+			AccountsPayable = 2000,
+			RetainedEarnings = 3090
 		}, new AccountDefined {
 			AccountName = account.AccountName.ToString(),
 			AccountNumber = account.AccountNumber.ToInt32(),

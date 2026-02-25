@@ -9,7 +9,7 @@ public static partial class ServiceCollectionExtensions {
 		public IServiceCollection AddInMemoryProjection<T>(Func<T, object, T> handler)
 			where T : MemoryReadModel, new() =>
 			services.AddSingleton<InMemoryProjection>(new InMemoryProjection<T>(handler));
-		public IServiceCollection AddProjectionHost<T>() where T : class, IHostedService, IProjectionsControl =>
+		public IServiceCollection AddProjectionHost<T>() where T : class, IProjectionsControl =>
 			services
 				.AddSingleton<T>()
 				.AddHostedService<T>(provider => provider.GetRequiredService<T>())

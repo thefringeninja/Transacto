@@ -4,7 +4,7 @@ using NodaTime.Text;
 // ReSharper disable once CheckNamespace
 namespace NodaTime;
 
-internal struct ParseableLocalDate(LocalDate value) : IParsable<ParseableLocalDate> {
+public struct ParseableLocalDate(LocalDate value) : IParsable<ParseableLocalDate> {
 	private readonly LocalDate _value = value;
 
 	public static ParseableLocalDate Parse(string s, IFormatProvider? provider) =>

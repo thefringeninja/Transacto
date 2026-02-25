@@ -12,15 +12,15 @@ public class ChartOfAccounts : AggregateRoot, IAggregateRoot<ChartOfAccounts> {
 
 	private State _state;
 
-	public AssetAccount AccountsReceivable => Get<AssetAccount>(_state.AccountsReceivable);
-	public LiabilityAccount AccountsPayable => Get<LiabilityAccount>(_state.AccountsPayable);
-	public EquityAccount RetainedEarnings => Get<EquityAccount>(_state.RetainedEarnings);
+	public AssetAccount AccountsReceivable => Get<AssetAccount>(_state.Settings.AccountsReceivable);
+	public LiabilityAccount AccountsPayable => Get<LiabilityAccount>(_state.Settings.AccountsPayable);
+	public EquityAccount RetainedEarnings => Get<EquityAccount>(_state.Settings.RetainedEarnings);
 
 	public static ChartOfAccounts Configure(ChartOfAccountsSettings settings) {
 		var chartOfAccounts = Factory();
 
 		chartOfAccounts.Apply(new ChartOfAccountsConfigured {
-			AccountNumberWidth = settings.AccountNumberWidth,
+			AccountNumberWidth = settings.AccountNumberWidth.ToInt32(),
 			AccountsReceivable = settings.AccountsReceivable.ToInt32(),
 			AccountsPayable = settings.AccountsPayable.ToInt32(),
 			RetainedEarnings = settings.RetainedEarnings.ToInt32(),
@@ -41,9 +41,14 @@ public class ChartOfAccounts : AggregateRoot, IAggregateRoot<ChartOfAccounts> {
 	public TAccount Get<TAccount>(AccountNumber accountNumber) where TAccount : Account =>
 		this[accountNumber] as TAccount ?? throw new AccountNotFoundException(accountNumber);
 
+	public TAccount GetActive<TAccount>(AccountNumber accountNumber) where TAccount : Account {
+		MustBeActive(accountNumber);
+		return Get<TAccount>(accountNumber);
+	}
 	protected override void ApplyEvent(object _) => _state = _ switch {
 		ChartOfAccountsConfigured e => _state with {
-			Settings = new ChartOfAccountsSettings(e.AccountNumberWidth,
+			Settings = new ChartOfAccountsSettings(
+				new(e.AccountNumberWidth),
 				new(e.AccountsReceivable),
 				new(e.AccountsPayable),
 				new(e.RetainedEarnings))
@@ -141,21 +146,15 @@ public class ChartOfAccounts : AggregateRoot, IAggregateRoot<ChartOfAccounts> {
 		}
 	}
 
-	private bool IsInactive(AccountNumber accountNumber) =>
-		_state.Accounts.TryGetValue(accountNumber, out var account)
-		&& !account.IsActive;
+	public bool IsInactive(AccountNumber accountNumber) =>
+		!_state.Accounts.TryGetValue(accountNumber, out var account) || !account.IsActive;
 
-	private bool IsActive(AccountNumber accountNumber) =>
-		_state.Accounts.TryGetValue(accountNumber, out var account)
-		&& account.IsActive;
+	public bool IsActive(AccountNumber accountNumber) =>
+		_state.Accounts.TryGetValue(accountNumber, out var account) && account.IsActive;
 
 	private record State {
 		public ImmutableDictionary<AccountNumber, AccountInfo> Accounts { get; init; }
 			= ImmutableDictionary<AccountNumber, AccountInfo>.Empty;
-
-		public AccountNumber AccountsReceivable { get; init; }
-		public AccountNumber AccountsPayable { get; init; }
-		public AccountNumber RetainedEarnings { get; init; }
 
 		public record AccountInfo(Account Account, bool IsActive = true);
 

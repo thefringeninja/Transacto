@@ -15,14 +15,14 @@ public abstract record Account {
 		CashFlowCategory? cashFlowCategory = null, bool affectsCash = false, ChartOfAccountsSettings? settings = null) {
 		var accountNumberString = accountNumber.ToString();
 
-		if (settings is not null && accountNumberString.Length != settings.AccountNumberWidth) {
+		if (settings is not null && accountNumberString.Length != settings.AccountNumberWidth.ToInt32()) {
 			throw new AccountNumberLengthOutOfRangeException(accountNumber, settings.AccountNumberWidth,
 				nameof(accountNumber));
 		}
 
 		var accountType = int.Parse([accountNumberString[0]]);
 
-		var accountNumberWidth = settings?.AccountNumberWidth ?? accountNumberString.Length;
+		var accountNumberWidth = settings?.AccountNumberWidth ?? new AccountNumberWidth(accountNumberString.Length);
 
 		cashFlowCategory ??= CashFlowCategory.None;
 
@@ -36,7 +36,7 @@ public abstract record Account {
 			(6, false) => new OperatingExpenseAccount(accountName, accountNumber, accountNumberWidth, cashFlowCategory),
 			(7, false) => new OtherIncomeAccount(accountName, accountNumber, accountNumberWidth, cashFlowCategory),
 			(8, false) => new OtherExpenseAccount(accountName, accountNumber, accountNumberWidth, cashFlowCategory),
-			(_, true) => throw new AccountCannotBeCashAccountException(accountNumber),
+			(> 0 and < 9, true) => throw new AccountCannotBeCashAccountException(accountNumber),
 			_ => throw new ArgumentOutOfRangeException(nameof(accountNumber))
 		};
 	}
@@ -69,7 +69,7 @@ public abstract record Account {
 	public abstract Account Credit(Money amount);
 	public abstract Account Debit(Money amount);
 
-	protected static void CashFlowCategoryMustBe(AccountNumber accountNumber, CashFlowCategory cashFlowCategory, 
+	protected static void CashFlowCategoryMustBe(AccountNumber accountNumber, CashFlowCategory cashFlowCategory,
 		params Span<CashFlowCategory> expected) {
 		if (cashFlowCategory == CashFlowCategory.None) {
 			return;
@@ -78,17 +78,18 @@ public abstract record Account {
 		if (expected.Contains(cashFlowCategory)) {
 			return;
 		}
-		
+
 		throw new AccountExpectedCashFlowCategoryException(accountNumber, cashFlowCategory, expected.ToArray());
 	}
 
-	protected static Range CreateAccountNumberSpace(int accountType, int accountNumberWidth) {
-		return new Range(
-			Create(accountType, accountNumberWidth),
-			Create(accountType + 1, accountNumberWidth));
+	protected static Range CreateAccountNumberSpace(int accountType, AccountNumberWidth accountNumberWidth) {
+		var start = Create(accountType, accountNumberWidth);
+		var end = Create(accountType + 1, accountNumberWidth);
 
-		int Create(int startDigit, int accountNumberWidth) {
-			int zeroCount = accountNumberWidth - 1;
+		return new Range(start, end);
+
+		int Create(int startDigit, AccountNumberWidth accountNumberWidth) {
+			int zeroCount = accountNumberWidth.ToInt32() - 1;
 			int powerOfTen = 1;
 			for (int i = 0; i < zeroCount; i++) {
 				powerOfTen *= 10;

@@ -1,7 +1,9 @@
+using Transacto.Domain;
+
 namespace Transacto.Messages;
 
 public record ChartOfAccountsConfigured : IFormattableMessage {
-	public required int AccountNumberWidth { get; init; }
+	public int AccountNumberWidth { get; init; } = Domain.AccountNumberWidth.Min.ToInt32();
 	
 	public required int AccountsReceivable { get; init; }
 	

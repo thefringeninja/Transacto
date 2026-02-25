@@ -26,14 +26,12 @@
 	<ItemGroup>
 		<!-- Generator dependencies -->
 		<PackageReference Include="IndexRange" Version="1.1.0" PrivateAssets="all"/>
-		<PackageReference Include="NodaTime" Version="3.1.5" PrivateAssets="all"/>
 		<PackageReference Include="NJsonSchema.CodeGeneration.CSharp" Version="11.5.2" PrivateAssets="all"/>
 	</ItemGroup>
 
 	<PropertyGroup>
 		<GetTargetPathDependsOn>$(GetTargetPathDependsOn);GetDependencyTargetPaths</GetTargetPathDependsOn>
 	</PropertyGroup>
-
 	<Target Name="GetDependencyTargetPaths" AfterTargets="ResolvePackageDependenciesForBuild">
 		<ItemGroup>
 			<TargetPathWithTargetPlatformMoniker Include="@(ResolvedCompileFileDefinitions)" IncludeRuntimeDependency="false" />

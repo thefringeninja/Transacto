@@ -12,6 +12,12 @@ internal static class FixtureExtensions {
 	public static void CustomizeAccountNumber(this IFixture fixture) => fixture.Customize<AccountNumber>(composer =>
 		composer.FromFactory<int>(number => new AccountNumber(number % 7000 + 1000)));
 
+	public static void CustomizeAccountNumberWidth(this IFixture fixture) =>
+		fixture.Customize<AccountNumberWidth>(composer =>
+			composer.FromFactory(() =>
+				new AccountNumberWidth((int)new SpecimenContext(fixture).Resolve(new RangedNumberRequest(typeof(int),
+					AccountNumberWidth.Min.ToInt32(), AccountNumberWidth.Max.ToInt32())))));
+	
 	public static void CustomizeCashFlowCategory(this IFixture fixture) =>
 		fixture.Customize<CashFlowCategory>(composer =>
 			composer.FromFactory<int>(number => CashFlowCategory.All[number % CashFlowCategory.All.Length]));

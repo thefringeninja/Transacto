@@ -2,7 +2,7 @@ using System.Collections.Immutable;
 using System.Text.Json.Serialization;
 using Transacto.Domain;
 using Transacto.Messages;
-using Transacto.Plugins.FinancialStatements;
+
 namespace Transacto.Plugins.FinancialStatements.CashFlow;
 
 public abstract record Report {

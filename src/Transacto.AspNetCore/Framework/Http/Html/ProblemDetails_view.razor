@@ -29,7 +29,7 @@
 			<span>@Model.Instance</span>
 		</section>
 
-		@if (Model.Extensions != null && Model.Extensions.Any()) {
+		@if (Model.Extensions is not null && Model.Extensions.Any()) {
 			<section>
 				<label>Extensions:</label>
 				<ul>

@@ -61,6 +61,8 @@ public partial class SQLiteProjectionHost<T>(
 		}
 	}
 
+	public event Action<object, EventArgs>? CaughtUp;
+
 	public async ValueTask DisposeAsync() {
 		if (_subscription is not { } s) {
 			return;
@@ -127,6 +129,8 @@ public partial class SQLiteProjectionHost<T>(
 						LogCaughtUp(logger, stopwatch.Elapsed);
 
 						_state = _state with { Status = ProjectionStatus.Live };
+						
+						CaughtUp?.Invoke(this, EventArgs.Empty);
 						continue;
 					}
 
@@ -151,14 +155,16 @@ public partial class SQLiteProjectionHost<T>(
 					batch.Add(resolvedEvent);
 
 					LogAddedToBatch(logger);
-					break;
+					continue;
 				}
 				case SubscriptionControlMessage.Flush: {
-					if (batch.Count == 0) {
-						break;
+					var batchCount = batch.Count;	
+					
+					if (batchCount == 0) {
+						continue;
 					}
 
-					LogFlushingBatch(logger, batch.Count);
+					LogFlushingBatch(logger, batchCount);
 
 					stopwatch.Restart();
 					await using var connection = connectionFactory();
@@ -180,9 +186,9 @@ public partial class SQLiteProjectionHost<T>(
 					await UpdateHead(ct);
 
 					stopwatch.Stop();
-					LogFlushedBatch(logger, position, batch.Count, stopwatch.Elapsed);
+					LogFlushedBatch(logger, position, batchCount, stopwatch.Elapsed);
 					
-					break;
+					continue;
 				}
 			}
 		}

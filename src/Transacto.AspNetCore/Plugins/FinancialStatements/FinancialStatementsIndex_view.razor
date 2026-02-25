@@ -3,6 +3,11 @@
 @using Transacto.Views.Shared
 @inherits ComponentBase<FinancialStatementsIndex>
 @inject Formatter Formatter
+@inject ViewContext context
+@{
+	context.Title = "Financial Statements";
+}
+
 <LayoutView Layout="typeof(Layout)">
 	<section>
 		<h1>@Formatter.LongDatePattern.Format(Model.StartOfYear)</h1>

@@ -1,6 +1,7 @@
 using System.Collections.Concurrent;
 using System.Data;
 using System.Diagnostics;
+using System.Runtime.CompilerServices;
 using System.Text.Json;
 using KurrentDB.Client;
 using Npgsql;
@@ -35,12 +36,17 @@ public partial class NpgsqlProjectionHost(
 	public Task Delete(string name) {
 		throw new NotImplementedException();
 	}
+	
+	public event Action<object, EventArgs>? CaughtUp;
 
 	protected override async Task ExecuteAsync(CancellationToken stoppingToken) {
-		if (_projections.Length == 0) {
-			using var sps = logger.BeginScope(_loggingScope);
-			logger.LogInformation("No projections registered.");
-			return;
+		using (var sps = logger.BeginScope(_loggingScope)) {
+			if (_projections.Length == 0) {
+				logger.LogInformation("No projections registered.");
+				return;
+			}
+
+			logger.LogInformation("{count} projections registered.", _projections.Length);
 		}
 
 		await CreateSchema(stoppingToken);
@@ -65,7 +71,7 @@ public partial class NpgsqlProjectionHost(
 
 	private async Task SubscribeInternal(CancellationToken ct) {
 		FromAll checkpoint = FromAll.End;
-		var projectors = await LoadProjectors(ct);
+		var projectors = await LoadProjectors(ct).ToArrayAsync(ct);
 
 		foreach (var projector in projectors) {
 			checkpoint = checkpoint < projector.Checkpoint ? checkpoint : projector.Checkpoint;
@@ -96,8 +102,10 @@ public partial class NpgsqlProjectionHost(
 						case StreamMessage.CaughtUp: {
 							stopwatch.Stop();
 							LogCaughtUp(logger, stopwatch.Elapsed);
+
 							_state.UpdateAll(value => value with { Status = ProjectionStatus.Live });
 
+							CaughtUp?.Invoke(this, EventArgs.Empty);
 							continue;
 						}
 						case StreamMessage.FellBehind: {
@@ -129,11 +137,13 @@ public partial class NpgsqlProjectionHost(
 					continue;
 				}
 				case SubscriptionControlMessage.Flush: {
-					if (batch.Count == 0) {
-						break;
+					var batchCount = batch.Count;	
+	
+					if (batchCount == 0) {
+						continue;
 					}
 
-					LogFlushingBatch(logger, batch.Count);
+					LogFlushingBatch(logger, batchCount);
 
 					stopwatch.Restart();
 
@@ -142,26 +152,31 @@ public partial class NpgsqlProjectionHost(
 							TransactoSerializerOptions.Events) ?? throw new InvalidOperationException())
 						.ToArray();
 
+					var resolvedEvent = batch[0];
+					var position = batch[^1].Event.Position;
+
 					await using var connection = await dataSource.OpenConnectionAsync(ct);
 					await using var transaction = await connection.BeginTransactionAsync(ct);
 					var executor = new ConnectedTransactionalSqlCommandExecutor(transaction);
 
-					var resolvedEvent = batch[0];
-					var position = batch[^1].Event.Position;
+					var fromAll = FromAll.After(resolvedEvent.Event.Position);
+					foreach (var projector in projectors) {
+						if (projector.Checkpoint > fromAll) {
+							continue;
+						}
 
-					await Task.WhenAll(projectors
-						.Where(projection => projection.Checkpoint < FromAll.After(resolvedEvent.Event.Position))
-						.Select(async projector => {
-							var sqlProjector = new AsyncSqlProjector(projector.Resolver, executor);
-							await sqlProjector.ProjectAsync(messages, ct);
-							await projector.Projection.WriteCheckpoint(transaction, position, ct);
-						}));
+						var sqlProjector = new AsyncSqlProjector(projector.Resolver, executor);
+						await sqlProjector.ProjectAsync(messages, ct);
+						await projector.Projection.WriteCheckpoint(transaction, position, ct);
+					}
+
 					await transaction.CommitAsync(ct);
 					batch.Clear();
 
 					stopwatch.Stop();
-					LogFlushedBatch(logger, position, batch.Count, stopwatch.Elapsed);
-					break;
+					LogFlushedBatch(logger, position, batchCount, stopwatch.Elapsed);
+
+					continue;
 				}
 			}
 		}
@@ -178,10 +193,12 @@ public partial class NpgsqlProjectionHost(
 			last);
 	}
 
-	async ValueTask<Projector[]> LoadProjectors(CancellationToken ct) {
+	async IAsyncEnumerable<Projector> LoadProjectors([EnumeratorCancellation] CancellationToken ct) {
 		await using var connection = await dataSource.OpenConnectionAsync(ct);
-		return await Task.WhenAll(Array.ConvertAll(_projections, async projection => new Projector(projection,
-			await projection.ReadCheckpoint(connection, ct))));
+		foreach (var projection in _projections) {
+			var checkpoint = await projection.ReadCheckpoint(connection, ct);
+			yield return new Projector(projection, checkpoint);
+		}
 	}
 
 	private async Task CreateSchema(CancellationToken ct) {
@@ -193,9 +210,10 @@ public partial class NpgsqlProjectionHost(
 		await executor.ExecuteNonQueryAsync(
 			new SqlNonQueryCommand(NpgsqlScripts.CreateCheckpoints, [], CommandType.Text), ct);
 
-		await Task.WhenAll(Array.ConvertAll(_projections,
-			p => new AsyncSqlProjector(Resolve.WhenEqualToHandlerMessageType(p), executor)
-				.ProjectAsync(new CreateSchema(), ct)));
+		foreach (var projection in _projections) {
+			var projector = new AsyncSqlProjector(Resolve.WhenAssignableToHandlerMessageType(projection), executor);
+			await projector.ProjectAsync(new CreateSchema(), ct);
+		}
 
 		await transaction.CommitAsync(ct);
 	}
@@ -237,4 +255,5 @@ public partial class NpgsqlProjectionHost(
 
 	[LoggerMessage(LogLevel.Information, "NpgSqlProjection schema created {projection}")]
 	static partial void LogSchemaCreated(ILogger<NpgsqlProjectionHost> logger, string projection);
+
 }

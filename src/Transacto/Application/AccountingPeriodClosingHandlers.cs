@@ -1,4 +1,5 @@
 using System.Collections.Immutable;
+using NodaTime;
 using Transacto.Domain;
 using Transacto.Messages;
 
@@ -7,8 +8,7 @@ namespace Transacto.Application;
 public class AccountingPeriodClosingHandlers(
 	IGeneralLedgerRepository ledger,
 	IGeneralLedgerEntryRepository generalLedgerEntries,
-	IChartOfAccountsRepository ofAccounts,
-	AccountIsDeactivated accountIsDeactivated) {
+	IChartOfAccountsRepository ofAccounts) {
 	public async ValueTask Handle(AccountingPeriodClosing @event, CancellationToken cancellationToken) {
 		var generalLedgerEntryIdentifiers = ImmutableHashSet.CreateRange(
 			ImmutableArray.CreateRange(@event.GeneralLedgerEntryIds, id => new GeneralLedgerEntryIdentifier(id)));
@@ -16,10 +16,9 @@ public class AccountingPeriodClosingHandlers(
 		var chartOfAccounts = await ofAccounts.Get(cancellationToken);
 
 		var accountingPeriodClosingProcess = new AccountingPeriodClosingProcess(
-			chartOfAccounts, AccountingPeriod.Parse(@event.Period), Time.Parse.LocalDate(@event.ClosingOn),
+			chartOfAccounts, AccountingPeriod.Parse(@event.Period), @event.ClosingOn,
 			generalLedgerEntryIdentifiers, new GeneralLedgerEntryIdentifier(@event.ClosingGeneralLedgerEntryId),
-			chartOfAccounts.RetainedEarnings,
-			accountIsDeactivated);
+			chartOfAccounts.RetainedEarnings);
 
 		foreach (var identifier in generalLedgerEntryIdentifiers) {
 			var generalLedgerEntry = await generalLedgerEntries.Get(identifier, cancellationToken);

@@ -41,7 +41,7 @@ public class LotsOfDataSmokeTests : SmokeTests {
 						new JournalEntry.Item(1040, 200.12m, JournalEntry.Type.Debit)
 					]
 				},
-				CreatedOn = OpenDate.ToDateTimeUnspecified(),
+				CreatedOn = OpenDate,
 				GeneralLedgerEntryId = openingBalanceId,
 				Period = period.ToString()
 			},
@@ -62,8 +62,8 @@ public class LotsOfDataSmokeTests : SmokeTests {
 					await HttpClient.SendCommand("/general-ledger/entries", new PostGeneralLedgerEntry {
 							BusinessTransaction = new Invoice(new Money(100m), new Money(7.95m),
 									Percentage.Of(8.25m), new Money(20m))
-								.ToJournalEntry(),
-							CreatedOn = current.ToDateTimeUnspecified().AddDays(day),
+								.ToJournalEntry(ChartOfAccounts.Factory()),
+							CreatedOn = current.PlusDays(day),
 							GeneralLedgerEntryId = invoiceId,
 							Period = period.ToString()
 						},
@@ -73,8 +73,8 @@ public class LotsOfDataSmokeTests : SmokeTests {
 					var paymentId = Guid.NewGuid();
 					await HttpClient.SendCommand("/general-ledger/entries", new PostGeneralLedgerEntry {
 							BusinessTransaction = new CreditCardPayment(new Money(108.25m + 7.95m), new Money(.5m), Percentage.Of(1.25m))
-								.ToJournalEntry(),
-							CreatedOn = current.ToDateTimeUnspecified().AddDays(day),
+								.ToJournalEntry(ChartOfAccounts.Factory()),
+							CreatedOn = current.PlusDays(day),
 							GeneralLedgerEntryId = paymentId,
 							Period = period.ToString()
 						},
@@ -88,8 +88,7 @@ public class LotsOfDataSmokeTests : SmokeTests {
 			var closingGeneralLedgerEntryId = Guid.NewGuid();
 			await HttpClient.SendCommand("/general-ledger", new BeginClosingAccountingPeriod {
 					ClosingGeneralLedgerEntryId = closingGeneralLedgerEntryId,
-					ClosingOn = new DateTimeOffset(new DateOnly(current.Year, current.Month, daysInMonth),
-						TimeOnly.MinValue, TimeSpan.Zero),
+					ClosingOn = new LocalDate(current.Year, current.Month, daysInMonth),
 					GeneralLedgerEntryIds = [..entryIds],
 					RetainedEarningsAccountNumber = 3030
 				},
@@ -124,12 +123,13 @@ public class LotsOfDataSmokeTests : SmokeTests {
 
 	private class Invoice(Money subtotal, Money shipping, Percentage salesTaxRate, Money inventory)
 		: IBusinessTransaction {
+
 		public GeneralLedgerEntrySequenceNumber? SequenceNumber { get; set; }
 		public static GeneralLedgerEntryNumberPrefix Prefix { get; } = new("invoice");
 		public GeneralLedgerEntryNumber? ReferenceNumber =>
 			SequenceNumber.HasValue ? new GeneralLedgerEntryNumber(Prefix, SequenceNumber.Value) : null;
 
-		public IEnumerable<object> GetTransactionItems() {
+		public IEnumerable<object> GetTransactionItems(ChartOfAccounts chartOfAccounts) {
 			var tax = subtotal * salesTaxRate;
 			var total = subtotal + shipping + tax;
 			yield return new Debit(new AccountNumber(1100), total);
@@ -148,7 +148,7 @@ public class LotsOfDataSmokeTests : SmokeTests {
 		public GeneralLedgerEntryNumber? ReferenceNumber =>
 			SequenceNumber.HasValue ? new GeneralLedgerEntryNumber(Prefix, SequenceNumber.Value) : null;
 
-		public IEnumerable<object> GetTransactionItems() {
+		public IEnumerable<object> GetTransactionItems(ChartOfAccounts chartOfAccounts) {
 			var processingFee = (flatFee + amount * transactionFee).Round(2);
 			var netPayment = amount - processingFee;
 			yield return new Credit(new AccountNumber(1100), amount);

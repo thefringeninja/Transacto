@@ -14,13 +14,12 @@ public class AccountClosingProcessTests {
 		_handler = new AccountingPeriodClosingHandlers(
 			new GeneralLedgerTestRepository(_facts),
 			new GeneralLedgerEntryTestRepository(_facts),
-			new ChartOfAccountsTestRepository(_facts),
-			_ => false);
+			new ChartOfAccountsTestRepository(_facts));
 	}
 
 	[AutoFixtureData]
-	public Task unposted_entry_throws(LocalDate openedOn, GeneralLedgerEntryNumber generalLedgerEntryNumber,
-		EquityAccount retainedEarnings, GeneralLedgerEntryIdentifier generalLedgerEntryIdentifier,
+	public Task unposted_entry_throws(LocalDate openedOn, EquityAccount retainedEarnings,
+		GeneralLedgerEntryIdentifier generalLedgerEntryIdentifier,
 		GeneralLedgerEntryIdentifier closingGeneralLedgerEntryIdentifier) =>
 		new UnpostedEntryThrows(openedOn, retainedEarnings, generalLedgerEntryIdentifier,
 				closingGeneralLedgerEntryIdentifier)
@@ -28,10 +27,11 @@ public class AccountClosingProcessTests {
 
 	[AutoFixtureData]
 	public Task period_closing_started(LocalDate openedOn, EquityAccount retainedEarnings, AssetAccount cashAccount,
-		IncomeAccount incomeAccount, ExpenseAccount expenseAccount,
-		GeneralLedgerEntryIdentifier[] generalLedgerEntryIdentifiers,
+		AssetAccount accountsReceivable, LiabilityAccount accountsPayable, IncomeAccount incomeAccount,
+		ExpenseAccount expenseAccount, GeneralLedgerEntryIdentifier[] generalLedgerEntryIdentifiers,
 		GeneralLedgerEntryIdentifier closingGeneralLedgerEntryIdentifier, Money income, Money expense) =>
-		new PeriodClosingStarted(openedOn, retainedEarnings, cashAccount, incomeAccount, expenseAccount,
-				generalLedgerEntryIdentifiers, closingGeneralLedgerEntryIdentifier, income, expense)
+		new PeriodClosingStarted(openedOn, retainedEarnings, cashAccount, accountsReceivable, accountsPayable,
+				incomeAccount, expenseAccount, generalLedgerEntryIdentifiers, closingGeneralLedgerEntryIdentifier,
+				income, expense)
 			.Assert(_handler, _facts);
 }

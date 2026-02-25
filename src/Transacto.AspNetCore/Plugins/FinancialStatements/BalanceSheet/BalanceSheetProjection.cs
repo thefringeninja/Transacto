@@ -16,7 +16,7 @@ internal class BalanceSheetProjection : SQLiteProjection {
 			Sql.String(e.NewAccountName).ToDbParameter(nameof(e.NewAccountName).Underscore())
 		]);
 		When<GeneralLedgerEntryCreated>(e => {
-			var date = Time.Parse.LocalDateTime(e.CreatedOn).Date.ToDateTimeUnspecified();
+			var date = e.CreatedOn.ToDateTimeUnspecified();
 
 			return [
 				Sql.Date(date).ToDbParameter(nameof(date).Underscore()),

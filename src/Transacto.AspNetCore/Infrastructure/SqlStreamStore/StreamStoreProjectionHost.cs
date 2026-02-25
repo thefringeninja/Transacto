@@ -56,6 +56,7 @@ public partial class StreamStoreProjectionHost(
 					case StreamMessage.CaughtUp:
 						stopwatch.Stop();
 						LogCaughtUp(logger, stopwatch.Elapsed);
+						CaughtUp?.Invoke(this, EventArgs.Empty);
 						break;
 					case StreamMessage.FellBehind:
 
@@ -118,6 +119,8 @@ public partial class StreamStoreProjectionHost(
 	public Task Delete(string name) {
 		throw new NotImplementedException();
 	}
+
+	public event Action<object, EventArgs>? CaughtUp;
 
 	[LoggerMessage(LogLevel.Information,
 		"StreamStoreProjection {StreamStoreProjection} encountered an issue. Will retry after {delay}.")]

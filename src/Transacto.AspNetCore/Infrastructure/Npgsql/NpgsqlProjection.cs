@@ -45,9 +45,9 @@ public abstract class NpgsqlProjection : SqlProjection {
 		CancellationToken cancellationToken) {
 		await using var command = new NpgsqlCommand(NpgsqlScripts.WriteCheckpoint, transaction.Connection, transaction) {
 			Parameters = {
-				unchecked(Sql.BigInt((long)checkpoint.CommitPosition).ToDbParameter("commit")),
-				unchecked(Sql.BigInt((long)checkpoint.PreparePosition).ToDbParameter("prepare")),
-				Sql.NVarChar(GetType().Name, new NpgsqlNVarCharSize(256)).ToDbParameter("projection")
+				unchecked(new NpgsqlParameter<long>("@commit", (long)checkpoint.CommitPosition)),
+				unchecked(new NpgsqlParameter<long>("@prepare", (long)checkpoint.CommitPosition)),
+				new NpgsqlParameter<string>("@projection", GetType().Name)
 			}
 		};
 

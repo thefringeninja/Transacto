@@ -1,7 +1,7 @@
 namespace Transacto.Domain;
 
 public record IncomeAccount : Account {
-	public IncomeAccount(AccountName accountName, AccountNumber accountNumber, int accountNumberWidth,
+	public IncomeAccount(AccountName accountName, AccountNumber accountNumber, AccountNumberWidth accountNumberWidth,
 		CashFlowCategory cashFlowCategory)
 		: this(accountName, accountNumber, cashFlowCategory, CreateAccountNumberSpace(4, accountNumberWidth)) {
 		CashFlowCategoryMustBe(accountNumber, cashFlowCategory, CashFlowCategory.Operations);

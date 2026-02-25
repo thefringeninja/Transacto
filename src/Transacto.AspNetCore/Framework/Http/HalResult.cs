@@ -134,7 +134,7 @@ internal class HalResult<T>(T? resource, Checkpoint checkpoint, IHal hal, HttpSt
 			if (viewType is null) {
 				viewType = typeof(ProblemDetails_view);
 				parameters["Model"] = new ProblemDetails {
-					Detail = $"The view {viewTypeName} was not found and no html could be rendered.",
+					Detail = $"The view {viewTypeName}, {typeof(T).Assembly} was not found and no html could be rendered.",
 					Status = 406
 				};
 			}

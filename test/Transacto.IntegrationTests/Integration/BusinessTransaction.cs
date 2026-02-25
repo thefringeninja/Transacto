@@ -11,7 +11,7 @@ internal class BusinessTransaction : IBusinessTransaction {
 	public GeneralLedgerEntryNumber? ReferenceNumber =>
 		SequenceNumber.HasValue ? new GeneralLedgerEntryNumber(Prefix, SequenceNumber.Value) : null;
 
-	public IEnumerable<object> GetTransactionItems() {
+	public IEnumerable<object> GetTransactionItems(ChartOfAccounts chartOfAccounts) {
 		yield return new Debit(new AccountNumber(1000), new Money(5m));
 		yield return new Credit(new AccountNumber(3000), new Money(5m));
 	}

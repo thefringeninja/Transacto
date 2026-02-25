@@ -7,5 +7,5 @@ public partial record PostGeneralLedgerEntry : IFormattableMessage {
 	[JsonPropertyName("document")] public required IBusinessTransaction BusinessTransaction { get; init; }
 
 	public FormattableString ToFormattableString() => 
-		$"Posting general ledger entry {GeneralLedgerEntryId} in accounting period {Period} on {CreatedOn:O}"; 
+		$"Posting general ledger entry {GeneralLedgerEntryId} in accounting period {Period} on {CreatedOn:yyyy'-'MM'-'dd}"; 
 }

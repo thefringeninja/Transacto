@@ -7,14 +7,12 @@ namespace Transacto.Application;
 public class GeneralLedgerEntryHandlers(
 	IGeneralLedgerRepository ledger,
 	IGeneralLedgerEntryRepository generalLedgerEntries,
-	IChartOfAccountsRepository chartOfAccounts,
-	AccountIsDeactivated accountIsDeactivated) {
+	IChartOfAccountsRepository chartOfAccounts) {
 	public async ValueTask Handle(PostGeneralLedgerEntry command, CancellationToken cancellationToken = default) {
 		var generalLedger = await ledger.Get(cancellationToken);
 
 		var entry = generalLedger.Create(new GeneralLedgerEntryIdentifier(command.GeneralLedgerEntryId),
-			command.BusinessTransaction, await chartOfAccounts.Get(cancellationToken), command.CreatedOn,
-			accountIsDeactivated);
+			command.BusinessTransaction, await chartOfAccounts.Get(cancellationToken), command.CreatedOn);
 
 		entry.Post();
 

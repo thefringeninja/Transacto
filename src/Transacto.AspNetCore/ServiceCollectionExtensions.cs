@@ -26,137 +26,150 @@ using Transacto.Plugins.GeneralLedger;
 namespace Transacto;
 
 public static partial class WebApplicationBuilderExtensions {
-	public static void AddTransacto(this IServiceCollection serviceCollection,
-		KurrentDBClientSettings eventStoreClientSettings,
-		NpgsqlConnectionStringBuilder npgsqlConnectionStringBuilder,
-		Func<Type, SQLiteConnectionStringBuilder> sqliteConnectionStringBuilderFactory,
-		IStreamStore streamStore, params IPlugin[] plugins) {
-		var sharedServices = new ServiceCollection();
+	extension(IServiceCollection services) {
+		public IServiceCollection AddTransacto(KurrentDBClientSettings eventStoreClientSettings,
+			NpgsqlConnectionStringBuilder npgsqlConnectionStringBuilder,
+			Func<Type, SQLiteConnectionStringBuilder> sqliteConnectionStringBuilderFactory,
+			IStreamStore streamStore, params IPlugin[] plugins) {
+			var sharedServices = new ServiceCollection();
 
-		foreach (var descriptor in serviceCollection) {
-			sharedServices.Add(descriptor);
-		}
+			foreach (var descriptor in services) {
+				sharedServices.Add(descriptor);
+			}
 
-		var sharedDependencies = sharedServices
-			.AddSingleton<Interceptor, DebuggerDeadlineInterceptor>()
-			.AddSingleton<KurrentDBClient>(provider => {
-				eventStoreClientSettings.LoggerFactory ??= provider.GetRequiredService<ILoggerFactory>();
-				eventStoreClientSettings.Interceptors ??= provider.GetServices<Interceptor>();
+			var sharedDependencies = sharedServices
+				.AddSingleton<Interceptor, DebuggerDeadlineInterceptor>()
+				.AddSingleton<KurrentDBClient>(provider => {
+					eventStoreClientSettings.LoggerFactory ??= provider.GetRequiredService<ILoggerFactory>();
+					eventStoreClientSettings.Interceptors ??= provider.GetServices<Interceptor>();
 
-				return new KurrentDBClient(eventStoreClientSettings);
-			})
-			.BuildServiceProvider();
+					return new KurrentDBClient(eventStoreClientSettings);
+				})
+				.BuildServiceProvider();
 
-		var eventStore = sharedDependencies.GetRequiredService<KurrentDBClient>();
+			var eventStore = sharedDependencies.GetRequiredService<KurrentDBClient>();
 
-		var allPlugins = plugins.Concat(Standard.Plugins).ToArray();
+			var allPlugins = plugins.Concat(Standard.Plugins).ToArray();
 
-		var linkRelations = new LinkRelationCollection {
-			new LinkRelation("self", "You are here:"),
-			new LinkRelation("index", "Navigation")
-		};
-		foreach (var plugin in allPlugins) {
-			foreach (var linkRelation in plugin.LinkRelations) {
-				linkRelations.Add(linkRelation);
+			var linkRelations = new LinkRelationCollection {
+				new LinkRelation("self", "You are here:"),
+				new LinkRelation("index", "Navigation")
+			};
+			foreach (var plugin in allPlugins) {
+				foreach (var linkRelation in plugin.LinkRelations) {
+					linkRelations.Add(linkRelation);
+				}
+			}
+
+			var npgsqlConnectionStringBuilderCache = new ConcurrentDictionary<string, NpgsqlConnectionStringBuilder>();
+
+			var messageTypeMapper = MessageTypeMapper.Create(Array.ConvertAll(plugins,
+				plugin => new MessageTypeMapper(plugin.MessageTypes)));
+
+			services
+				.AddSingleton(eventStore)
+				.AddSingleton(npgsqlConnectionStringBuilder)
+				.AddSingleton(streamStore)
+				.AddSingleton(messageTypeMapper)
+				.AddSingleton<ISystemClock, SystemClock>()
+				.AddHostedService<EventLogging>()
+				.AddHostedService<PluginInformationLogger>()
+				.AddRouting()
+				.AddTransactoProblemDetails()
+				.AddOutputCache()
+				.AddSingleton<ISettingsRepository, EventStoreSettingsRepository>()
+				.AddRazorComponents().Services
+				.AddScoped<ViewContext>()
+				.AddSingleton(linkRelations)
+				.AddSingleton(GetRootUri)
+				.AddSingleton<IndexRepresentation>()
+				.AddSingleton<GetCurrentPeriodAsync>(provider =>
+					provider.GetRequiredKeyedService<IServiceProvider>(Standard.GeneralLedger)
+						.GetRequiredService<GetCurrentPeriodAsync>());
+
+			_ = allPlugins.Aggregate(services,
+				(services, plugin) => {
+					var loggerFactory = sharedDependencies.GetRequiredService<ILoggerFactory>();
+					var pluginServices =
+						new PluginServiceCollection(plugin, loggerFactory.CreateLogger<PluginServiceCollection>());
+
+					pluginServices
+						.AddSingleton<Func<Type, IGeneralLedgerEntrySequenceNumberGenerator>>(provider => {
+							ConcurrentDictionary<Type, IGeneralLedgerEntrySequenceNumberGenerator> cache = [];
+
+							return type => cache.GetOrAdd(type,
+								static (type, provider) => new EventStoreSequenceNumberGenerator(
+									provider.GetRequiredService<KurrentDBClient>(),
+									provider.GetRequiredService<IMessageTypeMapper>(),
+									type,
+									provider.GetRequiredService<ILoggerFactory>()
+										.CreateLogger<EventStoreSequenceNumberGenerator>()), provider);
+						});
+
+
+					plugin.ConfigureServices(pluginServices);
+
+					pluginServices
+						.AddSingleton(loggerFactory)
+						.AddSingleton<CommandDispatcher>()
+						.AddSingleton(eventStore)
+						.AddSingleton(streamStore)
+						.AddSingleton(messageTypeMapper)
+						.AddSingleton<IPluginDescriptor>(plugin)
+						.AddSingleton<ISystemClock, SystemClock>()
+						.AddSingleton<InMemoryProjectionDatabase>()
+						.AddProjectionHost<InMemoryProjectionHost>()
+						.AddProjectionHost<NpgsqlProjectionHost>()
+						.AddProjectionHost<StreamStoreProjectionHost>()
+						.AddSingleton<ProjectionsController>()
+						.AddSingleton(sqliteConnectionStringBuilderFactory)
+						.AddSingleton(NpgsqlDataSourceBuilderFactory(plugin, loggerFactory).Build())
+						.AddSingleton(sharedDependencies.GetRequiredService<IConfiguration>())
+						.AddSingleton(sharedDependencies.GetRequiredService<IWebHostEnvironment>())
+						.AddSingleton(linkRelations)
+						.AddTransactoProblemDetails()
+						.AddOutputCache(options => options.AddBasePolicy(policy => policy.Cache()))
+						.Configure<WebEncoderOptions>(options =>
+							options.TextEncoderSettings = new TextEncoderSettings(UnicodeRanges.All))
+						.AddRazorComponents().Services
+						.AddScoped<ViewContext>()
+						.AddSingleton(GetPluginRootUri)
+						.AddSingleton<GetFormatter>(provider => () => provider
+							.GetRequiredService<InMemoryProjectionDatabase>()
+							.Get<FormatSettingsReadModel>() switch {
+							{ HasValue: true } readModel => readModel.Value.Formatter,
+							_ => Formatter.Default
+						})
+						.AddScoped<Formatter>(provider => provider.GetRequiredService<GetFormatter>()())
+						.AddInMemoryProjection<FormatSettingsReadModel>((readModel, e) => e switch {
+							Formatter settings => readModel with { Formatter = settings },
+							_ => readModel
+						});
+
+					var pluginProvider = pluginServices.BuildServiceProvider();
+
+					return services
+							.AddSingleton<IPluginDescriptor>(plugin)
+							.AddKeyedSingleton<IServiceProvider>(plugin, pluginProvider)
+							.AddSingleton<IHostedService>(new HostedServicesBackgroundService(plugin, pluginProvider))
+						;
+				});
+			return services;
+
+			NpgsqlDataSourceBuilder NpgsqlDataSourceBuilderFactory(IPluginDescriptor plugin,
+				ILoggerFactory loggerFactory) {
+				var cs = npgsqlConnectionStringBuilderCache.GetOrAdd(plugin.Name, static (pluginName, cs) =>
+					new NpgsqlConnectionStringBuilder(cs.ConnectionString), npgsqlConnectionStringBuilder);
+				return new NpgsqlDataSourceBuilder(cs.ConnectionString)
+					.UseLoggerFactory(loggerFactory)
+					.UseNodaTime();
 			}
 		}
 
-		var npgsqlConnectionStringBuilderCache = new ConcurrentDictionary<string, NpgsqlConnectionStringBuilder>();
-
-		var messageTypeMapper = MessageTypeMapper.Create(Array.ConvertAll(plugins,
-			plugin => new MessageTypeMapper(plugin.MessageTypes)));
-
-		serviceCollection
-			.AddSingleton(eventStore)
-			.AddSingleton(npgsqlConnectionStringBuilder)
-			.AddSingleton(streamStore)
-			.AddSingleton(messageTypeMapper)
-			.AddSingleton<ISystemClock, SystemClock>()
-			.AddHostedService<EventLogging>()
-			.AddRouting()
-			.AddOutputCache()
-			.AddSingleton<ISettingsRepository, EventStoreSettingsRepository>()
-			.AddRazorComponents().Services
-			.AddScoped<ViewContext>()
-			.AddSingleton(linkRelations)
-			.AddSingleton(GetRootUri)
-			.AddSingleton<IndexRepresentation>()
-			.AddSingleton<GetCurrentPeriodAsync>(provider =>
-				provider.GetRequiredKeyedService<IServiceProvider>(Standard.GeneralLedger)
-					.GetRequiredService<GetCurrentPeriodAsync>());
-
-		_ = allPlugins.Aggregate(serviceCollection,
-			(services, plugin) => {
-				var loggerFactory = sharedDependencies.GetRequiredService<ILoggerFactory>();
-				var pluginServices =
-					new PluginServiceCollection(plugin, loggerFactory.CreateLogger<PluginServiceCollection>());
-
-				pluginServices
-					.AddSingleton<Func<Type, IGeneralLedgerEntrySequenceNumberGenerator>>(provider => {
-						ConcurrentDictionary<Type, IGeneralLedgerEntrySequenceNumberGenerator> cache = [];
-
-						return type => cache.GetOrAdd(type,
-							static (type, provider) => new EventStoreSequenceNumberGenerator(
-								provider.GetRequiredService<KurrentDBClient>(),
-								provider.GetRequiredService<IMessageTypeMapper>(),
-								type,
-								provider.GetRequiredService<ILoggerFactory>()
-									.CreateLogger<EventStoreSequenceNumberGenerator>()), provider);
-					});
-
-
-				plugin.ConfigureServices(pluginServices);
-
-				pluginServices
-					.AddSingleton(loggerFactory)
-					.AddSingleton<CommandDispatcher>()
-					.AddSingleton(eventStore)
-					.AddSingleton(streamStore)
-					.AddSingleton(messageTypeMapper)
-					.AddSingleton<IPluginDescriptor>(plugin)
-					.AddSingleton<ISystemClock, SystemClock>()
-					.AddSingleton<InMemoryProjectionDatabase>()
-					.AddProjectionHost<InMemoryProjectionHost>()
-					.AddProjectionHost<NpgsqlProjectionHost>()
-					.AddProjectionHost<StreamStoreProjectionHost>()
-					.AddSingleton<ProjectionsController>()
-					.AddSingleton(sqliteConnectionStringBuilderFactory)
-					.AddSingleton(NpgsqlDataSourceBuilderFactory(plugin).Build())
-					.AddSingleton(sharedDependencies.GetRequiredService<IConfiguration>())
-					.AddSingleton(sharedDependencies.GetRequiredService<IWebHostEnvironment>())
-					.AddSingleton(linkRelations)
-					.AddOutputCache(options => options.AddBasePolicy(policy => policy.Cache()))
-					.Configure<WebEncoderOptions>(options =>
-						options.TextEncoderSettings = new TextEncoderSettings(UnicodeRanges.All))
-					.AddRazorComponents().Services
-					.AddScoped<ViewContext>()
-					.AddSingleton(GetPluginRootUri)
-					.AddSingleton<GetFormatter>(provider => () => provider
-						.GetRequiredService<InMemoryProjectionDatabase>()
-						.Get<FormatSettingsReadModel>() switch {
-						{ HasValue: true } readModel => readModel.Value.Formatter,
-						_ => Formatter.Default
-					})
-					.AddScoped<Formatter>(provider => provider.GetRequiredService<GetFormatter>()())
-					.AddInMemoryProjection<FormatSettingsReadModel>((readModel, e) => e switch {
-						Formatter settings => readModel with { Formatter = settings },
-						_ => readModel
-					});
-
-				var pluginProvider = pluginServices.BuildServiceProvider();
-
-				return services
-						.AddKeyedSingleton<IServiceProvider>(plugin, pluginProvider)
-						.AddSingleton<IHostedService>(new HostedServicesBackgroundService(plugin, pluginProvider))
-					;
+		private IServiceCollection AddTransactoProblemDetails() => services
+			.Configure<RouteHandlerOptions>(options => {
+				options.ThrowOnBadRequest = false;
 			});
-		return;
-
-		NpgsqlDataSourceBuilder NpgsqlDataSourceBuilderFactory(IPluginDescriptor plugin) {
-			var cs = npgsqlConnectionStringBuilderCache.GetOrAdd(plugin.Name, static (pluginName, cs) =>
-				new NpgsqlConnectionStringBuilder(cs.ConnectionString), npgsqlConnectionStringBuilder);
-			return new NpgsqlDataSourceBuilder(cs.ConnectionString);
-		}
 	}
 
 	extension(WebApplicationBuilder) {
@@ -188,6 +201,20 @@ public static partial class WebApplicationBuilderExtensions {
 
 		public async Task StopAsync(CancellationToken cancellationToken) =>
 			await Task.WhenAll(Array.ConvertAll(_hostedServices, (service => service.StopAsync(cancellationToken))));
+	}
+
+	private class PluginInformationLogger(
+		IEnumerable<IPluginDescriptor> plugins,
+		ILogger<PluginInformationLogger> logger) : BackgroundService {
+		protected override Task ExecuteAsync(CancellationToken stoppingToken) {
+			foreach (var plugin in plugins) {
+				logger.LogInformation("Plugin {plugin} configured with the following message types: {messageTypes}",
+					plugin.Name,
+					plugin.MessageTypes.Select(t => t.Name).ToArray());
+			}
+
+			return Task.CompletedTask;
+		}
 	}
 
 	private partial class PluginServiceCollection(IPluginDescriptor plugin, ILogger<PluginServiceCollection> logger)

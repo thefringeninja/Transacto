@@ -5,15 +5,15 @@ using Transacto.Integration;
 namespace Transacto.Smoke;
 
 public abstract class SmokeTests : IntegrationTests {
-	protected LocalDateTime OpenDate { get; }
+	protected LocalDate OpenDate { get; }
 	protected AccountingPeriod Period { get; }
 
 	protected Account[] Accounts { get; private set; } = [];
 
 
 	protected SmokeTests(TextWriter logOutput) : base(logOutput) {
-		OpenDate = new LocalDate(2025, 1, 1).AtMidnight();
-		Period = AccountingPeriod.Open(OpenDate.Date);
+		OpenDate = new LocalDate(2025, 1, 1);
+		Period = AccountingPeriod.Open(OpenDate);
 	}
 
 	public async Task InitializeAsync() {

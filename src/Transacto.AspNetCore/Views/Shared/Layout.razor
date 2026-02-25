@@ -277,7 +277,7 @@
 
 @code {
 
-	private static Dictionary<string, object?> linkParameters(Hallo.Link link) => new() { ["Model"] = link };
+	private static Dictionary<string, object> linkParameters(Hallo.Link link) => new() { ["Model"] = link };
 
 	private Dictionary<string, IReadOnlyList<Hallo.Link>> LinksByRel {
 		get => field ??= context._links

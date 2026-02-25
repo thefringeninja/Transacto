@@ -9,7 +9,10 @@ public abstract class NpgsqlScripts {
 	private readonly ConcurrentDictionary<string, string> _scripts
 		= new();
 
-	public string this[Type eventType] => GetScript(eventType.Name);
+	public string this[Type eventType] {
+		get => GetScript(eventType.Name);
+		set => _scripts[eventType.Name] = value;
+	}
 
 	public const string CreateCheckpoints =
 		"""

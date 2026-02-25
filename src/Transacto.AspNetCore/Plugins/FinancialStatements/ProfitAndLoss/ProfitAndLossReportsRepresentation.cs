@@ -1,8 +1,6 @@
 using Hallo;
 using NodaTime;
-using Transacto.Domain;
 using Transacto.Framework.Http.Html;
-using Transacto.Plugins.GeneralLedger;
 
 namespace Transacto.Plugins.FinancialStatements.ProfitAndLoss;
 

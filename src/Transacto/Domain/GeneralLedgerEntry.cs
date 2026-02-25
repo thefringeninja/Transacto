@@ -35,21 +35,21 @@ public class GeneralLedgerEntry : AggregateRoot, IAggregateRoot<GeneralLedgerEnt
 
 		Apply(new GeneralLedgerEntryCreated {
 			GeneralLedgerEntryId = identifier.ToGuid(),
-			CreatedOn = Time.Format.LocalDate(createdOn),
+			CreatedOn = createdOn,
 			Period = accountingPeriod.ToString()
 		});
 	}
 
 	internal GeneralLedgerEntry(GeneralLedgerEntryIdentifier identifier, IBusinessTransaction businessTransaction,
-		ChartOfAccounts chartOfAccounts, AccountingPeriod accountingPeriod, LocalDate createdOn,
-		AccountIsDeactivated accountIsDeactivated) : this(identifier, accountingPeriod, createdOn) {
+		ChartOfAccounts chartOfAccounts, AccountingPeriod accountingPeriod, LocalDate createdOn) : this(identifier,
+		accountingPeriod, createdOn) {
 		foreach (var item in businessTransaction.GetTransactionItems(chartOfAccounts)) {
 			switch (item) {
 				case Credit credit:
-					ApplyCredit(credit, accountIsDeactivated);
+					ApplyCredit(credit, chartOfAccounts.IsInactive);
 					break;
 				case Debit debit:
-					ApplyDebit(debit, accountIsDeactivated);
+					ApplyDebit(debit, chartOfAccounts.IsInactive);
 					break;
 			}
 		}

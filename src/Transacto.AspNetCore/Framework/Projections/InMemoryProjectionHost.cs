@@ -39,6 +39,8 @@ public partial class InMemoryProjectionHost(
 		await subscription.DisposeAsync();
 	}
 
+	public event Action<object, EventArgs>? CaughtUp;
+
 
 	protected override async Task ExecuteAsync(CancellationToken stoppingToken) {
 		try {
@@ -83,7 +85,10 @@ public partial class InMemoryProjectionHost(
 				case StreamMessage.CaughtUp:
 					stopwatch.Stop();
 					LogCaughtUp(logger, stopwatch.Elapsed);
+
 					_state.UpdateAll(value => value with { Status = ProjectionStatus.Live });
+
+					CaughtUp?.Invoke(this, EventArgs.Empty);
 					break;
 				case StreamMessage.FellBehind:
 					await FellBehind(ct);

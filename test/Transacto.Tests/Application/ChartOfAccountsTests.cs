@@ -14,19 +14,13 @@ public class ChartOfAccountsTests {
 	}
 
 	[AutoFixtureData]
-	public Task configuring_the_chart_of_accounts(int accountNumberWidth) =>
-		new ConfiguringTheChartOfAccounts(
-				accountNumberWidth %
-				(ChartOfAccountsSettings.MaxAccountNumberWidth - ChartOfAccountsSettings.MinAccountNumberWidth + 1) +
-				ChartOfAccountsSettings.MinAccountNumberWidth)
+	public Task configuring_the_chart_of_accounts(AccountNumberWidth accountNumberWidth) =>
+		new ConfiguringTheChartOfAccounts(accountNumberWidth)
 			.Assert(_handler, _facts);
 
 	[AutoFixtureData]
-	public Task configuring_the_chart_of_accounts_more_than_once(int accountNumberWidth) =>
-		new ConfiguringTheChartOfAccountsMoreThanOnce(
-				accountNumberWidth %
-				(ChartOfAccountsSettings.MaxAccountNumberWidth - ChartOfAccountsSettings.MinAccountNumberWidth + 1) +
-				ChartOfAccountsSettings.MinAccountNumberWidth)
+	public Task configuring_the_chart_of_accounts_more_than_once(AccountNumberWidth accountNumberWidth) =>
+		new ConfiguringTheChartOfAccountsMoreThanOnce(accountNumberWidth)
 			.Assert(_handler, _facts);
 
 	[AutoFixtureData]

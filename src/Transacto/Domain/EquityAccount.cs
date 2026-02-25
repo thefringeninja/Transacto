@@ -1,7 +1,7 @@
 namespace Transacto.Domain;
 
 public record EquityAccount : Account {
-	public EquityAccount(AccountName accountName, AccountNumber accountNumber, int accountNumberWidth,
+	public EquityAccount(AccountName accountName, AccountNumber accountNumber, AccountNumberWidth accountNumberWidth,
 		CashFlowCategory cashFlowCategory) : base(accountName, accountNumber, cashFlowCategory,
 		accountNumberSpaces: CreateAccountNumberSpace(3, accountNumberWidth)) {
 		CashFlowCategoryMustBe(accountNumber, cashFlowCategory, CashFlowCategory.Finance);

@@ -1,4 +1,5 @@
 using NodaTime;
+using NodaTime.Text;
 using Transacto.Messages;
 
 namespace Transacto.Domain;
@@ -10,7 +11,7 @@ public class GeneralLedgerEntryNotInPeriodException(
 	: Exception(FormatMessage(identifier, createdOn, accountingPeriod).ToString()), IFormattableMessage {
 	private static FormattableString FormatMessage(GeneralLedgerEntryIdentifier identifier, LocalDate createdOn,
 		AccountingPeriod accountingPeriod) =>
-		$"General ledger entry {identifier.ToString()} had a creation date of {createdOn:O}, but the current period is {accountingPeriod.ToString()}";
+		$"General ledger entry {identifier.ToString()} had a creation date of {LocalDatePattern.Iso.Format(createdOn)}, but the current period is {accountingPeriod.ToString()}";
 
 	public GeneralLedgerEntryIdentifier Identifier { get; } = identifier;
 	public LocalDate CreatedOn { get; } = createdOn;

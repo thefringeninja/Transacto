@@ -3,12 +3,9 @@ using NodaTime;
 namespace Transacto.Domain;
 
 public class ProfitAndLoss(AccountingPeriod accountingPeriod, ChartOfAccounts chartOfAccounts) {
-	private static bool IgnoreInactiveAccount(AccountNumber _) => false;
-
 	private readonly AccountBalanceCollection _current = new();
 
-	public GeneralLedgerEntry GetClosingEntry(AccountIsDeactivated accountIsDeactivated,
-		EquityAccount retainedEarningsAccount, LocalDate closedOn,
+	public GeneralLedgerEntry GetClosingEntry(EquityAccount retainedEarningsAccount, LocalDate closedOn,
 		GeneralLedgerEntryIdentifier closingGeneralLedgerEntryIdentifier) {
 		var entry = new GeneralLedgerEntry(closingGeneralLedgerEntryIdentifier,
 			accountingPeriod,
@@ -18,18 +15,18 @@ public class ProfitAndLoss(AccountingPeriod accountingPeriod, ChartOfAccounts ch
 			switch (account) {
 				case IncomeAccount: {
 					if (account.Balance > Money.Zero) {
-						entry.ApplyDebit(new(account.AccountNumber, account.Balance), IgnoreInactiveAccount);
+						entry.ApplyDebit(new(account.AccountNumber, account.Balance), AccountIsDeactivated.Ignore);
 					} else {
-						entry.ApplyCredit(new(account.AccountNumber, -account.Balance), IgnoreInactiveAccount);
+						entry.ApplyCredit(new(account.AccountNumber, -account.Balance), AccountIsDeactivated.Ignore);
 					}
 
 					continue;
 				}
 				case ExpenseAccount:
 					if (account.Balance > Money.Zero) {
-						entry.ApplyCredit(new(account.AccountNumber, account.Balance), IgnoreInactiveAccount);
+						entry.ApplyCredit(new(account.AccountNumber, account.Balance), AccountIsDeactivated.Ignore);
 					} else {
-						entry.ApplyDebit(new(account.AccountNumber, -account.Balance), IgnoreInactiveAccount);
+						entry.ApplyDebit(new(account.AccountNumber, -account.Balance), AccountIsDeactivated.Ignore);
 					}
 
 					continue;
@@ -41,9 +38,9 @@ public class ProfitAndLoss(AccountingPeriod accountingPeriod, ChartOfAccounts ch
 		var retainedEarnings = entry.Debits.Sum() - entry.Credits.Sum();
 
 		if (retainedEarnings < Money.Zero) {
-			entry.ApplyDebit(new(retainedEarningsAccount.AccountNumber, -retainedEarnings), accountIsDeactivated);
+			entry.ApplyDebit(new(retainedEarningsAccount.AccountNumber, -retainedEarnings), AccountIsDeactivated.Ignore);
 		} else if (retainedEarnings > Money.Zero) {
-			entry.ApplyCredit(new(retainedEarningsAccount.AccountNumber, retainedEarnings), accountIsDeactivated);
+			entry.ApplyCredit(new(retainedEarningsAccount.AccountNumber, retainedEarnings), AccountIsDeactivated.Ignore);
 		}
 
 		entry.Post();

@@ -79,26 +79,7 @@ internal class GeneralLedger : IPlugin {
 		.AddCommandHandlerModule<GeneralLedgerEntryModule>()
 		.AddCommandHandlerModule<GeneralLedgerModule>()
 		.AddBusinessTransaction<JournalEntry>()
-		.AddSingleton<AccountIsDeactivated>(provider => accountNumber => provider
-			.GetRequiredService<InMemoryProjectionDatabase>()
-			.Get<DeactivatedAccounts>() switch {
-			{ HasValue: true } optional => optional.Value.AccountNumbers.Contains(
-				accountNumber.ToInt32()),
-			_ => false
-		})
-		.AddSingleton<GetPrefix>(_ => {
-			var cache = new ConcurrentDictionary<Type, string>();
-			return t => new GeneralLedgerEntryNumberPrefix(
-				cache.GetOrAdd(t.GetType(), type => char.ToLower(type.Name[0]) + type.Name[1..]));
-		})
 		.AddSingleton<IGeneralLedgerEntryRepository, GeneralLedgerEntryEventStoreRepository>()
-		.AddInMemoryProjection<DeactivatedAccounts>((readModel, e) => readModel with {
-			AccountNumbers = e switch {
-				AccountDeactivated d => readModel.AccountNumbers.Add(d.AccountNumber),
-				AccountReactivated r => readModel.AccountNumbers.Remove(r.AccountNumber),
-				_ => readModel.AccountNumbers
-			}
-		})
 		.AddSQLiteProjection<LedgerEntryIndex.LedgerEntryIndexProjection>()
 		.AddSingleton<LedgerEntryIndex.SearchJournalEntriesAsync>(provider => {
 			var connectionFactory =
@@ -151,7 +132,7 @@ internal class GeneralLedger : IPlugin {
 		})
 		.AddInMemoryProjection<CurrentPeriod>((readModel, e) => readModel with {
 			Period = e switch {
-				GeneralLedgerOpened o => o.OpenedOn[..6],
+				GeneralLedgerOpened o => AccountingPeriod.Open(o.OpenedOn).ToString(),
 				AccountingPeriodClosed c => AccountingPeriod.Parse(c.Period).Next().ToString(),
 				_ => readModel.Period
 			}

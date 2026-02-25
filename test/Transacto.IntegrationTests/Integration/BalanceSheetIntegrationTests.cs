@@ -15,10 +15,10 @@ namespace Transacto.Integration;
 public class BalanceSheetIntegrationTests(TextWriter textWriter) : IntegrationTests(textWriter) {
 	[AutoFixtureData(1)]
 	public async Task when_an_entry_is_posted(
-		GeneralLedgerEntryIdentifier generalLedgerEntryIdentifier, LocalDateTime createdOn, Money subtotal,
+		GeneralLedgerEntryIdentifier generalLedgerEntryIdentifier, LocalDate createdOn, Money subtotal,
 		Money shipping, Money tax, Money inventory) {
-		var period = AccountingPeriod.Open(createdOn.Date);
-		var thru = createdOn.Date.PlusDays(1);
+		var period = AccountingPeriod.Open(createdOn);
+		var thru = createdOn.PlusDays(1);
 		var accounts = await OpenBooks(createdOn)
 			.ToDictionaryAsync(a => a.AccountNumber.ToInt32(), a => a.AccountName.ToString());
 
@@ -26,8 +26,8 @@ public class BalanceSheetIntegrationTests(TextWriter textWriter) : IntegrationTe
 
 		var command = new PostGeneralLedgerEntry {
 			GeneralLedgerEntryId = generalLedgerEntryIdentifier.ToGuid(),
-			CreatedOn = createdOn.ToDateTimeUnspecified(),
-			BusinessTransaction = invoice.ToJournalEntry(),
+			CreatedOn = createdOn,
+			BusinessTransaction = invoice.ToJournalEntry(ChartOfAccounts.Factory()),
 			Period = period.ToString()
 		};
 
@@ -64,7 +64,7 @@ public class BalanceSheetIntegrationTests(TextWriter textWriter) : IntegrationTe
 		public GeneralLedgerEntryNumber? ReferenceNumber =>
 			SequenceNumber.HasValue ? new GeneralLedgerEntryNumber(Prefix, SequenceNumber.Value) : null;
 
-		public IEnumerable<object> GetTransactionItems() {
+		public IEnumerable<object> GetTransactionItems(ChartOfAccounts chartOfAccounts) {
 			var total = subtotal + shipping + tax;
 			yield return new Debit(new AccountNumber(1100), total);
 			yield return new Credit(new AccountNumber(1220), inventory);

@@ -8,8 +8,7 @@ public class AccountingPeriodClosingProcess(
 	LocalDate closingOn,
 	IEnumerable<GeneralLedgerEntryIdentifier> generalLedgerEntryIdentifiers,
 	GeneralLedgerEntryIdentifier closingGeneralLedgerEntryIdentifier,
-	EquityAccount retainedEarningsAccount,
-	AccountIsDeactivated accountIsDeactivated) {
+	EquityAccount retainedEarningsAccount) {
 	private readonly HashSet<GeneralLedgerEntryIdentifier> _generalLedgerEntryIdentifiers =
 		[..generalLedgerEntryIdentifiers];
 
@@ -31,7 +30,7 @@ public class AccountingPeriodClosingProcess(
 
 		TrialBalance.MustBeInBalance();
 
-		return ProfitAndLoss.GetClosingEntry(accountIsDeactivated, retainedEarningsAccount,
+		return ProfitAndLoss.GetClosingEntry(retainedEarningsAccount,
 			closingOn, closingGeneralLedgerEntryIdentifier);
 	}
 

@@ -11,6 +11,8 @@ partial class ScenarioFixture {
 		this.CustomizeAccountName();
 
 		this.CustomizeAccountNumber();
+		
+		this.CustomizeAccountNumberWidth();
 
 		this.CustomizeAccount();
 

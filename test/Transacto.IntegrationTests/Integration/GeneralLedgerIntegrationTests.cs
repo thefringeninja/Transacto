@@ -13,12 +13,12 @@ using Transacto.Plugins.GeneralLedger.LedgerEntryIndex;
 namespace Transacto.Integration;
 
 public class GeneralLedgerIntegrationTests : IntegrationTests {
-	private readonly LocalDateTime _openedOn;
+	private readonly LocalDate _openedOn;
 	private string Period { get; }
 
 	public GeneralLedgerIntegrationTests(TextWriter logOutput) : base(logOutput) {
-		_openedOn = LocalDateTime.FromDateTime(DateTime.Now);
-		Period = LocalDateTimePattern.Create("yyyyMM", CultureInfo.InvariantCulture).Format(_openedOn);
+		_openedOn = LocalDate.FromDateTime(DateTime.Now);
+		Period = LocalDatePattern.Create("yyyyMM", CultureInfo.InvariantCulture).Format(_openedOn);
 	}
 
 	public async Task period() {
@@ -26,7 +26,7 @@ public class GeneralLedgerIntegrationTests : IntegrationTests {
 		Assert.Equal(HttpStatusCode.NotFound, response1.StatusCode);
 
 		var position = await HttpClient.SendCommand("/general-ledger", new OpenGeneralLedger {
-			OpenedOn = _openedOn.ToDateTimeUnspecified()
+			OpenedOn = _openedOn
 		}, TransactoHttpSerializerOptions.Commands);
 
 		using var response2 = await HttpClient.ConditionalGetAsync("/general-ledger/period", position);
@@ -45,10 +45,10 @@ public class GeneralLedgerIntegrationTests : IntegrationTests {
 		for (var i = 0; i < 10; i++) {
 			checkpoint = await HttpClient.SendCommand("/general-ledger/entries",
 				new PostGeneralLedgerEntry {
-					BusinessTransaction = new BusinessTransaction().ToJournalEntry(),
+					BusinessTransaction = new BusinessTransaction().ToJournalEntry(ChartOfAccounts.Factory()),
 					GeneralLedgerEntryId = generalLedgerEntryIds[i],
 					Period = Period,
-					CreatedOn = _openedOn.ToDateTimeUnspecified()
+					CreatedOn = _openedOn
 				},
 				TransactoHttpSerializerOptions.Commands);
 		}
@@ -68,7 +68,7 @@ public class GeneralLedgerIntegrationTests : IntegrationTests {
 		public GeneralLedgerEntryNumber? ReferenceNumber =>
 			SequenceNumber.HasValue ? new GeneralLedgerEntryNumber(Prefix, SequenceNumber.Value) : null;
 
-		public IEnumerable<object> GetTransactionItems() {
+		public IEnumerable<object> GetTransactionItems(ChartOfAccounts chartOfAccounts) {
 			yield return new Debit(new AccountNumber(1000), new Money(10m));
 			yield return new Credit(new AccountNumber(1200), new Money(10m));
 		}

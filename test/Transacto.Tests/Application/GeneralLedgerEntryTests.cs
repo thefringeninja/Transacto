@@ -24,7 +24,8 @@ public class GeneralLedgerEntryTests {
 		LiabilityAccount liabilityAccount, Money amount) => new PostingAnEntry(generalLedgerEntryIdentifier,
 			sequenceNumber, openedOn, assetAccount, liabilityAccount, amount)
 		.Assert(new GeneralLedgerEntryHandlers(new GeneralLedgerTestRepository(_facts),
-			new GeneralLedgerEntryTestRepository(_facts), _ => false), _facts);
+				new GeneralLedgerEntryTestRepository(_facts), new ChartOfAccountsTestRepository(_facts)),
+			_facts);
 
 	[AutoFixtureData]
 	public Task entry_date_not_in_current_or_next_period_throws(
@@ -32,7 +33,7 @@ public class GeneralLedgerEntryTests {
 		LocalDate openedOn) =>
 		new EntryDateNotInCurrentOrNextPeriodThrows(generalLedgerEntryIdentifier, sequenceNumber, openedOn)
 			.Assert(new GeneralLedgerEntryHandlers(new GeneralLedgerTestRepository(_facts),
-				new GeneralLedgerEntryTestRepository(_facts), _ => false), _facts);
+				new GeneralLedgerEntryTestRepository(_facts), new ChartOfAccountsTestRepository(_facts)), _facts);
 
 	[AutoFixtureData]
 	public Task applying_debit_to_non_existing_account_throws(
@@ -41,7 +42,7 @@ public class GeneralLedgerEntryTests {
 		new ApplyingDebitToNonExistingAccountThrows(generalLedgerEntryIdentifier, referenceNumber, openedOn,
 				accountNumber)
 			.Assert(new GeneralLedgerEntryHandlers(new GeneralLedgerTestRepository(_facts),
-				new GeneralLedgerEntryTestRepository(_facts), _ => true), _facts);
+				new GeneralLedgerEntryTestRepository(_facts), new ChartOfAccountsTestRepository(_facts)), _facts);
 
 	[AutoFixtureData]
 	public Task applying_credit_to_non_existing_account_throws(
@@ -49,14 +50,15 @@ public class GeneralLedgerEntryTests {
 		GeneralLedgerEntrySequenceNumber sequenceNumber, LocalDate openedOn, AccountNumber accountNumber) =>
 		new ApplyingCreditToNonExistingAccountThrows(generalLedgerEntryIdentifier, sequenceNumber, openedOn,
 			accountNumber).Assert(new GeneralLedgerEntryHandlers(new GeneralLedgerTestRepository(_facts),
-			new GeneralLedgerEntryTestRepository(_facts), _ => true), _facts);
+			new GeneralLedgerEntryTestRepository(_facts), new ChartOfAccountsTestRepository(_facts)), _facts);
 
 	[AutoFixtureData]
 	public Task entry_not_in_balance_throws(GeneralLedgerEntryIdentifier generalLedgerEntryIdentifier,
 		GeneralLedgerEntrySequenceNumber sequenceNumber, LocalDate openedOn, AccountName accountName,
 		AccountNumber accountNumber) =>
-		new EntryNotInBalanceThrows(generalLedgerEntryIdentifier, sequenceNumber, openedOn, Account.For(accountNumber, accountName))
+		new EntryNotInBalanceThrows(generalLedgerEntryIdentifier, sequenceNumber, openedOn,
+				Account.For(accountNumber, accountName))
 			.Assert(
 				new GeneralLedgerEntryHandlers(new GeneralLedgerTestRepository(_facts),
-					new GeneralLedgerEntryTestRepository(_facts), _ => false), _facts);
+					new GeneralLedgerEntryTestRepository(_facts), new ChartOfAccountsTestRepository(_facts)), _facts);
 }

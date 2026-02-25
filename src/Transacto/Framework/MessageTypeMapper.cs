@@ -24,10 +24,11 @@ public class MessageTypeMapper : IMessageTypeMapper {
 		_storageTypeToType = _typeToStorageType.ToDictionary(pair => pair.Value, pair => pair.Key);
 	}
 
-	public bool TryMap(string storageType, [NotNullWhen(true)] out Type type) =>
-		_storageTypeToType.TryGetValue(storageType, out type!);
+	public bool TryMap(string storageType, [NotNullWhen(true)] out Type? type) =>
+		_storageTypeToType.TryGetValue(storageType, out type);
 
-	public bool TryMap(Type type, out string storageType) => _typeToStorageType.TryGetValue(type, out storageType!);
+	public bool TryMap(Type type, [NotNullWhen(true)] out string? storageType) =>
+		_typeToStorageType.TryGetValue(type, out storageType);
 
 	private class TransactoMessageTypeMapper : IMessageTypeMapper {
 		public static readonly IMessageTypeMapper Instance = new TransactoMessageTypeMapper();

@@ -8,8 +8,6 @@ using Microsoft.CodeAnalysis.CSharp.Syntax;
 using NJsonSchema;
 using NJsonSchema.CodeGeneration.CSharp;
 using NJsonSchema.Generation;
-using NJsonSchema.Generation.TypeMappers;
-using NodaTime;
 
 namespace Transacto.Schemo;
 

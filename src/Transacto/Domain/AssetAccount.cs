@@ -1,10 +1,10 @@
 namespace Transacto.Domain;
 
 public record AssetAccount : Account {
-	public AssetAccount(AccountName accountName, AccountNumber accountNumber, int accountNumberWidth,
+	public AssetAccount(AccountName accountName, AccountNumber accountNumber, AccountNumberWidth accountNumberWidth,
 		CashFlowCategory cashFlowCategory, bool affectsCash) : base(accountName, accountNumber, cashFlowCategory,
 		affectsCash, CreateAccountNumberSpace(1, accountNumberWidth)) {
-		if (affectsCash && cashFlowCategory != CashFlowCategory.Operations) {
+		if (affectsCash) {
 			CashFlowCategoryMustBe(accountNumber, cashFlowCategory, CashFlowCategory.Operations);
 		}
 	}

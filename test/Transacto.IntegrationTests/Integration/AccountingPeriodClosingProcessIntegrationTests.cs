@@ -14,13 +14,13 @@ namespace Transacto.Integration;
 
 public class AccountingPeriodClosingProcessIntegrationTests(TextWriter textWriter) : IntegrationTests(textWriter) {
 	[AutoFixtureData(1)]
-	private async Task when_closing_the_period(LocalDateTime createdOn,
+	private async Task when_closing_the_period(LocalDate createdOn,
 		GeneralLedgerEntryIdentifier closingEntryIdentifier) {
-		var period = AccountingPeriod.Open(createdOn.Date);
+		var period = AccountingPeriod.Open(createdOn);
 		await OpenBooks(createdOn).ToArrayAsync();
 
 		var command = new BeginClosingAccountingPeriod {
-			ClosingOn = createdOn.ToDateTimeUnspecified(),
+			ClosingOn = createdOn,
 			ClosingGeneralLedgerEntryId = closingEntryIdentifier.ToGuid(),
 			RetainedEarningsAccountNumber = 3030,
 			GeneralLedgerEntryIds = ImmutableArray<Guid>.Empty

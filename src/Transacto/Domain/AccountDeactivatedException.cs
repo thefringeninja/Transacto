@@ -4,8 +4,7 @@ namespace Transacto.Domain;
 
 public class AccountDeactivatedException(AccountNumber accountNumber)
 	: Exception(FormatMessage(accountNumber).ToString()), IFormattableMessage {
-	private static FormattableString FormatMessage(AccountNumber accountNumber)
-	{
+	private static FormattableString FormatMessage(AccountNumber accountNumber) {
 		return $"Account {accountNumber} was deactivated.";
 	}
 

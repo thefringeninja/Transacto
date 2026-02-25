@@ -1,5 +1,4 @@
 using Inflector;
-using Transacto.Domain;
 using Transacto.Infrastructure.SQLite;
 using Transacto.Messages;
 
@@ -8,7 +7,7 @@ namespace Transacto.Plugins.GeneralLedger.LedgerEntryIndex;
 public class LedgerEntryIndexProjection : SQLiteProjection {
 	public LedgerEntryIndexProjection() : base(new Scripts()) {
 		When<GeneralLedgerEntryCreated>(e => {
-			var createdOn = Time.Parse.LocalDateTime(e.CreatedOn).ToDateTimeUnspecified();
+			var createdOn = e.CreatedOn.ToDateTimeUnspecified();
 			return [
 				Sql.Guid(e.GeneralLedgerEntryId).ToDbParameter(nameof(e.GeneralLedgerEntryId).Underscore()),
 

@@ -1,5 +1,8 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using NodaTime;
+using NodaTime.Serialization.SystemTextJson;
+using NodaTime.Text;
 using Transacto.Domain;
 
 namespace Transacto;
@@ -15,7 +18,9 @@ public static class TransactoSerializerOptions {
 			new PercentageConverter(),
 			new AccountNumberConverter(),
 			new GeneralLedgerEntrySequenceNumberConverter(),
-			new GeneralLedgerEntryNumberConverter()
+			new GeneralLedgerEntryNumberConverter(),
+			new NodaPatternConverter<LocalDate>(LocalDatePattern.Iso),
+			new NodaPatternConverter<Period>(PeriodPattern.NormalizingIso),
 		}
 	};
 

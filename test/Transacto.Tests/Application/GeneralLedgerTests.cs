@@ -19,22 +19,32 @@ public class GeneralLedgerTests {
 	public Task opening_the_period(LocalDate openedOn) => new OpeningThePeriod(openedOn).Assert(_handler, _facts);
 
 	[AutoFixtureData]
-	public Task closing_an_open_period(YearMonth openedOn, EquityAccount retainedEarnings,
+	public Task closing_an_open_period(YearMonth openedOn,
+		EquityAccount retainedEarnings,
+		AssetAccount accountsReceivable,
+		LiabilityAccount accountsPayable,
 		GeneralLedgerEntryIdentifier[] generalLedgerEntryIdentifiers,
 		GeneralLedgerEntryIdentifier closingGeneralLedgerEntryIdentifier) =>
-		new ClosingAnOpenPeriod(openedOn, retainedEarnings, generalLedgerEntryIdentifiers,
+		new ClosingAnOpenPeriod(openedOn, retainedEarnings, accountsReceivable, accountsPayable,
+				generalLedgerEntryIdentifiers,
 				closingGeneralLedgerEntryIdentifier)
 			.Assert(_handler, _facts);
 
 	[AutoFixtureData]
 	public Task closing_a_closed_period(YearMonth openedOn, EquityAccount retainedEarnings,
+		AssetAccount accountsReceivable,
+		LiabilityAccount accountsPayable,
 		GeneralLedgerEntryIdentifier closingGeneralLedgerEntryIdentifier) =>
-		new ClosingAClosedPeriod(openedOn, retainedEarnings, closingGeneralLedgerEntryIdentifier)
+		new ClosingAClosedPeriod(openedOn, retainedEarnings, accountsReceivable, accountsPayable,
+				closingGeneralLedgerEntryIdentifier)
 			.Assert(_handler, _facts);
 
 	[AutoFixtureData]
-	public Task closing_the_period_before_the_period_has_started(LocalDate openedOn, EquityAccount retainedEarnings,
+	public Task closing_the_period_before_the_period_has_started(LocalDate openedOn, 
+		EquityAccount retainedEarnings,
+		AssetAccount accountsReceivable,
+		LiabilityAccount accountsPayable,
 		GeneralLedgerEntryIdentifier closingGeneralLedgerEntryIdentifier) =>
 		new ClosingThePeriodBeforeThePeriodHasStarted(openedOn, retainedEarnings,
-			closingGeneralLedgerEntryIdentifier).Assert(_handler, _facts);
+			accountsReceivable, accountsPayable, closingGeneralLedgerEntryIdentifier).Assert(_handler, _facts);
 }

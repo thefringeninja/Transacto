@@ -25,7 +25,7 @@ public partial class ProcessManagerHost(
 		await Subscribe(stoppingToken);
 	}
 
-	private Task SetStreamMetadata(CancellationToken cancellationToken) =>
+	private Task<IWriteResult> SetStreamMetadata(CancellationToken cancellationToken) =>
 		eventStore.SetStreamMetadataAsync(checkpointStreamName, StreamState.NoStream,
 			new StreamMetadata(maxCount: 5), options => options.ThrowOnAppendFailure = false,
 			cancellationToken: cancellationToken);

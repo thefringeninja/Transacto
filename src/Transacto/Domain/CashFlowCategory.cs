@@ -14,13 +14,12 @@ public record CashFlowCategory : IParsable<CashFlowCategory> {
 
 	public static CashFlowCategory None { get; } = new();
 
-	public static ImmutableArray<CashFlowCategory> All { get; } =
-		[new(nameof(Operations)), new(nameof(Investment)), new(nameof(Finance))];
+	public static ImmutableArray<CashFlowCategory> All { get; } = [Operations, Investment, Finance];
 
-	public Messages.CashFlowCategoryType ToEnum() => _value switch {
-		nameof(Investment) => Messages.CashFlowCategoryType.Investment,
-		nameof(Finance) => Messages.CashFlowCategoryType.Finance,
-		_ => Messages.CashFlowCategoryType.Operations
+	public CashFlowCategoryType ToEnum() => _value switch {
+		nameof(Investment) => CashFlowCategoryType.Investment,
+		nameof(Finance) => CashFlowCategoryType.Finance,
+		_ => CashFlowCategoryType.Operations
 	};
 
 	public override string ToString() => _value ?? "N/A";
@@ -44,10 +43,10 @@ public record CashFlowCategory : IParsable<CashFlowCategory> {
 	public static bool TryParse([NotNullWhen(true)] string? s, [NotNullWhen(true)] out CashFlowCategory? result)
 		=> TryParse(s, null, out result);
 
-	public static CashFlowCategory FromCashFlowCategory(Messages.CashFlowCategoryType value) => value switch {
-		Messages.CashFlowCategoryType.Operations => Operations,
-		Messages.CashFlowCategoryType.Investment => Investment,
-		Messages.CashFlowCategoryType.Finance => Finance,
+	public static CashFlowCategory FromCashFlowCategory(CashFlowCategoryType value) => value switch {
+		CashFlowCategoryType.Operations => Operations,
+		CashFlowCategoryType.Investment => Investment,
+		CashFlowCategoryType.Finance => Finance,
 		_ => throw new ArgumentOutOfRangeException(nameof(value), value, null)
 	};
 }

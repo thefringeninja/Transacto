@@ -265,7 +265,10 @@ async Task Seed() {
 
 	async Task DefineChartOfAccounts() {
 		await chartOfAccounts.Handle(new ConfigureChartOfAccounts {
-			AccountNumberWidth = 4
+			AccountNumberWidth = 4,
+			AccountsReceivable = 1100,
+			AccountsPayable = 2100,
+			RetainedEarnings = 3900
 		});
 		await chartOfAccounts.Handle(new DefineAccount {
 			AccountName = "Bank", AccountNumber = 1000, AffectsCash = true,

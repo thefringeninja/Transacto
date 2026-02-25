@@ -9,13 +9,16 @@ public class CommandSerializerOptionTests {
 		var property = Guid.NewGuid().ToString();
 		var anotherProperty = Guid.NewGuid().ToString();
 		var transactionId = Guid.NewGuid();
-		var json = $@"{{
-	""property"": ""{property}"",
-	""businessTransaction"": {{
-		""testBusinessTransaction"": {JsonSerializer.Serialize(new TestBusinessTransaction { TransactionId = transactionId })}
-	}},
-    ""anotherProperty"": ""{anotherProperty}""
-}}";
+		var json = $$"""
+		             {
+		             	"property": "{{property}}",
+		             	"businessTransaction": {
+		             		"testBusinessTransaction": {{JsonSerializer.Serialize(new TestBusinessTransaction { TransactionId = transactionId }, new JsonSerializerOptions {
+					             WriteIndented = true })}}
+		             	},
+		                 "anotherProperty": "{{anotherProperty}}"
+		             }
+		             """;
 
 		var command = JsonSerializer.Deserialize<TestCommand>(json,
 			TransactoHttpSerializerOptions.BusinessTransactions(typeof(TestBusinessTransaction)))!;
@@ -60,7 +63,8 @@ public class CommandSerializerOptionTests {
 			BusinessTransaction = testBusinessTransaction
 		};
 
-		var copy = JsonSerializer.Deserialize<TestCommand>(JsonSerializer.Serialize(dto, sut), sut)!;
+		var json = JsonSerializer.Serialize(dto, sut);
+		var copy = JsonSerializer.Deserialize<TestCommand>(json, sut)!;
 
 		Assert.Equal(dto.Property, copy.Property);
 		Assert.Equal(dto.AnotherProperty, copy.AnotherProperty);
@@ -79,8 +83,10 @@ public class CommandSerializerOptionTests {
 
 		public GeneralLedgerEntrySequenceNumber? SequenceNumber { get; set; }
 		public static GeneralLedgerEntryNumberPrefix Prefix { get; } = new("test");
+
 		public GeneralLedgerEntryNumber? ReferenceNumber =>
 			SequenceNumber.HasValue ? new GeneralLedgerEntryNumber(Prefix, SequenceNumber.Value) : null;
-		public IEnumerable<object> GetTransactionItems() => [];
+
+		public IEnumerable<object> GetTransactionItems(ChartOfAccounts chartOfAccounts) => [];
 	}
 }

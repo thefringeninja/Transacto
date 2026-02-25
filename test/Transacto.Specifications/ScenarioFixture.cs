@@ -77,6 +77,8 @@ partial class ScenarioFixture : Fixture {
 
 		this.CustomizeAccountNumber();
 
+		this.Customize<AccountNumberWidth>(composer => composer.FromFactory(() => AccountNumberWidth.Min));
+
 		this.CustomizeRealisticAccount(faker);
 
 		this.CustomizeGeneralLedgerEntryNumberPrefix();

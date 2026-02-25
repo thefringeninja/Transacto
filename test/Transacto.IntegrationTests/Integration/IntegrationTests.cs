@@ -116,7 +116,7 @@ public abstract class IntegrationTests : IAsyncDisposable {
 
 		builder.Services.AddTransacto(
 			eventStoreClientSettings,
-			new NpgsqlConnectionStringBuilder(),
+			new NpgsqlConnectionStringBuilder("Host=localhost;Username=postgres;Password=Password;Port=5432"),
 			SQLiteInTempFolder,
 			_streamStoreClient);
 		builder.WebHost.UseTestServer();
@@ -162,9 +162,12 @@ public abstract class IntegrationTests : IAsyncDisposable {
 	}
 
 
-	protected async IAsyncEnumerable<Account> OpenBooks(LocalDateTime now) {
+	protected async IAsyncEnumerable<Account> OpenBooks(LocalDate now) {
 		await HttpClient.SendCommand("/chart-of-accounts", new ConfigureChartOfAccounts {
-			AccountNumberWidth = 4
+			AccountNumberWidth = 4,
+			AccountsReceivable = 1100,
+			AccountsPayable = 2000,
+			RetainedEarnings = 3030
 		}, TransactoHttpSerializerOptions.Commands);
 		await foreach (var account in GetChartOfAccounts().OrderBy(_ => Guid.NewGuid())) {
 			await HttpClient.SendCommand("/chart-of-accounts", new DefineAccount {
@@ -177,7 +180,7 @@ public abstract class IntegrationTests : IAsyncDisposable {
 		}
 
 		await HttpClient.SendCommand("/general-ledger", new OpenGeneralLedger {
-			OpenedOn = now.ToDateTimeUnspecified()
+			OpenedOn = now
 		}, TransactoHttpSerializerOptions.Commands);
 
 		await Task.Delay(TimeSpan.FromMilliseconds(500));

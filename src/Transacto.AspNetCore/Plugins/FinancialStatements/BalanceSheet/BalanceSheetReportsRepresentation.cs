@@ -1,9 +1,7 @@
 using Hallo;
 using NodaTime;
 using NodaTime.Text;
-using Transacto.Domain;
 using Transacto.Framework.Http.Html;
-using Transacto.Plugins.GeneralLedger;
 
 namespace Transacto.Plugins.FinancialStatements.BalanceSheet;
 

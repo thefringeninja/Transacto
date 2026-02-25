@@ -16,7 +16,7 @@ public class GeneralLedger : AggregateRoot, IAggregateRoot<GeneralLedger> {
 	public static GeneralLedger Open(LocalDate openedOn) {
 		var generalLedger = new GeneralLedger();
 		generalLedger.Apply(new GeneralLedgerOpened {
-			OpenedOn = Time.Format.LocalDate(openedOn),
+			OpenedOn = openedOn,
 		});
 		return generalLedger;
 	}
@@ -25,7 +25,7 @@ public class GeneralLedger : AggregateRoot, IAggregateRoot<GeneralLedger> {
 
 	protected override void ApplyEvent(object _) => _state = _ switch {
 		GeneralLedgerOpened e => _state with {
-			AccountingPeriod = AccountingPeriod.Open(Time.Parse.LocalDate(e.OpenedOn))
+			AccountingPeriod = AccountingPeriod.Open(e.OpenedOn)
 		},
 		AccountingPeriodClosing e => _state with {
 			PeriodClosing = true,
@@ -39,17 +39,17 @@ public class GeneralLedger : AggregateRoot, IAggregateRoot<GeneralLedger> {
 	};
 
 	public GeneralLedgerEntry Create(GeneralLedgerEntryIdentifier identifier,
-		IBusinessTransaction businessTransaction, ChartOfAccounts chartOfAccounts, LocalDate createdOn,
-		AccountIsDeactivated accountIsDeactivated) => Create(identifier, businessTransaction, chartOfAccounts,
-		createdOn, (_state.PeriodClosing, _state.AccountingPeriod.Contains(createdOn)) switch {
+		IBusinessTransaction businessTransaction, ChartOfAccounts chartOfAccounts, LocalDate createdOn) => Create(
+		identifier, businessTransaction, chartOfAccounts, createdOn,
+		(_state.PeriodClosing, _state.AccountingPeriod.Contains(createdOn)) switch {
 			(true, _) or (false, false) => _state.AccountingPeriod.Next(),
 			_ => _state.AccountingPeriod
-		}, accountIsDeactivated);
+		});
 
 	private static GeneralLedgerEntry Create(GeneralLedgerEntryIdentifier identifier,
 		IBusinessTransaction businessTransaction, ChartOfAccounts chartOfAccounts, LocalDate createdOn,
-		AccountingPeriod accountingPeriod, AccountIsDeactivated accountIsDeactivated) =>
-		new(identifier, businessTransaction, chartOfAccounts, accountingPeriod, createdOn, accountIsDeactivated);
+		AccountingPeriod accountingPeriod) =>
+		new(identifier, businessTransaction, chartOfAccounts, accountingPeriod, createdOn);
 
 	public void BeginClosingPeriod(EquityAccount retainedEarningsAccount,
 		GeneralLedgerEntryIdentifier closingGeneralLedgerEntryIdentifier,
@@ -64,7 +64,7 @@ public class GeneralLedger : AggregateRoot, IAggregateRoot<GeneralLedger> {
 			Period = _state.AccountingPeriod.ToString(),
 			GeneralLedgerEntryIds =
 				ImmutableArray.CreateRange(generalLedgerEntryIdentifiers, identifier => identifier.ToGuid()),
-			ClosingOn = Time.Format.LocalDate(closingOn),
+			ClosingOn = closingOn,
 			RetainedEarningsAccountNumber = retainedEarningsAccount.AccountNumber.ToInt32(),
 			ClosingGeneralLedgerEntryId = closingGeneralLedgerEntryIdentifier.ToGuid()
 		});

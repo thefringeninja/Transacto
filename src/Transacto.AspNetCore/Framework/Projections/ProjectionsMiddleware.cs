@@ -10,7 +10,7 @@ using Transacto.Framework.Http.Html;
 
 namespace Transacto.Framework.Projections;
 public static class ProjectionsMiddleware {
-	public static void UseProjectionStatus(this IApplicationBuilder app) {
+	public static IApplicationBuilder UseProjectionStatus(this IApplicationBuilder app) =>
 		app.Map("/projections", inner => inner.UseRouting().UseEndpoints(ep => {
 			ep.MapGet("",
 				(HttpContext context, [FromServices] ProjectionsController projectionsController) => {
@@ -40,7 +40,6 @@ public static class ProjectionsMiddleware {
 				return Results.SeeOther($"{siteRoot.Uri.AbsolutePath}/projections");
 			});
 		}));
-	}
 
 	extension(ConcurrentDictionary<string, ProjectionState> dictionary) {
 		public void UpdateAll<TState>(Func<ProjectionState, TState, ProjectionState> updater, TState state) {
@@ -161,8 +160,9 @@ public class ProjectionsController(IEnumerable<IProjectionsControl> projections)
 	}
 }
 
-public interface IProjectionsControl : IProjectionHostStatus {
+public interface IProjectionsControl : IProjectionHostStatus, IHostedService {
 	public Task Delete(string name);
+	event Action<object, EventArgs>? CaughtUp;
 }
 
 public static class ProjectionPolicy {

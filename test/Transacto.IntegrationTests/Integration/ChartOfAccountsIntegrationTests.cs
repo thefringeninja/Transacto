@@ -41,7 +41,10 @@ public class ChartOfAccountsIntegrationTests(TextWriter textWriter) : Integratio
 		Checkpoint checkpoint = Checkpoint.None;
 
 		await HttpClient.SendCommand("/chart-of-accounts", new ConfigureChartOfAccounts {
-			AccountNumberWidth = 4
+			AccountNumberWidth = 4,
+			AccountsReceivable = 1200,
+			AccountsPayable = 2000,
+			RetainedEarnings = 3900
 		}, TransactoHttpSerializerOptions.Commands);
 		foreach (var account in ChartOfAccounts.OrderBy(_ => Guid.NewGuid())) {
 			checkpoint = await HttpClient.SendCommand("/chart-of-accounts", new DefineAccount {

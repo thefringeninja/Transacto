@@ -16,9 +16,28 @@ public static class GeneralLedgerEntrySpecifications {
 		AssetAccount assetAccount,
 		LiabilityAccount liabilityAccount,
 		Money amount) : EventSpecification(new Scenario()
+		.Given(ChartOfAccounts.Identifier,
+			new ChartOfAccountsConfigured {
+				AccountNumberWidth = AccountNumberWidth.Min.ToInt32(),
+				AccountsPayable = 2000,
+				AccountsReceivable = 1200,
+				RetainedEarnings = 3900,
+			},
+			new AccountDefined {
+				AccountNumber = assetAccount.AccountNumber.ToInt32(),
+				AccountName = assetAccount.AccountName.ToString(),
+				AffectsCash = assetAccount.AffectsCash,
+				CashFlowCategory = assetAccount.CashFlowCategory.ToEnum()
+			},
+			new AccountDefined {
+				AccountNumber = liabilityAccount.AccountNumber.ToInt32(),
+				AccountName = liabilityAccount.AccountName.ToString(),
+				AffectsCash = liabilityAccount.AffectsCash,
+				CashFlowCategory = liabilityAccount.CashFlowCategory.ToEnum()
+			})
 		.Given(GeneralLedger.Identifier,
 			new GeneralLedgerOpened {
-				OpenedOn = Time.Format.LocalDate(openedOn)
+				OpenedOn = openedOn
 			})
 		.When(new PostGeneralLedgerEntry {
 			GeneralLedgerEntryId = generalLedgerEntryIdentifier.ToGuid(),
@@ -31,7 +50,7 @@ public static class GeneralLedgerEntrySpecifications {
 		.Then(GeneralLedgerEntry.FormatStreamIdentifier(generalLedgerEntryIdentifier),
 			new GeneralLedgerEntryCreated {
 				Period = AccountingPeriod.Open(openedOn).ToString(),
-				CreatedOn = Time.Format.LocalDateTime(openedOn.AtMidnight()),
+				CreatedOn = openedOn,
 				GeneralLedgerEntryId = generalLedgerEntryIdentifier.ToGuid()
 			},
 			new CreditApplied {
@@ -58,9 +77,16 @@ public static class GeneralLedgerEntrySpecifications {
 		GeneralLedgerEntrySequenceNumber sequenceNumber,
 #pragma warning restore CS9113 // Parameter is unread.
 		LocalDate openedOn) : ExceptionSpecification(new Scenario()
+		.Given(ChartOfAccounts.Identifier,
+			new ChartOfAccountsConfigured {
+				AccountNumberWidth = AccountNumberWidth.Min.ToInt32(),
+				AccountsPayable = 2000,
+				AccountsReceivable = 1200,
+				RetainedEarnings = 3900,
+			})
 		.Given(GeneralLedger.Identifier,
 			new GeneralLedgerOpened {
-				OpenedOn = Time.Format.LocalDate(openedOn)
+				OpenedOn = openedOn
 			})
 		.When(new PostGeneralLedgerEntry {
 			GeneralLedgerEntryId = generalLedgerEntryIdentifier.ToGuid(),
@@ -80,9 +106,16 @@ public static class GeneralLedgerEntrySpecifications {
 #pragma warning restore CS9113 // Parameter is unread.
 		LocalDate openedOn,
 		AccountNumber accountNumber) : ExceptionSpecification(new Scenario()
+		.Given(ChartOfAccounts.Identifier,
+			new ChartOfAccountsConfigured {
+				AccountNumberWidth = AccountNumberWidth.Min.ToInt32(),
+				AccountsPayable = 2000,
+				AccountsReceivable = 1200,
+				RetainedEarnings = 3900,
+			})
 		.Given(GeneralLedger.Identifier,
 			new GeneralLedgerOpened {
-				OpenedOn = Time.Format.LocalDate(openedOn)
+				OpenedOn = openedOn
 			})
 		.When(new PostGeneralLedgerEntry {
 			GeneralLedgerEntryId = generalLedgerEntryIdentifier.ToGuid(),
@@ -99,9 +132,16 @@ public static class GeneralLedgerEntrySpecifications {
 #pragma warning restore CS9113 // Parameter is unread.
 		LocalDate openedOn,
 		AccountNumber accountNumber) : ExceptionSpecification(new Scenario()
+		.Given(ChartOfAccounts.Identifier,
+			new ChartOfAccountsConfigured {
+				AccountNumberWidth = AccountNumberWidth.Min.ToInt32(),
+				AccountsPayable = 2000,
+				AccountsReceivable = 1200,
+				RetainedEarnings = 3900,
+			})
 		.Given(GeneralLedger.Identifier,
 			new GeneralLedgerOpened {
-				OpenedOn = Time.Format.LocalDate(openedOn)
+				OpenedOn = openedOn
 			})
 		.When(new PostGeneralLedgerEntry {
 			GeneralLedgerEntryId = generalLedgerEntryIdentifier.ToGuid(),
@@ -120,7 +160,7 @@ public static class GeneralLedgerEntrySpecifications {
 		Account account) : ExceptionSpecification(new Scenario()
 		.Given(GeneralLedger.Identifier,
 			new GeneralLedgerOpened {
-				OpenedOn = Time.Format.LocalDate(openedOn)
+				OpenedOn = openedOn
 			})
 		.Given(ChartOfAccounts.Identifier,
 			new AccountDefined {
