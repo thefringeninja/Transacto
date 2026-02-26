@@ -1,0 +1,15 @@
+{
+	"type": "object",
+	"title": "General Ledger Opened",
+	"additionalProperties": false,
+	"required": [
+		"openedOn"
+	],
+	"properties": {
+		"openedOn": {
+			"title": "Opened On",
+			"type": "string",
+			"format": "date"
+		}
+	}
+}

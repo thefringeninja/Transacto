@@ -12,7 +12,7 @@
 	"properties": {
 		"closingGeneralLedgerEntryId": {
 			"title": "Closing General Ledger Entry Id",
-			"$ref": "#/definitions/uuid",
+			"$ref": "Uuid.schema.json",
 			"x-schema-form": {
 				"key": "vendorId",
 				"type": "uuid"
@@ -31,15 +31,8 @@
 			"title": "General Ledger Entry Ids",
 			"type": "array",
 			"items": {
-				"$ref": "#/definitions/uuid"
+				"$ref": "Uuid.schema.json"
 			}
-		}
-	},
-	"definitions": {
-		"uuid": {
-			"type": "string",
-			"pattern": "^[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{12}$",
-			"format": "uuid"
 		}
 	}
 }

@@ -1,0 +1,30 @@
+{
+	"$schema": "http://json-schema.org/draft-07/schema",
+	"type": "object",
+	"title": "Debit Applied",
+	"additionalProperties": false,
+	"required": [
+		"generalLedgerEntryId",
+		"accountNumber",
+		"amount"
+	],
+	"properties": {
+		"generalLedgerEntryId": {
+			"title": "General Ledger Entry Id",
+			"$ref": "Uuid.schema.json",
+			"x-schema-form": {
+				"key": "generalLedgerEntryId",
+				"type": "uuid"
+			}
+		},
+		"accountNumber": {
+			"title": "Account Number",
+			"type": "integer"
+		},
+		"amount": {
+			"title": "amount",
+			"type": "number",
+			"format": "decimal"
+		}
+	}
+}

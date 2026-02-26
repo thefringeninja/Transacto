@@ -11,9 +11,9 @@
 	"properties": {
 		"generalLedgerEntryId": {
 			"title": "General Ledger Entry Id",
-			"$ref": "#/definitions/uuid",
+			"$ref": "Uuid.schema.json",
 			"x-schema-form": {
-				"key": "vendorId",
+				"key": "generalLedgerEntryId",
 				"type": "uuid"
 			}
 		},
@@ -25,13 +25,6 @@
 			"title": "Created On",
 			"type": "string",
 			"format": "date"
-		}
-	},
-	"definitions": {
-		"uuid": {
-			"type": "string",
-			"pattern": "^[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{12}$",
-			"format": "uuid"
 		}
 	}
 }

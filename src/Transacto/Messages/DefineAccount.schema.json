@@ -18,9 +18,7 @@
 			"type": "integer"
 		},
 		"cashFlowCategory": {
-			"title": "Cash Flow Category Type",
-			"type": "string",
-			"enum": ["operations", "investment", "finance"]
+			"$ref": "CashFlowCategoryType.schema.json"
 		},
 		"affectsCash" : {
 			"title": "Affects Cash",

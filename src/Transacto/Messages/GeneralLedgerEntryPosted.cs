@@ -1,8 +1,5 @@
 namespace Transacto.Messages;
 
-public record GeneralLedgerEntryPosted : IFormattableMessage {
-	public required Guid GeneralLedgerEntryId { get; init; }
-	public required string Period { get; init; }
-
+partial record GeneralLedgerEntryPosted : IFormattableMessage {
 	public FormattableString ToFormattableString() => $"General ledger entry was posted in accounting period {Period}.";
 }

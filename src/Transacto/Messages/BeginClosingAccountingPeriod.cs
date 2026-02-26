@@ -1,5 +1,3 @@
-using System.Text.Json.Serialization;
-
 namespace Transacto.Messages;
 
 public partial record BeginClosingAccountingPeriod : IFormattableMessage {
