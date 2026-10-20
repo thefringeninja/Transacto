@@ -16,7 +16,7 @@ public class GeneralLedger : AggregateRoot, IAggregateRoot<GeneralLedger> {
 	public static GeneralLedger Open(LocalDate openedOn) {
 		var generalLedger = new GeneralLedger();
 		generalLedger.Apply(new GeneralLedgerOpened {
-			OpenedOn = Time.Format.LocalDate(openedOn),
+			OpenedOn = openedOn,
 		});
 		return generalLedger;
 	}
@@ -25,7 +25,7 @@ public class GeneralLedger : AggregateRoot, IAggregateRoot<GeneralLedger> {
 
 	protected override void ApplyEvent(object _) => _state = _ switch {
 		GeneralLedgerOpened e => _state with {
-			AccountingPeriod = AccountingPeriod.Open(Time.Parse.LocalDate(e.OpenedOn))
+			AccountingPeriod = AccountingPeriod.Open(e.OpenedOn)
 		},
 		AccountingPeriodClosing e => _state with {
 			PeriodClosing = true,
@@ -33,39 +33,38 @@ public class GeneralLedger : AggregateRoot, IAggregateRoot<GeneralLedger> {
 		},
 		AccountingPeriodClosed e => _state with {
 			PeriodClosing = false,
-			AccountingPeriod = AccountingPeriod.Parse(e.Period)
+			AccountingPeriod = AccountingPeriod.Parse(e.Period).Next()
 		},
 		_ => _state
 	};
 
 	public GeneralLedgerEntry Create(GeneralLedgerEntryIdentifier identifier,
-		IBusinessTransaction businessTransaction, GeneralLedgerEntryNumberPrefix prefix,
-		LocalDateTime createdOn, AccountIsDeactivated accountIsDeactivated) =>
-		Create(identifier, businessTransaction, prefix, createdOn,
-			(_state.PeriodClosing, _state.AccountingPeriod.Contains(createdOn.Date)) switch {
-				(true, _) or (false, false) => _state.AccountingPeriod.Next(),
-				_ => _state.AccountingPeriod
-			}, accountIsDeactivated);
+		IBusinessTransaction businessTransaction, ChartOfAccounts chartOfAccounts, LocalDate createdOn) => Create(
+		identifier, businessTransaction, chartOfAccounts, createdOn,
+		(_state.PeriodClosing, _state.AccountingPeriod.Contains(createdOn)) switch {
+			(true, _) or (false, false) => _state.AccountingPeriod.Next(),
+			_ => _state.AccountingPeriod
+		});
 
 	private static GeneralLedgerEntry Create(GeneralLedgerEntryIdentifier identifier,
-		IBusinessTransaction businessTransaction, GeneralLedgerEntryNumberPrefix prefix,
-		LocalDateTime createdOn, AccountingPeriod accountingPeriod, AccountIsDeactivated accountIsDeactivated) =>
-		new(identifier, businessTransaction, prefix, accountingPeriod, createdOn, accountIsDeactivated);
+		IBusinessTransaction businessTransaction, ChartOfAccounts chartOfAccounts, LocalDate createdOn,
+		AccountingPeriod accountingPeriod) =>
+		new(identifier, businessTransaction, chartOfAccounts, accountingPeriod, createdOn);
 
 	public void BeginClosingPeriod(EquityAccount retainedEarningsAccount,
 		GeneralLedgerEntryIdentifier closingGeneralLedgerEntryIdentifier,
-		ImmutableArray<GeneralLedgerEntryIdentifier> generalLedgerEntryIdentifiers, LocalDateTime closingOn) {
+		ImmutableArray<GeneralLedgerEntryIdentifier> generalLedgerEntryIdentifiers, LocalDate closingOn) {
 		if (_state.PeriodClosing) {
 			throw new PeriodClosingInProcessException(_state.AccountingPeriod);
 		}
 
-		_state.AccountingPeriod.MustNotBeAfter(closingOn.Date);
+		_state.AccountingPeriod.MustNotBeAfter(closingOn);
 
 		Apply(new AccountingPeriodClosing {
 			Period = _state.AccountingPeriod.ToString(),
 			GeneralLedgerEntryIds =
 				ImmutableArray.CreateRange(generalLedgerEntryIdentifiers, identifier => identifier.ToGuid()),
-			ClosingOn = Time.Format.LocalDateTime(closingOn),
+			ClosingOn = closingOn,
 			RetainedEarningsAccountNumber = retainedEarningsAccount.AccountNumber.ToInt32(),
 			ClosingGeneralLedgerEntryId = closingGeneralLedgerEntryIdentifier.ToGuid()
 		});
@@ -90,10 +89,12 @@ public class GeneralLedger : AggregateRoot, IAggregateRoot<GeneralLedger> {
 				generalLedgerEntryIdentifiers.ToImmutableArray(), identifier => identifier.ToGuid()),
 			ClosingGeneralLedgerEntryId = closingEntry.Identifier.ToGuid(),
 			Period = _state.AccountingPeriod.ToString(),
-			Balance = trialBalance.Select(account => new BalanceLineItem {
-				Amount = account.Balance.ToDecimal(),
-				AccountNumber = account.AccountNumber.ToInt32()
-			}).ToImmutableArray()
+			Balance = [
+				..trialBalance.Select(account => new BalanceLineItem {
+					Amount = account.Balance.ToDecimal(),
+					AccountNumber = account.AccountNumber.ToInt32()
+				})
+			]
 		});
 	}
 

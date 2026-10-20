@@ -1,9 +1,13 @@
+using Transacto.Messages;
+
 namespace Transacto.Domain;
 
-public class PeriodOpenException : Exception {
-	public AccountingPeriod AccountingPeriod { get; }
+public class PeriodOpenException(AccountingPeriod accountingPeriod)
+	: Exception(FormatMessage(accountingPeriod).ToString()), IFormattableMessage {
+	public AccountingPeriod AccountingPeriod { get; } = accountingPeriod;
 
-	public PeriodOpenException(AccountingPeriod accountingPeriod) : base($"Period {accountingPeriod} is still open.") {
-		AccountingPeriod = accountingPeriod;
-	}
+	private static FormattableString FormatMessage(AccountingPeriod accountingPeriod) =>
+		$"Period {accountingPeriod.ToString()} is still open.";
+
+	public FormattableString ToFormattableString() => FormatMessage(AccountingPeriod);
 }

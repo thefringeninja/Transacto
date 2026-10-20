@@ -1,5 +1,6 @@
 namespace Transacto.Messages;
 
-public partial record BeginClosingAccountingPeriod {
-	public override string ToString() => "Closing accounting period.";
+public partial record BeginClosingAccountingPeriod : IFormattableMessage {
+	public FormattableString ToFormattableString() =>
+		$"Begin closing current accounting period to equity account {RetainedEarningsAccountNumber} {ClosingOn:yyyy'-'MM'-'dd}.";
 }

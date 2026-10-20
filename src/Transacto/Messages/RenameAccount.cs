@@ -1,5 +1,5 @@
 namespace Transacto.Messages;
 
-public partial record RenameAccount {
-	public override string ToString() => $"Renaming account {NewAccountName}-{AccountNumber}.";
+public partial record RenameAccount : IFormattableMessage {
+	public FormattableString ToFormattableString() => $"Renaming account {AccountNumber} to {NewAccountName}.";
 }

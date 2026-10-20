@@ -1,28 +1,8 @@
 namespace Transacto.Domain;
 
-public class GeneralLedgerEntryIdentifierTests {
-	[AutoFixtureData]
-	public void Equality(Guid value) {
-		var sut = new GeneralLedgerEntryIdentifier(value);
-		var copy = new GeneralLedgerEntryIdentifier(value);
-		Assert.Equal(sut, copy);
-	}
-
-	[AutoFixtureData]
-	public void EqualityOperator(Guid value) {
-		var sut = new GeneralLedgerEntryIdentifier(value);
-		var copy = new GeneralLedgerEntryIdentifier(value);
-		Assert.True(sut == copy);
-	}
-
-	[AutoFixtureData]
-	public void InequalityOperator(GeneralLedgerEntryIdentifier left, GeneralLedgerEntryIdentifier right) {
-		Assert.True(left != right);
-	}
-
-	public void EmptyValueThrows() {
+public class GeneralLedgerEntryIdentifierTests : ValueObjectTests<GeneralLedgerEntryIdentifier> {
+	public void EmptyValueThrows() =>
 		Assert.Throws<ArgumentOutOfRangeException>(() => new GeneralLedgerEntryIdentifier(Guid.Empty));
-	}
 
 	[AutoFixtureData]
 	public void ToGuidReturnsExpectedResult(Guid value) {

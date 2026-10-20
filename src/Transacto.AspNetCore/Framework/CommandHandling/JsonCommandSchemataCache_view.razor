@@ -1,0 +1,11 @@
+@using Transacto.Views.Shared
+@inherits ComponentBase<dynamic>
+<LayoutView Layout="typeof(Layout)">
+
+	@foreach (JsonCommandSchema schema in Model.forms)
+	{
+		<ReactJsonSchemaForm Model="@schema" />
+	}
+
+</LayoutView>
+

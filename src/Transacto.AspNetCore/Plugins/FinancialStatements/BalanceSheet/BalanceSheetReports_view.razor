@@ -1,0 +1,92 @@
+@using Transacto.Framework.Http.Html
+@using Transacto.Views.Shared
+@inject Formatter Formatter
+@inject ViewContext context
+@{
+	var colspan = Model.Groups.Length + 1;
+	context.Title = "Balance Sheet";
+}
+
+<LayoutView Layout="typeof(Layout)">
+	<table>
+		<thead>
+		<tr>
+			<th colspan="@colspan"><h1>Balance Sheet Report</h1></th>
+		</tr>
+		<tr>
+			<th></th>
+			@foreach (var report in Model.Groups) {
+				<th>@Formatter.ShortDatePattern.Format(report.Thru)</th>
+			}
+		</tr>
+		</thead>
+		@{
+			ReportSection("Assets", Model.AccountMap.Assets, report => report.Assets);
+			ReportSection("Liabilities", Model.AccountMap.Liability, report => report.Liabilities);
+			ReportSection("Equity", Model.AccountMap.Equity, report => report.Equity, e => e.TotalEquity, true);
+		}
+		<tfoot>
+		<tr>
+			<td>Total Equity &amp; Liabilities</td>
+			@foreach (var report in Model.Groups) {
+				<td style="text-align: right">
+					<Balance Value="@report.TotalEquityAndLiabilities"/>
+				</td>
+			}
+		</tr>
+		</tfoot>
+	</table>
+
+	@{
+		void ReportSection(
+			string name,
+			IDictionary<int, string> accounts,
+			Func<ReportGroup, Report> getReport,
+			Func<ReportGroup, decimal>? getSubtotal = null,
+			bool includeIncomeSummary = false) {
+			<thead>
+			@{
+				getSubtotal ??= group => getReport(group).Total;
+			}
+			<tr>
+				<th colspan="@colspan">@name</th>
+			</tr>
+			</thead>
+			<tbody>
+			@foreach (var (accountNumber, accountName) in accounts) {
+				<tr>
+					<td>@accountNumber - @accountName</td>
+					@foreach (var reportGroup in Model.Groups) {
+						<td style="text-align: right">
+							<Balance Value="@getReport(reportGroup).Lines[accountNumber].Balance"/>
+						</td>
+					}
+				</tr>
+			}
+			@if (includeIncomeSummary) {
+				<tr>
+					<td>Income Summary</td>
+					@foreach (var report in Model.Groups) {
+						<td style="text-align: right">
+							<Balance Value="@report.IncomeSummary"/>
+						</td>
+					}
+				</tr>
+			}
+			<tr>
+				<td>Total @name</td>
+				@foreach (var report in Model.Groups) {
+					<td style="text-align: right">
+						<Balance Value="@getSubtotal(report)"/>
+					</td>
+				}
+			</tr>
+			</tbody>
+		}
+	}
+</LayoutView>
+
+@code
+{
+	[Parameter] public required BalanceSheetReports Model { get; set; }
+}

@@ -4,12 +4,8 @@ using Transacto.Testing;
 
 namespace Transacto.Application;
 
-internal class ChartOfAccountsTestRepository : IChartOfAccountsRepository {
-	private readonly FactRecorderRepository<ChartOfAccounts> _inner;
-
-	public ChartOfAccountsTestRepository(IFactRecorder factRecorder) {
-		_inner = new FactRecorderRepository<ChartOfAccounts>(factRecorder);
-	}
+internal class ChartOfAccountsTestRepository(IFactRecorder factRecorder) : IChartOfAccountsRepository {
+	private readonly FactRecorderRepository<ChartOfAccounts> _inner = new(factRecorder);
 
 	public ValueTask<Optional<ChartOfAccounts>> GetOptional(CancellationToken cancellationToken = default)
 		=> _inner.GetOptional(ChartOfAccounts.Identifier, cancellationToken);

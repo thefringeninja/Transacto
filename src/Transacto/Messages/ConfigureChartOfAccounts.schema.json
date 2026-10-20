@@ -1,0 +1,32 @@
+{
+	"$schema": "http://json-schema.org/draft-07/schema",
+	"type": "object",
+	"title": "Configure Chart Of Accounts",
+	"additionalProperties": false,
+	"required": [
+		"accountNumberWidth",
+		"accountsReceivable",
+		"accountsPayable",
+		"retainedEarnings"
+	],
+	"properties": {
+		"accountNumberWidth": {
+			"title": "Account Number Width",
+			"type": "integer",
+			"minimum": 4,
+			"maximum": 8
+		},
+		"accountsReceivable": {
+			"title": "Accounts Receivable",
+			"type": "integer"
+		},
+		"accountsPayable": {
+			"title": "Accounts Payable",
+			"type": "integer"
+		},
+		"retainedEarnings": {
+			"title": "Retained Earnings",
+			"type": "integer"
+		}
+	}
+}

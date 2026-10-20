@@ -1,0 +1,45 @@
+@* ReSharper disable once CheckNamespace *@
+@namespace Microsoft.AspNetCore.Mvc
+@using Transacto.Views.Shared;
+@inherits ComponentBase<ProblemDetails>
+<LayoutView Layout="typeof(Layout)">
+	<article>
+		<section>
+			<label>Type:</label>
+			<span>@Model.Type</span>
+		</section>
+
+		<section>
+			<label>Title:</label>
+			<span>@Model.Title</span>
+		</section>
+
+		<section>
+			<label>Status:</label>
+			<span>@Model.Status</span>
+		</section>
+
+		<section>
+			<label>Detail:</label>
+			<span>@Model.Detail</span>
+		</section>
+
+		<section>
+			<label>Instance:</label>
+			<span>@Model.Instance</span>
+		</section>
+
+		@if (Model.Extensions is not null && Model.Extensions.Any()) {
+			<section>
+				<label>Extensions:</label>
+				<ul>
+					@foreach (var extension in Model.Extensions) {
+						<li>
+							<strong>@extension.Key:</strong> @extension.Value
+						</li>
+					}
+				</ul>
+			</section>
+		}
+	</article>
+</LayoutView>

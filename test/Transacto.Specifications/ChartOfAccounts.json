@@ -1,0 +1,711 @@
+[
+	{
+		"accountName": "Petty Cash",
+		"accountNumber": 1000,
+		"cashFlowCategory": "operations",
+		"affectsCash": true
+	},
+	{
+		"accountName": "Cash on Hand",
+		"accountNumber": 1010,
+		"cashFlowCategory": "operations",
+		"affectsCash": true
+	},
+	{
+		"accountName": "Regular Checking Account",
+		"accountNumber": 1020,
+		"cashFlowCategory": "operations",
+		"affectsCash": true
+	},
+	{
+		"accountName": "Payroll Checking Account",
+		"accountNumber": 1030,
+		"cashFlowCategory": "operations",
+		"affectsCash": true
+	},
+	{
+		"accountName": "Savings Account",
+		"accountNumber": 1040,
+		"cashFlowCategory": "operations",
+		"affectsCash": true
+	},
+	{
+		"accountName": "Special Account",
+		"accountNumber": 1050,
+		"cashFlowCategory": "operations",
+		"affectsCash": false
+	},
+	{
+		"accountName": "Investments - Money Market",
+		"accountNumber": 1060,
+		"cashFlowCategory": "investment",
+		"affectsCash": false
+	},
+	{
+		"accountName": "Investments - Certificates of Deposit",
+		"accountNumber": 1070,
+		"cashFlowCategory": "investment",
+		"affectsCash": false
+	},
+	{
+		"accountName": "Accounts Receivable",
+		"accountNumber": 1100,
+		"cashFlowCategory": "operations",
+		"affectsCash": false
+	},
+	{
+		"accountName": "Other Receivables",
+		"accountNumber": 1140,
+		"cashFlowCategory": "operations",
+		"affectsCash": false
+	},
+	{
+		"accountName": "Allowance for Doubtful Accounts",
+		"accountNumber": 1150,
+		"cashFlowCategory": "operations",
+		"affectsCash": false
+	},
+	{
+		"accountName": "Raw Materials Inventory",
+		"accountNumber": 1200,
+		"cashFlowCategory": "operations",
+		"affectsCash": false
+	},
+	{
+		"accountName": "Supplies Inventory",
+		"accountNumber": 1205,
+		"cashFlowCategory": "operations",
+		"affectsCash": false
+	},
+	{
+		"accountName": "Work in Progress Inventory",
+		"accountNumber": 1210,
+		"cashFlowCategory": "operations",
+		"affectsCash": false
+	},
+	{
+		"accountName": "Finished Goods Inventory",
+		"accountNumber": 1220,
+		"cashFlowCategory": "operations",
+		"affectsCash": false
+	},
+	{
+		"accountName": "Prepaid Expenses",
+		"accountNumber": 1400,
+		"cashFlowCategory": "operations",
+		"affectsCash": false
+	},
+	{
+		"accountName": "Employee Advances",
+		"accountNumber": 1410,
+		"cashFlowCategory": "operations",
+		"affectsCash": false
+	},
+	{
+		"accountName": "Notes Receivable - Current",
+		"accountNumber": 1420,
+		"cashFlowCategory": "operations",
+		"affectsCash": false
+	},
+	{
+		"accountName": "Prepaid Interest",
+		"accountNumber": 1430,
+		"cashFlowCategory": "operations",
+		"affectsCash": false
+	},
+	{
+		"accountName": "Other Current Assets",
+		"accountNumber": 1470,
+		"cashFlowCategory": "operations",
+		"affectsCash": false
+	},
+	{
+		"accountName": "Furniture and Fixtures",
+		"accountNumber": 1500,
+		"cashFlowCategory": "investment",
+		"affectsCash": false
+	},
+	{
+		"accountName": "Equipment",
+		"accountNumber": 1510,
+		"cashFlowCategory": "investment",
+		"affectsCash": false
+	},
+	{
+		"accountName": "Vehicles",
+		"accountNumber": 1520,
+		"cashFlowCategory": "investment",
+		"affectsCash": false
+	},
+	{
+		"accountName": "Other Depreciable Property",
+		"accountNumber": 1530,
+		"cashFlowCategory": "investment",
+		"affectsCash": false
+	},
+	{
+		"accountName": "Leasehold Improvements",
+		"accountNumber": 1540,
+		"cashFlowCategory": "investment"
+	},
+	{
+		"accountName": "Buildings",
+		"accountNumber": 1550,
+		"cashFlowCategory": "investment"
+	},
+	{
+		"accountName": "Building Improvements",
+		"accountNumber": 1560,
+		"cashFlowCategory": "investment"
+	},
+	{
+		"accountName": "Land",
+		"accountNumber": 1690,
+		"cashFlowCategory": "investment"
+	},
+	{
+		"accountName": "Accumulated Depreciation, Furniture and Fixtures",
+		"accountNumber": 1700,
+		"cashFlowCategory": "investment"
+	},
+	{
+		"accountName": "Accumulated Depreciation, Equipment",
+		"accountNumber": 1710,
+		"cashFlowCategory": "investment"
+	},
+	{
+		"accountName": "Accumulated Depreciation, Vehicles",
+		"accountNumber": 1720,
+		"cashFlowCategory": "investment"
+	},
+	{
+		"accountName": "Accumulated Depreciation, Other",
+		"accountNumber": 1730,
+		"cashFlowCategory": "investment"
+	},
+	{
+		"accountName": "Accumulated Depreciation, Leasehold",
+		"accountNumber": 1740,
+		"cashFlowCategory": "investment"
+	},
+	{
+		"accountName": "Accumulated Depreciation, Buildings",
+		"accountNumber": 1750,
+		"cashFlowCategory": "investment"
+	},
+	{
+		"accountName": "Accumulated Depreciation, Building Improvements",
+		"accountNumber": 1760,
+		"cashFlowCategory": "investment"
+	},
+	{
+		"accountName": "Deposits",
+		"accountNumber": 1900,
+		"cashFlowCategory": "investment"
+	},
+	{
+		"accountName": "Organization Costs",
+		"accountNumber": 1910,
+		"cashFlowCategory": "investment"
+	},
+	{
+		"accountName": "Accumulated Amortization, Organization Costs",
+		"accountNumber": 1915,
+		"cashFlowCategory": "investment"
+	},
+	{
+		"accountName": "Notes Receivable, Non-current",
+		"accountNumber": 1920,
+		"cashFlowCategory": "investment"
+	},
+	{
+		"accountName": "Other Non-current Assets",
+		"accountNumber": 1990,
+		"cashFlowCategory": "investment"
+	},
+	{
+		"accountName": "Accounts Payable",
+		"accountNumber": 2000,
+		"cashFlowCategory": "operations"
+	},
+	{
+		"accountName": "Accrued Expenses",
+		"accountNumber": 2300,
+		"cashFlowCategory": "operations"
+	},
+	{
+		"accountName": "Sales Tax Payable",
+		"accountNumber": 2310,
+		"cashFlowCategory": "operations"
+	},
+	{
+		"accountName": "Wages Payable",
+		"accountNumber": 2320,
+		"cashFlowCategory": "operations"
+	},
+	{
+		"accountName": "401-K Deductions Payable",
+		"accountNumber": 2330,
+		"cashFlowCategory": "operations"
+	},
+	{
+		"accountName": "Health Insurance Payable",
+		"accountNumber": 2335,
+		"cashFlowCategory": "operations"
+	},
+	{
+		"accountName": "Federal Payroll Taxes Payable",
+		"accountNumber": 2340,
+		"cashFlowCategory": "operations"
+	},
+	{
+		"accountName": "FUTA Tax Payable",
+		"accountNumber": 2350,
+		"cashFlowCategory": "operations"
+	},
+	{
+		"accountName": "State Payroll Taxes Payable",
+		"accountNumber": 2360,
+		"cashFlowCategory": "operations"
+	},
+	{
+		"accountName": "SUTA Payable",
+		"accountNumber": 2370,
+		"cashFlowCategory": "operations"
+	},
+	{
+		"accountName": "Local Payroll Taxes Payable",
+		"accountNumber": 2380,
+		"cashFlowCategory": "operations"
+	},
+	{
+		"accountName": "Income Taxes Payable",
+		"accountNumber": 2390,
+		"cashFlowCategory": "operations"
+	},
+	{
+		"accountName": "Other Taxes Payable",
+		"accountNumber": 2400,
+		"cashFlowCategory": "operations"
+	},
+	{
+		"accountName": "Employee Benefits Payable",
+		"accountNumber": 2410,
+		"cashFlowCategory": "operations"
+	},
+	{
+		"accountName": "Current Portion of Long-term Debt",
+		"accountNumber": 2420,
+		"cashFlowCategory": "operations"
+	},
+	{
+		"accountName": "Deposits from Customers",
+		"accountNumber": 2440,
+		"cashFlowCategory": "operations"
+	},
+	{
+		"accountName": "Other Current Liabilities",
+		"accountNumber": 2480,
+		"cashFlowCategory": "operations"
+	},
+	{
+		"accountName": "Notes Payable",
+		"accountNumber": 2700,
+		"cashFlowCategory": "finance"
+	},
+	{
+		"accountName": "Land Payable",
+		"accountNumber": 2702,
+		"cashFlowCategory": "finance"
+	},
+	{
+		"accountName": "Equipment Payable",
+		"accountNumber": 2704,
+		"cashFlowCategory": "finance"
+	},
+	{
+		"accountName": "Vehicles Payable",
+		"accountNumber": 2706,
+		"cashFlowCategory": "finance"
+	},
+	{
+		"accountName": "Bank Loans Payable",
+		"accountNumber": 2708,
+		"cashFlowCategory": "finance"
+	},
+	{
+		"accountName": "Deferred Revenue",
+		"accountNumber": 2710,
+		"cashFlowCategory": "finance"
+	},
+	{
+		"accountName": "Other Long-term Liabilities",
+		"accountNumber": 2740,
+		"cashFlowCategory": "finance"
+	},
+	{
+		"accountName": "Opening Balance",
+		"accountNumber": 3000,
+		"cashFlowCategory": "finance"
+	},
+	{
+		"accountName": "Stated Capital",
+		"accountNumber": 3010,
+		"cashFlowCategory": "finance"
+	},
+	{
+		"accountName": "Capital Surplus",
+		"accountNumber": 3020,
+		"cashFlowCategory": "finance"
+	},
+	{
+		"accountName": "Retained Earnings",
+		"accountNumber": 3030,
+		"cashFlowCategory": "finance"
+	},
+	{
+		"accountName": "Sales Income",
+		"accountNumber": 4000,
+		"cashFlowCategory": "operations"
+	},
+	{
+		"accountName": "Shipping and Handling Income",
+		"accountNumber": 4050,
+		"cashFlowCategory": "operations"
+	},
+	{
+		"accountName": "Interest Income",
+		"accountNumber": 4060,
+		"cashFlowCategory": "operations"
+	},
+	{
+		"accountName": "Other Income",
+		"accountNumber": 4080,
+		"cashFlowCategory": "operations"
+	},
+	{
+		"accountName": "Finance Charge Income",
+		"accountNumber": 4540,
+		"cashFlowCategory": "operations"
+	},
+	{
+		"accountName": "Shipping Charges Reimbursed",
+		"accountNumber": 4550,
+		"cashFlowCategory": "operations"
+	},
+	{
+		"accountName": "Sales Returns and Allowances",
+		"accountNumber": 4800,
+		"cashFlowCategory": "operations"
+	},
+	{
+		"accountName": "Sales Discounts",
+		"accountNumber": 4900,
+		"cashFlowCategory": "operations"
+	},
+	{
+		"accountName": "Cost of Goods Sold, Inventory",
+		"accountNumber": 5000,
+		"cashFlowCategory": "operations"
+	},
+	{
+		"accountName": "Raw Material Purchases",
+		"accountNumber": 5050,
+		"cashFlowCategory": "operations"
+	},
+	{
+		"accountName": "Direct Labor Costs",
+		"accountNumber": 5100,
+		"cashFlowCategory": "operations"
+	},
+	{
+		"accountName": "Indirect Labor Costs",
+		"accountNumber": 5150,
+		"cashFlowCategory": "operations"
+	},
+	{
+		"accountName": "Heat and Power",
+		"accountNumber": 5200,
+		"cashFlowCategory": "operations"
+	},
+	{
+		"accountName": "Commissions",
+		"accountNumber": 5250,
+		"cashFlowCategory": "operations"
+	},
+	{
+		"accountName": "Miscellaneous Factory Costs",
+		"accountNumber": 5300,
+		"cashFlowCategory": "operations"
+	},
+	{
+		"accountName": "Cost of Goods Sold, Salaries and Wages",
+		"accountNumber": 5700,
+		"cashFlowCategory": "operations"
+	},
+	{
+		"accountName": "Cost of Goods Sold, Contract Labor",
+		"accountNumber": 5730,
+		"cashFlowCategory": "operations"
+	},
+	{
+		"accountName": "Cost of Goods Sold, Freight",
+		"accountNumber": 5750,
+		"cashFlowCategory": "operations"
+	},
+	{
+		"accountName": "Cost of Goods Sold, Other",
+		"accountNumber": 5800,
+		"cashFlowCategory": "operations"
+	},
+	{
+		"accountName": "Inventory Adjustments",
+		"accountNumber": 5850,
+		"cashFlowCategory": "operations"
+	},
+	{
+		"accountName": "Purchase Returns and Allowances",
+		"accountNumber": 5900,
+		"cashFlowCategory": "operations"
+	},
+	{
+		"accountName": "Purchase Discounts",
+		"accountNumber": 5950,
+		"cashFlowCategory": "operations"
+	},
+	{
+		"accountName": "Default Purchase Expense",
+		"accountNumber": 6000,
+		"cashFlowCategory": "operations"
+	},
+	{
+		"accountName": "Advertising Expense",
+		"accountNumber": 6010,
+		"cashFlowCategory": "operations"
+	},
+	{
+		"accountName": "Amortization Expense",
+		"accountNumber": 6050,
+		"cashFlowCategory": "operations"
+	},
+	{
+		"accountName": "Auto Expenses",
+		"accountNumber": 6100,
+		"cashFlowCategory": "operations"
+	},
+	{
+		"accountName": "Bad Debt Expense",
+		"accountNumber": 6150,
+		"cashFlowCategory": "operations"
+	},
+	{
+		"accountName": "Bank Fees",
+		"accountNumber": 6200,
+		"cashFlowCategory": "operations"
+	},
+	{
+		"accountName": "Credit Card Processing Fees",
+		"accountNumber": 6210,
+		"cashFlowCategory": "operations"
+	},
+	{
+		"accountName": "Cash Over and Short",
+		"accountNumber": 6250,
+		"cashFlowCategory": "operations"
+	},
+	{
+		"accountName": "Charitable Contributions Expense",
+		"accountNumber": 6300,
+		"cashFlowCategory": "operations"
+	},
+	{
+		"accountName": "Commissions and Fees Expense",
+		"accountNumber": 6350,
+		"cashFlowCategory": "operations"
+	},
+	{
+		"accountName": "Depreciation Expense",
+		"accountNumber": 6400,
+		"cashFlowCategory": "operations"
+	},
+	{
+		"accountName": "Dues and Subscriptions Expense",
+		"accountNumber": 6450,
+		"cashFlowCategory": "operations"
+	},
+	{
+		"accountName": "Employee Benefit Expense, Health Insurance",
+		"accountNumber": 6500,
+		"cashFlowCategory": "operations"
+	},
+	{
+		"accountName": "Employee Benefit Expense, Pension Plans",
+		"accountNumber": 6510,
+		"cashFlowCategory": "operations"
+	},
+	{
+		"accountName": "Employee Benefit Expense, Profit Sharing Plan",
+		"accountNumber": 6520,
+		"cashFlowCategory": "operations"
+	},
+	{
+		"accountName": "Employee Benefit Expense, Other",
+		"accountNumber": 6530,
+		"cashFlowCategory": "operations"
+	},
+	{
+		"accountName": "Freight Expense",
+		"accountNumber": 6550,
+		"cashFlowCategory": "operations"
+	},
+	{
+		"accountName": "Gifts Expense",
+		"accountNumber": 6600,
+		"cashFlowCategory": "operations"
+	},
+	{
+		"accountName": "Income Tax Expense, Federal",
+		"accountNumber": 6650,
+		"cashFlowCategory": "operations"
+	},
+	{
+		"accountName": "Income Tax Expense, State",
+		"accountNumber": 6660,
+		"cashFlowCategory": "operations"
+	},
+	{
+		"accountName": "Income Tax Expense, Local",
+		"accountNumber": 6670,
+		"cashFlowCategory": "operations"
+	},
+	{
+		"accountName": "Insurance Expense, Product Liability",
+		"accountNumber": 6700,
+		"cashFlowCategory": "operations"
+	},
+	{
+		"accountName": "Insurance Expense, Vehicle",
+		"accountNumber": 6710,
+		"cashFlowCategory": "operations"
+	},
+	{
+		"accountName": "Interest Expense",
+		"accountNumber": 6750,
+		"cashFlowCategory": "operations"
+	},
+	{
+		"accountName": "Laundry and Dry Cleaning Expense",
+		"accountNumber": 6800,
+		"cashFlowCategory": "operations"
+	},
+	{
+		"accountName": "Legal and Professional Expense",
+		"accountNumber": 6850,
+		"cashFlowCategory": "operations"
+	},
+	{
+		"accountName": "Licenses Expense",
+		"accountNumber": 6900,
+		"cashFlowCategory": "operations"
+	},
+	{
+		"accountName": "Loss on NSF Checks",
+		"accountNumber": 6950,
+		"cashFlowCategory": "operations"
+	},
+	{
+		"accountName": "Maintenance Expense",
+		"accountNumber": 8000,
+		"cashFlowCategory": "operations"
+	},
+	{
+		"accountName": "Other Income",
+		"accountNumber": 7000,
+		"cashFlowCategory": "operations"
+	},
+	{
+		"accountName": "Meals and Entertainment Expense",
+		"accountNumber": 8050,
+		"cashFlowCategory": "operations"
+	},
+	{
+		"accountName": "Office Expense",
+		"accountNumber": 8100,
+		"cashFlowCategory": "operations"
+	},
+	{
+		"accountName": "Payroll Tax Expense",
+		"accountNumber": 8200,
+		"cashFlowCategory": "operations"
+	},
+	{
+		"accountName": "Penalties and Fines Expense",
+		"accountNumber": 8250,
+		"cashFlowCategory": "operations"
+	},
+	{
+		"accountName": "Other Taxes",
+		"accountNumber": 8300,
+		"cashFlowCategory": "operations"
+	},
+	{
+		"accountName": "Postage Expense",
+		"accountNumber": 8350,
+		"cashFlowCategory": "operations"
+	},
+	{
+		"accountName": "Rent or Lease Expense",
+		"accountNumber": 8400,
+		"cashFlowCategory": "operations"
+	},
+	{
+		"accountName": "Repair and Maintenance Expense, Office",
+		"accountNumber": 8450,
+		"cashFlowCategory": "operations"
+	},
+	{
+		"accountName": "Repair and Maintenance Expense, Vehicle",
+		"accountNumber": 8460,
+		"cashFlowCategory": "operations"
+	},
+	{
+		"accountName": "Supplies Expense, Office",
+		"accountNumber": 8550,
+		"cashFlowCategory": "operations"
+	},
+	{
+		"accountName": "Telephone Expense",
+		"accountNumber": 8600,
+		"cashFlowCategory": "operations"
+	},
+	{
+		"accountName": "Training Expense",
+		"accountNumber": 8620,
+		"cashFlowCategory": "operations"
+	},
+	{
+		"accountName": "Travel Expense",
+		"accountNumber": 8650,
+		"cashFlowCategory": "operations"
+	},
+	{
+		"accountName": "Salaries Expense, Officers",
+		"accountNumber": 8700,
+		"cashFlowCategory": "operations"
+	},
+	{
+		"accountName": "Wages Expense",
+		"accountNumber": 8750,
+		"cashFlowCategory": "operations"
+	},
+	{
+		"accountName": "Utilities Expense",
+		"accountNumber": 8800,
+		"cashFlowCategory": "operations"
+	},
+	{
+		"accountName": "Other Expense",
+		"accountNumber": 8900,
+		"cashFlowCategory": "operations"
+	}
+]

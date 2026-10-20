@@ -5,19 +5,19 @@ namespace Transacto.Framework;
 public static class LoggingExtensions {
 	public static IMessageHandlerBuilder<T, TReturn> Log<T, TReturn>(
 		this IMessageHandlerBuilder<T, TReturn> builder,
-		ILoggerFactory? loggerFactory = null) where T : class {
-		var log = loggerFactory?.CreateLogger<T>() ?? new NullLogger<T>();
+		ILogger? logger = null) where T : class {
+		logger ??= NullLogger.Instance;
 
 		return builder.Pipe(next => async (m, ct) => {
-			if (log.IsEnabled(LogLevel.Information)) {
-				log.LogInformation(m.ToString());
+			if (logger.IsEnabled(LogLevel.Information)) {
+				logger.LogDebug("{message}", m.ToString());
 			}
 
 			try {
 				return await next(m, ct);
 			} catch (Exception ex) {
-				if (log.IsEnabled(LogLevel.Error)) {
-					log.LogError(ex.ToString());
+				if (logger.IsEnabled(LogLevel.Error)) {
+					logger.LogError(ex, "Error handling message {message}", m.ToString());
 				}
 
 				throw;

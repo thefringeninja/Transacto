@@ -1,28 +1,21 @@
 using System.Text.Json;
-using EventStore.Client;
+using KurrentDB.Client;
 using Transacto.Domain;
 using Transacto.Framework;
 using Transacto.Messages;
 
 namespace Transacto.Infrastructure.EventStore;
 
-public class GeneralLedgerEventStoreRepository : IGeneralLedgerRepository {
-	private readonly EventStoreClient _eventStore;
-	private readonly IMessageTypeMapper _messageTypeMapper;
-	private readonly EventStoreRepository<GeneralLedger> _inner;
-
-	public GeneralLedgerEventStoreRepository(EventStoreClient eventStore, IMessageTypeMapper messageTypeMapper) {
-		_eventStore = eventStore;
-		_messageTypeMapper = messageTypeMapper;
-		_inner = new EventStoreRepository<GeneralLedger>(eventStore, messageTypeMapper);
-	}
+public class GeneralLedgerEventStoreRepository(KurrentDBClient eventStore, IMessageTypeMapper messageTypeMapper)
+	: IGeneralLedgerRepository {
+	private readonly EventStoreRepository<GeneralLedger> _inner = new(eventStore, messageTypeMapper);
 
 	public async ValueTask<GeneralLedger> Get(CancellationToken cancellationToken = default) {
 		if (UnitOfWork.Current.TryGet(GeneralLedger.Identifier, out var a) && a is GeneralLedger generalLedger) {
 			return generalLedger;
 		}
 
-		var events = _eventStore.ReadStreamAsync(Direction.Backwards,
+		var events = eventStore.ReadStreamAsync(Direction.Backwards,
 			GeneralLedger.Identifier, StreamPosition.End, int.MaxValue, cancellationToken: cancellationToken);
 
 		generalLedger = GeneralLedger.Factory();
@@ -38,8 +31,8 @@ public class GeneralLedgerEventStoreRepository : IGeneralLedgerRepository {
 			}
 
 			var @event = JsonSerializer.Deserialize(resolvedEvent.OriginalEvent.Data.Span,
-				_messageTypeMapper.Map(resolvedEvent.OriginalEvent.EventType),
-				TransactoSerializerOptions.Events)!;
+				messageTypeMapper.Map(resolvedEvent.OriginalEvent.EventType),
+				TransactoSerializerOptions.Messages)!;
 			stack.Push(@event);
 
 			if (@event is GeneralLedgerOpened or AccountingPeriodClosed) {
@@ -50,9 +43,9 @@ public class GeneralLedgerEventStoreRepository : IGeneralLedgerRepository {
 		foreach (var e in stack) {
 			generalLedger.ReadFromHistory(e);
 		}
-
+		
 		UnitOfWork.Current.Attach(new(GeneralLedger.Identifier, generalLedger,
-			new Expected.Revision(StreamRevision.FromStreamPosition(streamPosition))));
+			StreamState.StreamRevision(streamPosition)));
 
 		return generalLedger;
 	}

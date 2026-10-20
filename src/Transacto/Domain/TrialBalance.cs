@@ -2,23 +2,17 @@ using System.Collections;
 
 namespace Transacto.Domain;
 
-public class TrialBalance : IEnumerable<Account> {
-	private readonly ChartOfAccounts _chartOfAccounts;
-	private readonly AccountBalanceCollection _current;
-
-	public TrialBalance(ChartOfAccounts chartOfAccounts) {
-		_chartOfAccounts = chartOfAccounts;
-		_current = new AccountBalanceCollection();
-	}
+public class TrialBalance(ChartOfAccounts chartOfAccounts) : IEnumerable<Account> {
+	private readonly AccountBalanceCollection _current = new();
 
 	public void Transfer(GeneralLedgerEntry generalLedgerEntry) {
 		foreach (var debit in generalLedgerEntry.Debits) {
-			_current.AddOrUpdate(debit.AccountNumber, () => _chartOfAccounts[debit.AccountNumber],
+			_current.AddOrUpdate(debit.AccountNumber, () => chartOfAccounts[debit.AccountNumber],
 				account => account.Debit(debit.Amount));
 		}
 
 		foreach (var credit in generalLedgerEntry.Credits) {
-			_current.AddOrUpdate(credit.AccountNumber, () => _chartOfAccounts[credit.AccountNumber],
+			_current.AddOrUpdate(credit.AccountNumber, () => chartOfAccounts[credit.AccountNumber],
 				account => account.Credit(credit.Amount));
 		}
 	}
@@ -31,6 +25,6 @@ public class TrialBalance : IEnumerable<Account> {
 		}
 	}
 
-	public IEnumerator<Account> GetEnumerator() => _current.OrderBy(x => x.AccountNumber.ToInt32()).GetEnumerator();
+	public IEnumerator<Account> GetEnumerator() => _current.OrderBy(x => x.AccountNumber).GetEnumerator();
 	IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
 }

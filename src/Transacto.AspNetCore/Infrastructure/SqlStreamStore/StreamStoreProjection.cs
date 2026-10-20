@@ -1,20 +1,17 @@
 using System.Text.Json;
-using EventStore.Client;
+using KurrentDB.Client;
 using Projac;
 using SqlStreamStore;
 using SqlStreamStore.Streams;
-using Position = EventStore.Client.Position;
+using Position = KurrentDB.Client.Position;
 
 namespace Transacto.Infrastructure.SqlStreamStore;
 
 public abstract class StreamStoreProjection : Projection<IStreamStore> {
-	protected string StreamName { get; }
+	public string StreamName { get; }
 
 	protected StreamStoreProjection(string streamName) {
-		if (string.IsNullOrWhiteSpace(streamName)) {
-			throw new ArgumentException();
-		}
-
+		ArgumentException.ThrowIfNullOrWhiteSpace(streamName);
 		StreamName = streamName;
 	}
 

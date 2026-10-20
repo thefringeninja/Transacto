@@ -1,64 +1,11 @@
+using AutoFixture;
+using AutoFixture.Idioms;
+
 namespace Transacto.Domain;
 
-public class GeneralLedgerEntryPrefixTests {
-	public static IEnumerable<object[]> InvalidPrefixCases() {
-		yield return new object[] { " " };
-		yield return new object[] { string.Empty };
-		yield return new object[] { " a" };
-		yield return new object[] { "a " };
-		yield return new object[] { "a\t" };
-		yield return new object[] { new string('a', GeneralLedgerEntryNumberPrefix.MaxPrefixLength + 1) };
-	}
-
-	[MemberData(nameof(InvalidPrefixCases))]
-	public void InvalidPrefix(string value) {
-		var ex = Assert.Throws<ArgumentException>(() => new GeneralLedgerEntryNumberPrefix(value));
-		Assert.Equal(nameof(value), ex.ParamName);
-	}
-
-	[AutoFixtureData]
-	public void Equality(GeneralLedgerEntryNumberPrefix sut) {
-		var copy = sut;
-		Assert.Equal(sut, copy);
-	}
-
-	[AutoFixtureData]
-	public void EqualityOperator(GeneralLedgerEntryNumberPrefix sut) {
-		var copy = sut;
-		Assert.True(sut == copy);
-	}
-
-	[AutoFixtureData]
-	public void InequalityOperator(GeneralLedgerEntryNumberPrefix left, GeneralLedgerEntryNumberPrefix right) {
-		Assert.True(left != right);
-	}
-
-	[AutoFixtureData]
-	public void ToStringReturnsExpectedResult(Guid guid) {
-		var value = guid.ToString()[..5];
-		var sut = new GeneralLedgerEntryNumberPrefix(value);
-
-		Assert.Equal(value, sut.ToString());
-	}
-}
-
-public class GeneralLedgerEntryNumberTests {
-	[AutoFixtureData]
-	public void Equality(GeneralLedgerEntryNumber sut) {
-		var copy = new GeneralLedgerEntryNumber(sut.Prefix, sut.SequenceNumber);
-		Assert.Equal(sut, copy);
-	}
-
-	[AutoFixtureData]
-	public void EqualityOperator(GeneralLedgerEntryNumber sut) {
-		var copy = new GeneralLedgerEntryNumber(sut.Prefix, sut.SequenceNumber);
-		Assert.True(sut == copy);
-	}
-
-	[AutoFixtureData]
-	public void InequalityOperator(GeneralLedgerEntryNumber left, GeneralLedgerEntryNumber right) {
-		Assert.True(left != right);
-	}
+public class GeneralLedgerEntryNumberTests : ValueObjectTests<GeneralLedgerEntryNumber> {
+	public void ParseIsGuarded() => Fixture.Create<GuardClauseAssertion>()
+		.Verify(typeof(AccountingPeriod).GetMethod(nameof(AccountingPeriod.Parse)));
 
 	[AutoFixtureData]
 	public void ParseValidValueReturnsExpectedResult(GeneralLedgerEntryNumber number) {
@@ -73,12 +20,12 @@ public class GeneralLedgerEntryNumberTests {
 	}
 
 	public static IEnumerable<object[]> ParseInvalidValueTestCases() {
-		yield return new object[] { string.Empty };
-		yield return new object[] { "a" };
-		yield return new object[] { "a-" };
-		yield return new object[] { "a--1" };
-		yield return new object[] { "-1" };
-		yield return new object[] { " " };
+		yield return [string.Empty];
+		yield return ["a"];
+		yield return ["a-"];
+		yield return ["a--1"];
+		yield return ["-1"];
+		yield return [" "];
 	}
 
 	[MemberData(nameof(ParseInvalidValueTestCases))]

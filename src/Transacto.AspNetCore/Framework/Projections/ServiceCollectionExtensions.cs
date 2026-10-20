@@ -1,5 +1,3 @@
-using Projac;
-using Transacto.Framework;
 using Transacto.Framework.Projections;
 
 // ReSharper disable CheckNamespace
@@ -7,16 +5,22 @@ namespace Microsoft.Extensions.DependencyInjection;
 // ReSharper restore CheckNamespace
 
 public static partial class ServiceCollectionExtensions {
-	public static IServiceCollection AddInMemoryProjection<T>(this IServiceCollection services,
-		Func<T, object, T> handler) where T : MemoryReadModel, new() =>
-		services.AddSingleton<ProjectionHandler<InMemoryProjectionDatabase>[]>(
-			new AnonymousProjectionBuilder<InMemoryProjectionDatabase>().When<Envelope>((target, envelope) => {
-					var model = target.Get<T>();
-					var (message, position) = envelope;
+	extension(IServiceCollection services) {
+		public IServiceCollection AddInMemoryProjection<T>(Func<T, object, T> handler)
+			where T : MemoryReadModel, new() =>
+			services.AddSingleton<InMemoryProjection>(new InMemoryProjection<T>(handler));
+		public IServiceCollection AddProjectionHost<T>() where T : class, IProjectionsControl =>
+			services
+				.AddSingleton<T>()
+				.AddHostedService<T>(provider => provider.GetRequiredService<T>())
+				.AddSingleton<IProjectionHostStatus, ProjectionHostStatusWrapper<T>>()
+				.AddSingleton<IProjectionsControl>(provider => provider.GetRequiredService<T>());
 
-					target.Set(handler(model.HasValue ? model.Value : new T(), message) with {
-						Checkpoint = position
-					});
-				})
-				.Build());
+		public IServiceCollection AddProjectionHost<T>(Func<IServiceProvider, T> factory)
+			where T : class, IHostedService, IProjectionsControl => services
+			.AddSingleton(factory)
+			.AddHostedService<T>(provider => provider.GetRequiredService<T>())
+			.AddSingleton<IProjectionHostStatus, ProjectionHostStatusWrapper<T>>()
+			.AddSingleton<IProjectionsControl>(provider => provider.GetRequiredService<T>());
+	}
 }

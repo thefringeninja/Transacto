@@ -1,12 +1,7 @@
 namespace Transacto.Framework.CommandHandling;
 
-public class CommandResolveException : Exception {
-	public Type CommandType { get; }
-	public int HandlerCount { get; }
-
-	public CommandResolveException(Type commandType, int handlerCount)
-		: base($"Expected one registration for command {commandType}, {handlerCount} found.") {
-		CommandType = commandType;
-		HandlerCount = handlerCount;
-	}
+public class CommandResolveException(Type commandType, int handlerCount)
+	: Exception($"Expected one registration for command {commandType}, {handlerCount} found.") {
+	public Type CommandType { get; } = commandType;
+	public int HandlerCount { get; } = handlerCount;
 }

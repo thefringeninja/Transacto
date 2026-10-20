@@ -1,0 +1,21 @@
+{
+	"$schema": "http://json-schema.org/draft-07/schema",
+	"type": "object",
+	"title": "Balance Line Item",
+	"additionalProperties": false,
+	"required": [
+		"accountNumber",
+		"amount"
+	],
+	"properties": {
+		"accountNumber": {
+			"title": "Account Number",
+			"type": "integer"
+		},
+		"amount": {
+			"title": "Amount",
+			"type": "number",
+			"format": "decimal"
+		}
+	}
+}

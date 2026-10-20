@@ -2,43 +2,31 @@ using NodaTime;
 
 namespace Transacto.Domain;
 
-public class ProfitAndLoss {
-	private static bool IgnoreInactiveAccount(AccountNumber _) => false;
+public class ProfitAndLoss(AccountingPeriod accountingPeriod, ChartOfAccounts chartOfAccounts) {
+	private readonly AccountBalanceCollection _current = new();
 
-	private readonly AccountingPeriod _accountingPeriod;
-	private readonly ChartOfAccounts _chartOfAccounts;
-	private readonly AccountBalanceCollection _current;
-
-	public ProfitAndLoss(AccountingPeriod accountingPeriod, ChartOfAccounts chartOfAccounts) {
-		_accountingPeriod = accountingPeriod;
-		_chartOfAccounts = chartOfAccounts;
-		_current = new AccountBalanceCollection();
-	}
-
-	public GeneralLedgerEntry GetClosingEntry(AccountIsDeactivated accountIsDeactivated,
-		EquityAccount retainedEarningsAccount, LocalDateTime closedOn,
+	public GeneralLedgerEntry GetClosingEntry(EquityAccount retainedEarningsAccount, LocalDate closedOn,
 		GeneralLedgerEntryIdentifier closingGeneralLedgerEntryIdentifier) {
 		var entry = new GeneralLedgerEntry(closingGeneralLedgerEntryIdentifier,
-			new GeneralLedgerEntryNumber(new("jec"), new(int.Parse(_accountingPeriod.ToString()))),
-			_accountingPeriod,
+			accountingPeriod,
 			closedOn);
 
 		foreach (var account in _current.Where(x => x.Balance != Money.Zero)) {
 			switch (account) {
 				case IncomeAccount: {
 					if (account.Balance > Money.Zero) {
-						entry.ApplyDebit(new(account.AccountNumber, account.Balance), IgnoreInactiveAccount);
+						entry.ApplyDebit(new(account.AccountNumber, account.Balance), AccountIsDeactivated.Ignore);
 					} else {
-						entry.ApplyCredit(new(account.AccountNumber, -account.Balance), IgnoreInactiveAccount);
+						entry.ApplyCredit(new(account.AccountNumber, -account.Balance), AccountIsDeactivated.Ignore);
 					}
 
 					continue;
 				}
 				case ExpenseAccount:
 					if (account.Balance > Money.Zero) {
-						entry.ApplyCredit(new(account.AccountNumber, account.Balance), IgnoreInactiveAccount);
+						entry.ApplyCredit(new(account.AccountNumber, account.Balance), AccountIsDeactivated.Ignore);
 					} else {
-						entry.ApplyDebit(new(account.AccountNumber, -account.Balance), IgnoreInactiveAccount);
+						entry.ApplyDebit(new(account.AccountNumber, -account.Balance), AccountIsDeactivated.Ignore);
 					}
 
 					continue;
@@ -47,13 +35,12 @@ public class ProfitAndLoss {
 			}
 		}
 
-		var retainedEarnings = entry.Debits.Select(x => x.Amount).Sum() -
-		                       entry.Credits.Select(x => x.Amount).Sum();
+		var retainedEarnings = entry.Debits.Sum() - entry.Credits.Sum();
 
 		if (retainedEarnings < Money.Zero) {
-			entry.ApplyDebit(new(retainedEarningsAccount.AccountNumber, -retainedEarnings), accountIsDeactivated);
+			entry.ApplyDebit(new(retainedEarningsAccount.AccountNumber, -retainedEarnings), AccountIsDeactivated.Ignore);
 		} else if (retainedEarnings > Money.Zero) {
-			entry.ApplyCredit(new(retainedEarningsAccount.AccountNumber, retainedEarnings), accountIsDeactivated);
+			entry.ApplyCredit(new(retainedEarningsAccount.AccountNumber, retainedEarnings), AccountIsDeactivated.Ignore);
 		}
 
 		entry.Post();
@@ -63,12 +50,12 @@ public class ProfitAndLoss {
 
 	public void Transfer(GeneralLedgerEntry generalLedgerEntry) {
 		foreach (var credit in generalLedgerEntry.Credits) {
-			_current.AddOrUpdate(credit.AccountNumber, () => _chartOfAccounts[credit.AccountNumber],
+			_current.AddOrUpdate(credit.AccountNumber, () => chartOfAccounts[credit.AccountNumber],
 				account => account.Credit(credit.Amount));
 		}
 
 		foreach (var debit in generalLedgerEntry.Debits) {
-			_current.AddOrUpdate(debit.AccountNumber, () => _chartOfAccounts[debit.AccountNumber],
+			_current.AddOrUpdate(debit.AccountNumber, () => chartOfAccounts[debit.AccountNumber],
 				account => account.Debit(debit.Amount));
 		}
 	}

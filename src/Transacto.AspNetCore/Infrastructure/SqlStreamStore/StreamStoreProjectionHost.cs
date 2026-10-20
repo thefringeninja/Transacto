@@ -1,80 +1,161 @@
+using System.Diagnostics;
 using System.Text.Json;
-using EventStore.Client;
+using KurrentDB.Client;
 using Polly;
 using Projac;
 using SqlStreamStore;
 using Transacto.Framework;
+using Transacto.Framework.Logging;
+using Transacto.Framework.Projections;
+using EventTypeFilter = KurrentDB.Client.EventTypeFilter;
 
 namespace Transacto.Infrastructure.SqlStreamStore;
 
-public class StreamStoreProjectionHost : IHostedService {
-	private readonly EventStoreClient _eventStore;
-	private readonly IMessageTypeMapper _messageTypeMap;
-	private readonly IStreamStore _streamStore;
-	private readonly StreamStoreProjection[] _projections;
-	private readonly CancellationTokenSource _stopped;
+public partial class StreamStoreProjectionHost(
+	KurrentDBClient eventStore,
+	IMessageTypeMapper messageTypeMap,
+	IStreamStore streamStore,
+	IPluginDescriptor plugin,
+	ILogger<StreamStoreProjectionHost> logger,
+	params IEnumerable<StreamStoreProjection> projections)
+	: BackgroundService, IProjectionsControl {
+	public string Name { get; } = $"[{string.Join(',', projections.Select(x => x.StreamName))}]";
 
-	public StreamStoreProjectionHost(EventStoreClient eventStore, IMessageTypeMapper messageTypeMap,
-		IStreamStore streamStore, params StreamStoreProjection[] projections) {
-		_eventStore = eventStore;
-		_messageTypeMap = messageTypeMap;
-		_streamStore = streamStore;
-		_projections = projections;
-		_stopped = new CancellationTokenSource();
+	private readonly Scopes.Plugins _pluginScope = new(plugin.Name);
+
+	protected override async Task ExecuteAsync(CancellationToken stoppingToken) {
+		try {
+			await Policy.WrapAsync(ProjectionPolicy.CircuitBreaker, ProjectionPolicy.RetryExponentially(OnRetry))
+				.ExecuteAsync(SubscribeInternal, stoppingToken);
+
+			void OnRetry(Exception ex, TimeSpan delay) {
+				LogWillRetryAfterDelay(logger, ex, Name, delay);
+			}
+		} catch (OperationCanceledException) { }
 	}
 
-	public Task StartAsync(CancellationToken cancellationToken) {
-		if (_projections.Length > 0) {
-			Subscribe();
+	private async Task SubscribeInternal(CancellationToken ct) {
+		if (!projections.Any()) {
+			return;
 		}
 
-		return Task.CompletedTask;
-	}
+		var projectors = await GetProjectors();
+		var checkpoint = projectors.Select(x => x.Checkpoint).Min();
 
-	public Task StopAsync(CancellationToken cancellationToken) {
-		_stopped.Cancel();
-		return Task.CompletedTask;
-	}
+		LogResumingFromCheckpoint(logger, checkpoint);
 
-	private async void Subscribe() {
-		var projections = await GetProjectors();
-		var checkpoint = projections.Select(x => x.Checkpoint).Min();
+		await using var subscription = eventStore.SubscribeToAll(checkpoint,
+			filterOptions: new SubscriptionFilterOptions(EventTypeFilter.ExcludeSystemEvents()));
 
-		await Policy.Handle<Exception>(ex => ex is not OperationCanceledException)
-			.WaitAndRetryAsync(5, retryCount => TimeSpan.FromMilliseconds(retryCount * retryCount * 100))
-			.ExecuteAsync(Subscribe);
+		var stopwatch = Stopwatch.StartNew();
 
-		return;
+		await foreach (var message in subscription.Messages.WithCancellation(ct)) {
+			using (logger.BeginScope(_pluginScope)) {
+				LogSawMessage(logger, message);
+				switch (message) {
+					case StreamMessage.CaughtUp:
+						stopwatch.Stop();
+						LogCaughtUp(logger, stopwatch.Elapsed);
+						CaughtUp?.Invoke(this, EventArgs.Empty);
+						break;
+					case StreamMessage.FellBehind:
 
-		async Task Subscribe() {
-			await using var subscription = _eventStore.SubscribeToAll(checkpoint,
-				filterOptions: new SubscriptionFilterOptions(EventTypeFilter.ExcludeSystemEvents()));
+						continue;
+				}
 
-			await foreach (var message in subscription.Messages) {
 				if (message is not StreamMessage.Event(var resolvedEvent)) {
 					continue;
 				}
 
-				if (!_messageTypeMap.TryMap(resolvedEvent.Event.EventType, out var type)) {
+				var er = resolvedEvent.Event;
+
+				using var ers = logger.BeginScope(Scopes.EventRecord.From(er));
+
+				if (!messageTypeMap.TryMap(er.EventType, out var type)) {
+					LogDidNotUnderstandMessageType(logger, er.EventType);
 					continue;
 				}
 
-				var e = JsonSerializer.Deserialize(resolvedEvent.Event.Data.Span, type!,
-					TransactoSerializerOptions.Events)!;
+				var e = JsonSerializer.Deserialize(er.Data.Span, type!, TransactoSerializerOptions.Messages);
+				ArgumentNullException.ThrowIfNull(e);
 
-				await Task.WhenAll(projections
-					.Where(x => x.Checkpoint < FromAll.After(resolvedEvent.OriginalPosition ?? Position.Start))
-					.Select(_ => _.Projector.ProjectAsync(_streamStore,
-						new Envelope(message, resolvedEvent.OriginalEvent.Position), _stopped.Token)));
+				await Task.WhenAll(projectors
+					.Where(x => x.Checkpoint < FromAll.After(er.Position))
+					.Select(ProtectAsync(e, er.Position)));
 			}
 		}
 
-		Task<CheckpointedProjector[]> GetProjectors() => Task.WhenAll(Array.ConvertAll(_projections,
-			async projection => new CheckpointedProjector(
-				new Projector<IStreamStore>(Resolve.WhenAssignableToHandlerMessageType(projection.Handlers)),
-				await projection.ReadCheckpoint(_streamStore, _stopped.Token))));
+		return;
 
+		Task<CheckpointedProjector[]> GetProjectors() => Task.WhenAll(projections.Select(LoadProjector));
+
+		Func<CheckpointedProjector, Task> ProtectAsync(object e, Position streamPosition) => async cp => {
+			using var scope = logger.BeginScope(new Scopes.Projections(cp.Projection.StreamName));
+			try {
+				await cp.Projector.ProjectAsync(streamStore, new Envelope(e, streamPosition), ct);
+			} catch (Exception ex) {
+				LogFailedToApplyMessage(logger, ex, e);
+				throw;
+			}
+		};
+
+		async Task<CheckpointedProjector> LoadProjector(StreamStoreProjection projection) {
+			var checkpoint = await projection.ReadCheckpoint(streamStore, ct);
+			var projector = new Projector<IStreamStore>(Resolve.WhenAssignableToHandlerMessageType(projection.Handlers));
+
+			return new(projector, checkpoint, projection);
+		}
 	}
 
-	private record CheckpointedProjector(Projector<IStreamStore> Projector, FromAll Checkpoint);
+	private record CheckpointedProjector(Projector<IStreamStore> Projector, FromAll Checkpoint, StreamStoreProjection Projection);
+
+	
+	public IReadOnlyList<ProjectionState> State { get; } = [];
+
+	public bool TryGetState(string name, out ProjectionState state) {
+		throw new NotImplementedException();
+	}
+
+	public Task Delete(string name) {
+		throw new NotImplementedException();
+	}
+
+	public event Action<object, EventArgs>? CaughtUp;
+
+	[LoggerMessage(LogLevel.Information,
+		"StreamStoreProjection {StreamStoreProjection} encountered an issue. Will retry after {delay}.")]
+	static partial void LogWillRetryAfterDelay(ILogger<StreamStoreProjectionHost> logger, Exception ex,
+		string StreamStoreProjection, TimeSpan delay);
+
+	[LoggerMessage(LogLevel.Trace, "Operation cancelled.")]
+	static partial void LogOperationCancelled(ILogger<StreamStoreProjectionHost> logger);
+
+	[LoggerMessage(LogLevel.Information, "StreamStoreProjection resuming from checkpoint {checkpoint}.")]
+	static partial void LogResumingFromCheckpoint(ILogger<StreamStoreProjectionHost> logger, FromAll checkpoint);
+
+	[LoggerMessage(LogLevel.Information, "StreamStoreProjection caught up in {elapsed}.")]
+	static partial void LogCaughtUp(ILogger<StreamStoreProjectionHost> logger, TimeSpan elapsed);
+
+	[LoggerMessage(LogLevel.Trace, "StreamStoreProjection saw {message}")]
+	static partial void LogSawMessage(ILogger<StreamStoreProjectionHost> logger, StreamMessage message);
+
+	[LoggerMessage(LogLevel.Debug, "StreamStoreProjection did not understand type '{eventType}.")]
+	static partial void LogDidNotUnderstandMessageType(ILogger<StreamStoreProjectionHost> logger, string eventType);
+
+	[LoggerMessage(LogLevel.Debug, "StreamStoreProjection failed to apply message @{message}")]
+	static partial void LogFailedToApplyMessage(ILogger<StreamStoreProjectionHost> logger, Exception ex, object message);
+
+	[LoggerMessage(LogLevel.Trace, "StreamStoreProjection added message to batch.")]
+	static partial void LogAddedToBatch(ILogger<StreamStoreProjectionHost> logger);
+
+	[LoggerMessage(LogLevel.Trace, "StreamStoreProjection flushing batch with {count} messages.")]
+	static partial void LogFlushingBatch(ILogger<StreamStoreProjectionHost> logger, int count);
+
+	[LoggerMessage(LogLevel.Debug,
+		"StreamStoreProjection flushed batch at checkpoint {checkpoint} with {count} messages in {elapsed}.")]
+	static partial void LogFlushedBatch(ILogger<StreamStoreProjectionHost> logger, Position checkpoint, int count,
+		TimeSpan elapsed);
+
+	[LoggerMessage(LogLevel.Information, "Schema created {projection}")]
+	static partial void LogSchemaCreated(ILogger<StreamStoreProjectionHost> logger, string projection);
 }

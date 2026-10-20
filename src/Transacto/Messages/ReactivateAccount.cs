@@ -1,5 +1,5 @@
 namespace Transacto.Messages;
 
-public partial record ReactivateAccount {
-	public override string ToString() => $"Reactivating account {AccountNumber}.";
+public partial record ReactivateAccount : IFormattableMessage {
+	public FormattableString ToFormattableString() => $"Reactivating account {AccountNumber}.";
 }

@@ -1,0 +1,288 @@
+@using Inflector
+@using Microsoft.AspNetCore.Components.Sections
+@using Transacto.Framework.Http.Html
+@inherits LayoutComponentBase
+@inject ViewContext context
+<!DOCTYPE html>
+<html>
+<head>
+	<title>@(context.Title ?? "Transacto")</title>
+	<style>
+		table {
+			border-spacing: 0;
+		}
+
+		td {
+			padding: 5pt;
+		}
+
+		/* Style for even rows */
+		tbody tr:nth-child(even) {
+			background-color: #f2f2f2; /* Light gray for even rows */
+		}
+
+		/* Style for odd rows (optional, if you want a different color for odd rows) */
+		tbody tr:nth-child(odd) {
+			background-color: #ffffff; /* White for odd rows */
+		}
+	</style>
+	<style>
+		* {
+			margin: 0;
+			padding: 0;
+			box-sizing: border-box;
+		}
+
+		body {
+			font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+		}
+
+		/* Header */
+		header {
+			position: fixed;
+			top: 0;
+			left: 0;
+			right: 0;
+			height: 60px;
+			background: #1a1a2e;
+			color: white;
+			display: flex;
+			align-items: center;
+			padding: 0 20px;
+			z-index: 1000;
+			box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+		}
+
+		a[rel="next"]::before {
+			content: "➡️"; /* Unicode for Link Symbol 🔗 followed by a non-breaking space */
+			font-size: 0.9em; /* Make the symbol slightly smaller */
+			margin-right: 4px; /* Add visual space between symbol and link text */
+			opacity: 0.7; /* Make the symbol slightly transparent */
+		}
+
+		a[rel="prev"]::before {
+			content: "⬅️"; /* Unicode for Link Symbol 🔗 followed by a non-breaking space */
+			font-size: 0.9em; /* Make the symbol slightly smaller */
+			margin-right: 4px; /* Add visual space between symbol and link text */
+			opacity: 0.7; /* Make the symbol slightly transparent */
+		}
+
+		/* Hamburger menu button */
+		.menu-btn {
+			width: 30px;
+			height: 24px;
+			cursor: pointer;
+			display: flex;
+			flex-direction: column;
+			justify-content: space-between;
+		}
+
+		.menu-btn span {
+			display: block;
+			height: 3px;
+			background: white;
+			border-radius: 2px;
+			transition: all 0.3s ease;
+		}
+
+		/* When checkbox is checked */
+		#drawer-toggle:checked ~ header .menu-btn span:nth-child(1) {
+			transform: rotate(45deg) translate(8px, 8px);
+		}
+
+		#drawer-toggle:checked ~ header .menu-btn span:nth-child(2) {
+			opacity: 0;
+		}
+
+		#drawer-toggle:checked ~ header .menu-btn span:nth-child(3) {
+			transform: rotate(-45deg) translate(7px, -7px);
+		}
+
+		#drawer-toggle:checked ~ nav {
+			left: 0;
+		}
+
+		#drawer-toggle:checked ~ main {
+			margin-left: 280px;
+		}
+
+		body:has(#drawer-toggle:checked) main, footer {
+			margin-left: 280px;
+		}
+		
+		header, footer {
+			> nav {
+				background: #16213e;
+			}
+		}
+
+		footer {
+			position: relative;
+			bottom: 0;
+			right: 0;
+			
+			> nav {
+				display: inline-table;
+			}
+		}
+
+		header {
+			position: fixed;
+			top: 0;
+			left: 0;
+			right: 0;
+			height: 60px;
+			background: #1a1a2e;
+			color: white;
+			display: flex;
+			align-items: center;
+			padding: 0 20px;
+			z-index: 1000;
+			box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+
+			> nav {
+				position: fixed;
+				top: 60px;
+				left: -280px;
+				width: 280px;
+				height: calc(100vh - 60px);
+				transition: left 0.3s ease;
+				overflow-y: auto;
+				z-index: 999;
+				padding: 0 20px;
+
+				> details.index {
+					order: -1
+				}
+				
+				> details.self {
+					display: none;
+				}
+
+				> details {
+
+					> ul {
+						list-style: none;
+
+						> li {
+							border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+							display: contents;
+
+							> a {
+								display: block;
+								color: #e4e4e4;
+								text-decoration: none;
+								transition: background 0.2s ease;
+							}
+
+							> a:hover {
+								background: rgba(255, 255, 255, 0.1);
+							}
+						}
+					}
+				}
+			}
+		}
+
+		main {
+			margin-top: 60px;
+			margin-left: 0;
+			padding: 0 20px;
+			transition: margin-left 0.3s ease
+		}
+	</style>
+	<SectionOutlet SectionName="head"/>
+	<script type="text/javascript" language="javascript">
+		const style = document.createElement('style');
+		document.head.appendChild(style);
+
+		const observer = new MutationObserver(function (mutationsList, observer) {
+			for (const mutation of mutationsList) {
+				if (mutation.type === 'childList') {
+					mutation.addedNodes.forEach(node => {
+						if (node.nodeType === Node.ELEMENT_NODE && node.id === 'dotnet-compile-error') {
+							style.innerHTML = node.innerHTML.length
+								? ''
+								: '#dotnet-compile-error { visibility: hidden; }';
+						}
+					});
+					mutation.removedNodes.forEach(node => {
+						if (node.nodeType === Node.ELEMENT_NODE && node.id === 'dotnet-compile-error') {
+							style.innerHTML = '';
+						}
+					});
+				}
+			}
+		});
+		observer.observe(document, {childList: true, subtree: true});
+	</script>
+	<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/css/materialize.min.css">
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/js/materialize.min.js"></script>
+	<SectionOutlet SectionName="styles"/>
+</head>
+<body>
+<header>
+	<input type="checkbox" id="drawer-toggle" style="display: none" checked>
+
+	<label for="drawer-toggle" class="menu-btn">
+		<span></span>
+		<span></span>
+		<span></span>
+	</label>
+
+	<nav>
+		@{
+			foreach (var (rel2, links) in LinksByRel.Where(links => links.Key is not ("next" or "prev"))) {
+				<details class="@rel2.Underscore()" open>
+					<summary>@(context.LinkRelations.TryGetValue(rel2, out var rel) ? rel.Title : rel2)</summary>
+					<ul>
+						@foreach (var link in links) {
+							<li>
+								<DynamicComponent Type="@context.GetTemplatedLink(link)"
+								                  Parameters="@linkParameters(link)"/>
+							</li>
+						}
+					</ul>
+				</details>
+			}
+		}
+	</nav>
+</header>
+<main>
+	@Body
+</main>
+<footer>
+	<SectionOutlet SectionName="footer"/>
+	<nav>
+		<ul>
+			@if (LinksByRel.TryGetValue("prev", out var prev)) {
+				foreach (var link in prev) {
+					<li>
+						<Link Model="@link"></Link>
+					</li>
+				}
+			}
+			@if (LinksByRel.TryGetValue("next", out var next)) {
+				foreach (var link in next) {
+					<li>
+						<Link Model="@link"></Link>
+					</li>
+				}
+			}
+		</ul>
+	</nav>
+</footer>
+</body>
+</html>
+
+@code {
+
+	private static Dictionary<string, object> linkParameters(Hallo.Link link) => new() { ["Model"] = link };
+
+	private Dictionary<string, IReadOnlyList<Hallo.Link>> LinksByRel {
+		get => field ??= context._links
+			.GroupBy(link => link.Rel)
+			.ToDictionary(links => links.Key, IReadOnlyList<Hallo.Link> (links) => links.AsEnumerable().ToArray());
+	}
+
+}

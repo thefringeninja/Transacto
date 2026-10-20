@@ -2,7 +2,7 @@ using AutoFixture;
 
 namespace Transacto;
 
-internal class ScenarioFixture : Fixture {
+partial class ScenarioFixture {
 	public ScenarioFixture() {
 		this.CustomizeNodaTime();
 
@@ -11,6 +11,8 @@ internal class ScenarioFixture : Fixture {
 		this.CustomizeAccountName();
 
 		this.CustomizeAccountNumber();
+		
+		this.CustomizeAccountNumberWidth();
 
 		this.CustomizeAccount();
 
@@ -21,5 +23,7 @@ internal class ScenarioFixture : Fixture {
 		this.CustomizeCredit();
 
 		this.CustomizeDebit();
+		
+		this.CustomizeCashFlowCategory();
 	}
 }

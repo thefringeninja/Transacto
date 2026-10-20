@@ -5,11 +5,7 @@ using Transacto.Messages;
 namespace Transacto.Framework;
 
 public class MessageTypeMapperTests {
-	private readonly IMessageTypeMapper _sut;
-
-	public MessageTypeMapperTests() {
-		_sut = MessageTypeMapper.Create(MessageTypeMapper.ScopedFromType(typeof(SomeEvent)));
-	}
+	private readonly IMessageTypeMapper _sut = MessageTypeMapper.Create(MessageTypeMapper.ScopedFromType(typeof(SomeEvent)));
 
 	public void DuplicateTypeRegistrationThrows() {
 		Assert.Throws<ArgumentException>(() => MessageTypeMapper.Create(
@@ -60,7 +56,7 @@ public class MessageTypeMapperTests {
 
 		var messageTypes = typeof(AccountDefined).Assembly.GetTypes()
 			.Where(type => string.Equals(type.Namespace, typeof(AccountDefined).Namespace))
-			.Concat(new[] { typeof(JournalEntry) });
+			.Concat([typeof(JournalEntry)]);
 
 		Assert.Equal(messageTypes, sut.Types);
 		Assert.Equal(messageTypes.Select(x => x.Name), sut.StorageTypes);

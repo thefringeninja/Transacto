@@ -1,10 +1,12 @@
+using Transacto.Messages;
+
 namespace Transacto.Domain;
 
-public class GeneralLedgerEntryWasPostedException : Exception {
-	public GeneralLedgerEntryIdentifier GeneralLedgerEntryIdentifier { get; }
+public class GeneralLedgerEntryWasPostedException(GeneralLedgerEntryIdentifier generalLedgerEntryIdentifier)
+	: Exception(FormatMessage(generalLedgerEntryIdentifier).ToString()), IFormattableMessage {
+	private static FormattableString FormatMessage(GeneralLedgerEntryIdentifier generalLedgerEntryIdentifier) =>
+		$"General ledger entry {generalLedgerEntryIdentifier.ToGuid():n} was posted.";
 
-	public GeneralLedgerEntryWasPostedException(GeneralLedgerEntryIdentifier generalLedgerEntryIdentifier)
-		: base("The general ledger entry was posted.") {
-		GeneralLedgerEntryIdentifier = generalLedgerEntryIdentifier;
-	}
+	public GeneralLedgerEntryIdentifier GeneralLedgerEntryIdentifier { get; } = generalLedgerEntryIdentifier;
+	public FormattableString ToFormattableString() => FormatMessage(GeneralLedgerEntryIdentifier);
 }

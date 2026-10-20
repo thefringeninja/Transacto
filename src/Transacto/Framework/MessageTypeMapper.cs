@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using System.Reflection;
 using Transacto.Domain;
 using Transacto.Messages;
@@ -15,7 +16,7 @@ public class MessageTypeMapper : IMessageTypeMapper {
 		new ReflectionMessageTypeMapper(type.Assembly, type.Namespace);
 
 	public static IMessageTypeMapper Create(params IMessageTypeMapper[] messageTypeMappers)
-		=> new CompositeMessageTypeMapper(messageTypeMappers.Concat(new[] { TransactoMessageTypeMapper.Instance })
+		=> new CompositeMessageTypeMapper(messageTypeMappers.Concat([TransactoMessageTypeMapper.Instance])
 			.ToArray());
 
 	public MessageTypeMapper(IEnumerable<Type> types) {
@@ -23,22 +24,28 @@ public class MessageTypeMapper : IMessageTypeMapper {
 		_storageTypeToType = _typeToStorageType.ToDictionary(pair => pair.Value, pair => pair.Key);
 	}
 
-	public bool TryMap(string storageType, out Type type) => _storageTypeToType.TryGetValue(storageType, out type!);
-	public bool TryMap(Type type, out string storageType) => _typeToStorageType.TryGetValue(type, out storageType!);
+	public bool TryMap(string storageType, [NotNullWhen(true)] out Type? type) =>
+		_storageTypeToType.TryGetValue(storageType, out type);
+
+	public bool TryMap(Type type, [NotNullWhen(true)] out string? storageType) =>
+		_typeToStorageType.TryGetValue(type, out storageType);
 
 	private class TransactoMessageTypeMapper : IMessageTypeMapper {
 		public static readonly IMessageTypeMapper Instance = new TransactoMessageTypeMapper();
 
 		private readonly IMessageTypeMapper _inner;
 
-		public bool TryMap(string storageType, out Type type) => _inner.TryMap(storageType, out type);
-		public bool TryMap(Type type, out string storageType) => _inner.TryMap(type, out storageType);
+		public bool TryMap(string storageType, [NotNullWhen(true)] out Type? type) =>
+			_inner.TryMap(storageType, out type);
+
+		public bool TryMap(Type type, [NotNullWhen(true)] out string? storageType) =>
+			_inner.TryMap(type, out storageType);
 
 		public IEnumerable<string> StorageTypes => _inner.StorageTypes;
 		public IEnumerable<Type> Types => _inner.Types;
 
 		private TransactoMessageTypeMapper() => _inner = new CompositeMessageTypeMapper(
-			ScopedFromType(typeof(AccountDefined)), new MessageTypeMapper(new[] { typeof(JournalEntry) }));
+			ScopedFromType(typeof(AccountDefined)), new MessageTypeMapper([typeof(JournalEntry)]));
 	}
 
 	private class CompositeMessageTypeMapper : IMessageTypeMapper {
@@ -61,8 +68,8 @@ public class MessageTypeMapper : IMessageTypeMapper {
 			_messageTypeMappers = messageTypeMappers;
 		}
 
-		public bool TryMap(string storageType, out Type type) {
-			type = default!;
+		public bool TryMap(string storageType, [NotNullWhen(true)] out Type? type) {
+			type = null;
 			foreach (var messageTypeMapper in _messageTypeMappers) {
 				if (messageTypeMapper.TryMap(storageType, out type)) {
 					return true;
@@ -72,8 +79,8 @@ public class MessageTypeMapper : IMessageTypeMapper {
 			return false;
 		}
 
-		public bool TryMap(Type type, out string storageType) {
-			storageType = default!;
+		public bool TryMap(Type type, [NotNullWhen(true)] out string? storageType) {
+			storageType = null;
 			foreach (var messageTypeMapper in _messageTypeMappers) {
 				if (messageTypeMapper.TryMap(type, out storageType)) {
 					return true;
@@ -84,18 +91,19 @@ public class MessageTypeMapper : IMessageTypeMapper {
 		}
 	}
 
-	private class ReflectionMessageTypeMapper : IMessageTypeMapper {
-		private readonly IMessageTypeMapper _inner;
-
-		public ReflectionMessageTypeMapper(Assembly messageAssembly, string? messageNamespace) {
-			_inner = new MessageTypeMapper(messageAssembly.DefinedTypes.Where(IsMessageType(messageNamespace)));
-		}
+	private class ReflectionMessageTypeMapper(Assembly messageAssembly, string? messageNamespace) : IMessageTypeMapper {
+		private readonly IMessageTypeMapper _inner =
+			new MessageTypeMapper(messageAssembly.DefinedTypes.Where(IsMessageType(messageNamespace)));
 
 		private static Func<Type, bool> IsMessageType(string? messageNamespace) => type =>
 			string.Equals(messageNamespace, type.Namespace);
 
-		public bool TryMap(string storageType, out Type type) => _inner.TryMap(storageType, out type);
-		public bool TryMap(Type type, out string storageType) => _inner.TryMap(type, out storageType);
+		public bool TryMap(string storageType, [NotNullWhen(true)] out Type? type) =>
+			_inner.TryMap(storageType, out type);
+
+		public bool TryMap(Type type, [NotNullWhen(true)] out string? storageType) =>
+			_inner.TryMap(type, out storageType);
+
 		public IEnumerable<string> StorageTypes => _inner.StorageTypes;
 		public IEnumerable<Type> Types => _inner.Types;
 	}

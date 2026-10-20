@@ -1,14 +1,14 @@
 using NodaTime;
+using Transacto.Messages;
 
 namespace Transacto.Domain;
 
-public class ClosingDateBeforePeriodException : Exception {
-	public AccountingPeriod AccountingPeriod { get; }
-	public LocalDate Date { get; }
+public class ClosingDateBeforePeriodException(AccountingPeriod accountingPeriod, LocalDate date)
+	: Exception(FormatMessage(accountingPeriod, date).ToString()), IFormattableMessage {
+	private static FormattableString FormatMessage(AccountingPeriod accountingPeriod, LocalDate date) =>
+		$"Closing date {date} is before period {accountingPeriod.ToString()}.";
 
-	public ClosingDateBeforePeriodException(AccountingPeriod accountingPeriod, LocalDate date)
-		: base($"Closing date {date} is before period {accountingPeriod}.") {
-		AccountingPeriod = accountingPeriod;
-		Date = date;
-	}
+	public AccountingPeriod AccountingPeriod { get; } = accountingPeriod;
+	public LocalDate Date { get; } = date;
+	public FormattableString ToFormattableString() => FormatMessage(AccountingPeriod, Date);
 }

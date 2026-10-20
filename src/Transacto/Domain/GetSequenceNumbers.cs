@@ -1,0 +1,3 @@
+namespace Transacto.Domain;
+
+public delegate IGeneralLedgerEntrySequenceNumberGenerator GetSequenceNumbers(IBusinessTransaction businessTransaction);

@@ -1,36 +1,36 @@
 using System.Net;
-using System.Text.Json;
+using System.Reflection;
+using AngleSharp;
+using AngleSharp.Html;
+using AngleSharp.Html.Parser;
 using Hallo;
-using Hallo.Serialization;
+using Microsoft.AspNetCore.Components;
+using Microsoft.AspNetCore.Components.Web;
+using Microsoft.AspNetCore.Http.Headers;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Formatters;
 using Microsoft.Net.Http.Headers;
+using Transacto.Framework.Http.Html;
+using Transacto.Plugins.FinancialStatements;
+using Link = Transacto.Views.Shared.Link;
 
 namespace Transacto.Framework.Http;
 
-internal class HalResult<T> : IResult {
-	private const string HalJsonContentType = "application/hal+json";
-	private const string HalHtmlContentType = "text/html";
-	private static readonly MediaType HalJson = new(HalJsonContentType);
-	private static readonly MediaType Html = new(HalHtmlContentType);
+internal abstract class HalResult {
+	protected const string HalJsonContentType = "application/hal+json";
+	protected const string HalHtmlContentType = "text/html; charset=utf-8";
+	protected static readonly MediaType HalJson = new(HalJsonContentType);
+	protected static readonly MediaType Html = new(HalHtmlContentType);
+}
 
-	private readonly T? _resource;
-	private readonly Checkpoint _checkpoint;
-	private readonly IHal _hal;
-	private readonly HttpStatusCode _statusCode;
-
-	public HalResult(T? resource, Checkpoint checkpoint, IHal hal, HttpStatusCode statusCode = HttpStatusCode.OK) {
-		_resource = resource;
-		_checkpoint = checkpoint;
-		_hal = hal;
-		_statusCode = statusCode;
-	}
-
+internal class HalResult<T>(T? resource, Checkpoint checkpoint, IHal hal, HttpStatusCode statusCode = HttpStatusCode.OK)
+	: HalResult, IResult {
 	public Task ExecuteAsync(HttpContext context) {
-		context.Response.StatusCode = (int)_statusCode;
+		context.Response.StatusCode = (int)statusCode;
 
 		var requestHeaders = context.Request.GetTypedHeaders();
 
-		if (_checkpoint != default) {
+		if (checkpoint != default) {
 			for (var i = 0; i < requestHeaders.IfMatch.Count; i++) {
 				var etag = requestHeaders.IfMatch[i].Tag;
 				if (!etag.HasValue) {
@@ -39,76 +39,117 @@ internal class HalResult<T> : IResult {
 
 				var requestedCheckpoint = Checkpoint.FromString(etag.Value.AsSpan()[1..^1]);
 
-				if (requestedCheckpoint > _checkpoint) {
-					return Results.Extensions.PreconditionFailed().ExecuteAsync(context);
+				if (requestedCheckpoint <= checkpoint) {
+					continue;
 				}
+
+				context.Response.StatusCode = (int)HttpStatusCode.PreconditionFailed;
+				return NegotiateFromHeaders(requestHeaders, default, hal).ExecuteAsync(context);
 			}
 
-			context.Response.Headers.ETag = _checkpoint.ToString();
+			context.Response.Headers.ETag = checkpoint.ToString();
 		}
 
-		var inner = requestHeaders.Accept.Count switch {
-			0 => new HalJsonResult(_resource, _hal),
-			_ => requestHeaders.Accept.Select(MediaType).Select(Negotiate).FirstOrDefault() ??
-			     Results.Extensions.NotAcceptable()
-		};
+		var inner = NegotiateFromHeaders(requestHeaders, resource, hal);
 
 		return inner.ExecuteAsync(context);
 
-		IResult Negotiate(MediaType m) =>
-			(HalJson.IsSubsetOf(m), Html.IsSubsetOf(m) || m.SubTypeSuffix == "html") switch {
-				(true, false) => new HalJsonResult(_resource, _hal),
-				(false, true) => new HalHtmlResult(_resource, _hal),
-				_ => NotAcceptableResult.Instance
+		static IResult NegotiateFromHeaders(RequestHeaders headers, T? resource, IHal hal) {
+			return headers.Accept.Count switch {
+				0 => new HalJsonResult(resource, hal),
+				_ => headers.Accept.Select(MediaType).Select(NegotiateFromMediaType).FirstOrDefault() ??
+				     NotAcceptableResult.Instance
 			};
+			
+			IResult NegotiateFromMediaType(MediaType m) =>
+				(HalJson.IsSubsetOf(m), Html.IsSubsetOf(m) || m.SubTypeSuffix == "html") switch {
+					(true, false) => new HalJsonResult(resource, hal),
+					(false, true) => new HalHtmlResult(resource, hal),
+					_ => NotAcceptableResult.Instance
+				};
+
+		}
+
 
 		static MediaType MediaType(MediaTypeHeaderValue value) => new(value.MediaType);
 	}
 
-	private class HalJsonResult : IResult {
-		private static readonly JsonSerializerOptions SerializerOptions
-			= new() {
-				Converters = {
-					new LinksConverter(),
-					new HalRepresentationConverter()
-				},
-
-				PropertyNamingPolicy = JsonNamingPolicy.CamelCase
-			};
-
-		private static readonly MediaTypeHeaderValue ContentType = new($"{HalJson.Type}/{HalJson.SubType}");
-
-		private readonly T? _resource;
-		private readonly IHal _hal;
-
-		public HalJsonResult(T? resource, IHal hal) {
-			_resource = resource;
-			_hal = hal;
-		}
-
+	private class HalJsonResult(T? resource, IHal hal) : IResult {
 		public async Task ExecuteAsync(HttpContext context) {
-			context.Response.ContentType = HalJsonContentType;
-			var representation = await _hal.RepresentationOfAsync(_resource ?? new object());
-			await context.Response.WriteAsJsonAsync(representation, SerializerOptions, context.RequestAborted);
+			var representation = await hal.RepresentationOfAsync(resource);
+			
+			await context.Response.WriteAsJsonAsync(representation,
+				TransactoHttpSerializerOptions.HalJsonSerializerOptions, HalJsonContentType, context.RequestAborted);
 		}
 	}
 
-	private class HalHtmlResult : IResult {
-		private readonly T? _resource;
-		private readonly IHal _hal;
+	private class HalHtmlResult(T? resource, IHal hal) : IResult {
+		private static readonly HtmlParser s_HtmlParser = new();
 
-		public HttpStatusCode StatusCode { get; init; }
+		private static readonly PrettyMarkupFormatter s_PrettyMarkupFormatter = new() {
+			Indentation = "\t",
+			NewLine = "\n"
+		};
 
-		public HalHtmlResult(T? resource, IHal hal) {
-			_resource = resource;
-			_hal = hal;
-		}
+		private static IReadOnlyList<Type> GetLinkRenderers() =>
+			typeof(T).Namespace is null
+				? []
+				: typeof(T).Assembly.GetTypes().Where(type =>
+						type.Namespace is not null &&
+						type.IsAssignableTo(typeof(ILinkMatcher)) &&
+						type.Name.EndsWith("_link") &&
+						type.Namespace.Split('.').Any(typeof(T).Namespace!.StartsWith))
+					.ToList()
+					.AsReadOnly();
 
-		public Task ExecuteAsync(HttpContext context) {
-			context.Response.StatusCode = (int)StatusCode;
+		private static readonly IReadOnlyList<Type> s_LinkRenderers = GetLinkRenderers();
+
+		public async Task ExecuteAsync(HttpContext context) {
+			await using var htmlRenderer = new HtmlRenderer(context.RequestServices,
+				context.RequestServices.GetRequiredService<ILoggerFactory>());
 			context.Response.ContentType = HalHtmlContentType;
 
-			return Task.CompletedTask;
+			var representation = await hal.RepresentationOfAsync(resource);
+
+			var viewContext = context.RequestServices.GetRequiredService<ViewContext>();
+			viewContext._links = representation.Links.ToArray();
+			viewContext._embedded = representation.Embedded;
+			viewContext.GetTemplatedLink = link => {
+				foreach (var r in s_LinkRenderers) {
+					if ((bool)r.GetMethod("IsMatch", BindingFlags.Public | BindingFlags.Static)!
+					    .Invoke(null, [link])!) {
+						return r;
+					};
+				}
+				return typeof(Link);
+			};
+
+			var parameters = new Dictionary<string, object?> {
+				["Model"] = representation.State
+			};
+
+			var viewTypeName = $"{typeof(T).FullName}_view".Replace('+', '_');
+			var viewType = Type.GetType(viewTypeName);
+
+			if (viewType is null) {
+				viewType = typeof(ProblemDetails_view);
+				parameters["Model"] = new ProblemDetails {
+					Detail = $"The view {viewTypeName}, {typeof(T).Assembly} was not found and no html could be rendered.",
+					Status = 406
+				};
+			}
+
+			var html = await htmlRenderer.Dispatcher.InvokeAsync(async () => {
+				var component =
+					await htmlRenderer.RenderComponentAsync(viewType, ParameterView.FromDictionary(parameters));
+				return component.ToHtmlString();
+			});
+
+			if (context.RequestServices.GetRequiredService<IWebHostEnvironment>().IsDevelopment()) {
+				html = s_HtmlParser.ParseDocument(html).ToHtml(s_PrettyMarkupFormatter);
+			}
+
+			await context.Response.WriteAsync(html, context.RequestAborted);
 		}
 	}
 }

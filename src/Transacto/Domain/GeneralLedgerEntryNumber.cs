@@ -1,22 +1,25 @@
 namespace Transacto.Domain;
 
-public readonly struct GeneralLedgerEntryNumber : IEquatable<GeneralLedgerEntryNumber> {
-	public GeneralLedgerEntryNumberPrefix Prefix { get; }
-	public GeneralLedgerEntrySequenceNumber SequenceNumber { get; }
-
-	public GeneralLedgerEntryNumber(GeneralLedgerEntryNumberPrefix prefix,
-		GeneralLedgerEntrySequenceNumber sequenceNumber) {
-		Prefix = prefix;
-		SequenceNumber = sequenceNumber;
-	}
+public readonly struct GeneralLedgerEntryNumber(
+	GeneralLedgerEntryNumberPrefix prefix,
+	GeneralLedgerEntrySequenceNumber sequenceNumber)
+	: IEquatable<GeneralLedgerEntryNumber> {
+	public static readonly GeneralLedgerEntryNumber Empty = default;
+	
+	public GeneralLedgerEntryNumberPrefix Prefix { get; } = prefix;
+	public GeneralLedgerEntrySequenceNumber SequenceNumber { get; } = sequenceNumber;
 
 	public static GeneralLedgerEntryNumber Parse(string value) =>
 		TryParse(value, out var result)
 			? result
 			: throw new FormatException();
 
-	public static bool TryParse(string value, out GeneralLedgerEntryNumber generalLedgerEntryNumber) {
+	public static bool TryParse(string? value, out GeneralLedgerEntryNumber generalLedgerEntryNumber) {
 		generalLedgerEntryNumber = default;
+
+		if (string.IsNullOrEmpty(value)) {
+			return false;
+		}
 		var indexOfDelimiter = value.IndexOf('-');
 		if (indexOfDelimiter < 0 || indexOfDelimiter != value.LastIndexOf('-')) {
 			return false;

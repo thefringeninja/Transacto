@@ -1,10 +1,12 @@
+using Transacto.Messages;
+
 namespace Transacto.Domain;
 
-public class GeneralLedgerEntryNotInBalanceException : Exception {
-	public GeneralLedgerEntryIdentifier GeneralLedgerEntryIdentifier { get; }
+public class GeneralLedgerEntryNotInBalanceException(GeneralLedgerEntryIdentifier generalLedgerEntryIdentifier)
+	: Exception(FormatMessage(generalLedgerEntryIdentifier).ToString()), IFormattableMessage {
+	private static FormattableString FormatMessage(GeneralLedgerEntryIdentifier generalLedgerEntryIdentifier) =>
+		$"General ledger entry {generalLedgerEntryIdentifier.ToGuid():n} was not in balance.";
 
-	public GeneralLedgerEntryNotInBalanceException(GeneralLedgerEntryIdentifier generalLedgerEntryIdentifier)
-		: base("The general ledger entry was not in balance.") {
-		GeneralLedgerEntryIdentifier = generalLedgerEntryIdentifier;
-	}
+	public GeneralLedgerEntryIdentifier GeneralLedgerEntryIdentifier { get; } = generalLedgerEntryIdentifier;
+	public FormattableString ToFormattableString() => FormatMessage(GeneralLedgerEntryIdentifier);
 }

@@ -1,10 +1,13 @@
+using Transacto.Messages;
+
 namespace Transacto.Domain;
 
-public class TrialBalanceFailedException : Exception {
-	public Money Balance { get; }
+public class TrialBalanceFailedException(Money balance)
+	: Exception(FormatMessage(balance).ToString()), IFormattableMessage {
+	private static FormattableString FormatMessage(Money balance) =>
+		$"Expected a balance of {Money.Zero}, current trial balance is {balance}.";
 
-	public TrialBalanceFailedException(Money balance) : base(
-		$"Expected a balance of {Money.Zero}, current trial balance is {balance}.") {
-		Balance = balance;
-	}
+	public Money Balance { get; } = balance;
+
+	public FormattableString ToFormattableString() => FormatMessage(Balance);
 }

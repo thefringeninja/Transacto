@@ -1,0 +1,24 @@
+{
+	"$schema": "http://json-schema.org/draft-07/schema",
+	"type": "object",
+	"title": "General Ledger Entry Number Allocated",
+	"additionalProperties": false,
+	"required": [
+		"generalLedgerEntryId",
+		"generalLedgerEntrySequenceNumber"
+	],
+	"properties": {
+		"generalLedgerEntryId": {
+			"title": "General Ledger Entry Id",
+			"$ref": "Uuid.schema.json",
+			"x-schema-form": {
+				"key": "generalLedgerEntryId",
+				"type": "uuid"
+			}
+		},
+		"generalLedgerEntrySequenceNumber": {
+			"title": "General Ledger Entry Sequence Number",
+			"type": "integer"
+		}
+	}
+}

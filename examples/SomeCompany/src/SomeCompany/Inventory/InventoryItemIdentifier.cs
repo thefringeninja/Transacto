@@ -4,9 +4,7 @@ public readonly struct InventoryItemIdentifier : IEquatable<InventoryItemIdentif
 	private readonly Guid _value;
 
 	public InventoryItemIdentifier(Guid value) {
-		if (value == Guid.Empty) {
-			throw new ArgumentOutOfRangeException(nameof(value));
-		}
+		ArgumentOutOfRangeException.ThrowIfEqual(value, Guid.Empty);
 
 		_value = value;
 	}

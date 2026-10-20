@@ -1,67 +1,149 @@
+using System.Collections.Concurrent;
+using System.Collections.ObjectModel;
+using System.Diagnostics;
 using System.Text.Json;
-using EventStore.Client;
+using KurrentDB.Client;
 using Polly;
 using Projac;
+using Transacto.Framework.Logging;
+using EventTypeFilter = KurrentDB.Client.EventTypeFilter;
 
 namespace Transacto.Framework.Projections;
 
-public class InMemoryProjectionHost : IHostedService {
-	private readonly EventStoreClient _eventStore;
-	private readonly IMessageTypeMapper _messageTypeMapper;
-	private readonly InMemoryProjectionDatabase _target;
-	private readonly CancellationTokenSource _stopped;
+public partial class InMemoryProjectionHost(
+	IPluginDescriptor pluginDescriptor,
+	KurrentDBClient eventStore,
+	IMessageTypeMapper messageTypeMapper,
+	InMemoryProjectionDatabase target,
+	ILogger<InMemoryProjectionHost> logger,
+	params IEnumerable<InMemoryProjection> projections)
+	: BackgroundService, IProjectionsControl {
+	private readonly Projector<InMemoryProjectionDatabase> _projector = new(
+		EnvelopeResolve.WhenAssignableToHandlerMessageType(projections.SelectMany(_ => _).ToArray()));
 
-	private readonly Projector<InMemoryProjectionDatabase> _projector;
+	private readonly InMemoryProjectionCollection _projections = [..projections];
 
-	public InMemoryProjectionHost(EventStoreClient eventStore, IMessageTypeMapper messageTypeMapper,
-		InMemoryProjectionDatabase target, params ProjectionHandler<InMemoryProjectionDatabase>[][] projections) {
-		_eventStore = eventStore;
-		_messageTypeMapper = messageTypeMapper;
-		_target = target;
-		_stopped = new CancellationTokenSource();
+	private readonly ConcurrentDictionary<string, ProjectionState> _state = [];
+	private KurrentDBClient.StreamSubscriptionResult? _currentSubscription;
 
-		_projector = new Projector<InMemoryProjectionDatabase>(
-			EnvelopeResolve.WhenAssignableToHandlerMessageType(projections.SelectMany(_ => _).ToArray()));
+	public IReadOnlyList<ProjectionState> State => _state.Values.ToList();
+
+	public bool TryGetState(string name, out ProjectionState state) =>
+		_state.TryGetValue(name, out state);
+
+	public async Task Delete(string name) {
+		if (_currentSubscription is not { } subscription) {
+			return;
+		}
+
+		await subscription.DisposeAsync();
 	}
 
-	public Task StartAsync(CancellationToken cancellationToken) {
-		Subscribe();
+	public event Action<object, EventArgs>? CaughtUp;
 
-		return Task.CompletedTask;
-	}
 
-	private async void Subscribe() {
-		var checkpoint = FromAll.Start;
+	protected override async Task ExecuteAsync(CancellationToken stoppingToken) {
+		try {
+			await Policy.WrapAsync(ProjectionPolicy.CircuitBreaker, ProjectionPolicy.RetryExponentially(OnRetry))
+				.ExecuteAsync(SubscribeInternal, stoppingToken);
 
-		await Policy.Handle<Exception>(ex => ex is not OperationCanceledException)
-			.WaitAndRetryAsync(5, retryCount => TimeSpan.FromMilliseconds(retryCount * retryCount * 100))
-			.ExecuteAsync(Subscribe);
-		return;
-
-		async Task Subscribe() {
-			await using var subscription = _eventStore.SubscribeToAll(checkpoint,
-				filterOptions: new SubscriptionFilterOptions(EventTypeFilter.ExcludeSystemEvents()));
-
-			await foreach (var message in subscription.Messages) {
-				if (message is not StreamMessage.Event(var resolvedEvent)) {
-					continue;
-				}
-
-				if (!_messageTypeMapper.TryMap(resolvedEvent.Event.EventType, out var type)) {
-					continue;
-				}
-
-				var e = JsonSerializer.Deserialize(resolvedEvent.Event.Data.Span, type!,
-					TransactoSerializerOptions.Events)!;
-
-				await _projector.ProjectAsync(_target, new Envelope(e, resolvedEvent.OriginalEvent.Position),
-					_stopped.Token);
+			void OnRetry(Exception ex, TimeSpan delay) {
+				_state.UpdateAll(static (state, ex) => state with {
+					Status = ProjectionStatus.Faulted,
+					ErrorMessage = ex.Message
+				}, ex);
+				LogRetryAfterDelay(logger, ex, delay);
 			}
+		} catch (OperationCanceledException) {
 		}
 	}
 
-	public Task StopAsync(CancellationToken cancellationToken) {
-		_stopped.Cancel();
-		return Task.CompletedTask;
+	private async Task SubscribeInternal(CancellationToken ct) {
+		target.Clear();
+
+		var scope = new Scopes.Plugins(pluginDescriptor.Name); 
+
+		foreach (var projectionHandler in _projections) {
+			var key = $"{projectionHandler.Name}-Projection";
+			_state.TryAdd(key, ProjectionState.Named(key));
+		}
+
+		using (logger.BeginScope(scope)) {
+			LogResumingFromCheckpoint(logger, FromAll.Start);
+		}
+
+		await FellBehind(ct);
+
+		var stopwatch = Stopwatch.StartNew();
+
+		_currentSubscription = eventStore.SubscribeToAll(FromAll.Start,
+			filterOptions: new SubscriptionFilterOptions(EventTypeFilter.ExcludeSystemEvents()), cancellationToken: ct);
+
+		await foreach (var message in _currentSubscription.Messages.WithCancellation(ct)) {
+			LogSawMessage(logger, message);
+			switch (message) {
+				case StreamMessage.CaughtUp:
+					stopwatch.Stop();
+					LogCaughtUp(logger, stopwatch.Elapsed);
+
+					_state.UpdateAll(value => value with { Status = ProjectionStatus.Live });
+
+					CaughtUp?.Invoke(this, EventArgs.Empty);
+					break;
+				case StreamMessage.FellBehind:
+					await FellBehind(ct);
+
+					continue;
+			}
+
+			if (message is not StreamMessage.Event(var resolvedEvent)) {
+				continue;
+			}
+
+			_state.UpdateAll((value, position) => value
+				.End(FromAll.After(position))
+				.Checkpoint(FromAll.After(position)), resolvedEvent.Event.Position);
+
+			using var ers = logger.BeginScope(Scopes.EventRecord.From(resolvedEvent.Event));
+
+			if (!messageTypeMapper.TryMap(resolvedEvent.Event.EventType, out var type)) {
+				LogDidNotUnderstandMessageType(logger, resolvedEvent.Event.EventType);
+				continue;
+			}
+
+			var e = JsonSerializer.Deserialize(resolvedEvent.Event.Data.Span, type, TransactoSerializerOptions.Messages)!;
+
+			await _projector.ProjectAsync(target, new Envelope(e, resolvedEvent.OriginalEvent.Position), ct);
+		}
+	}
+
+	private async Task FellBehind(CancellationToken ct) {
+		var last = await eventStore.ReadAllAsync(Direction.Backwards, Position.End, 1)
+			.Select(re => re.Event.Position)
+			.FirstOrDefaultAsync(ct);
+
+		_state.UpdateAll(
+			static (value, position) =>
+				value.End(FromAll.After(position)) with { Status = ProjectionStatus.CatchingUp },
+			last);
+	}
+	
+	[LoggerMessage(LogLevel.Information, "InMemoryProjectionHost encountered an issue. Will retry after {delay}")]
+	static partial void LogRetryAfterDelay(ILogger<InMemoryProjectionHost> logger, Exception ex, TimeSpan delay);
+
+	[LoggerMessage(LogLevel.Information, "InMemoryProjection resuming from checkpoint {checkpoint}.")]
+	static partial void LogResumingFromCheckpoint(ILogger<InMemoryProjectionHost> logger, FromAll checkpoint);
+
+	[LoggerMessage(LogLevel.Information, "InMemoryProjection caught up in {elapsed}.")]
+	static partial void LogCaughtUp(ILogger<InMemoryProjectionHost> logger, TimeSpan elapsed);
+
+	[LoggerMessage(LogLevel.Trace, "InMemoryProjection saw {message}")]
+	static partial void LogSawMessage(ILogger<InMemoryProjectionHost> logger, StreamMessage message);
+
+	[LoggerMessage(LogLevel.Debug, "InMemoryProjection did not understand type {type}.")]
+	static partial void LogDidNotUnderstandMessageType(ILogger<InMemoryProjectionHost> logger, string type);
+
+	private class InMemoryProjectionCollection : KeyedCollection<string, InMemoryProjection> {
+		protected override string GetKeyForItem(InMemoryProjection item) => item.Name;
 	}
 }

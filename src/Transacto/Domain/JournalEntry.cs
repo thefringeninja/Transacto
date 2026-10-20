@@ -1,15 +1,18 @@
 using System.Collections.Immutable;
+using System.Text.Json.Serialization;
 
 namespace Transacto.Domain;
 
 public partial class JournalEntry : IBusinessTransaction {
-	public GeneralLedgerEntrySequenceNumber SequenceNumber => new(JournalEntryNumber);
-	public int JournalEntryNumber { get; init; }
 	public string? Description { get; init; }
 	public ImmutableArray<Item> Items { get; init; } = ImmutableArray<Item>.Empty;
+	public GeneralLedgerEntrySequenceNumber? SequenceNumber { get; set; }
+	public static GeneralLedgerEntryNumberPrefix Prefix { get; } = new("journalEntry");
+	public GeneralLedgerEntryNumber? ReferenceNumber =>
+		SequenceNumber.HasValue ? new GeneralLedgerEntryNumber(Prefix, SequenceNumber.Value) : null;
 
-	public IEnumerable<object> GetTransactionItems() {
-		foreach (var (accountNumber, amount, type) in Items) {
+	public IEnumerable<object> GetTransactionItems(ChartOfAccounts chartOfAccounts) {
+		foreach (var (accountNumber, amount, type) in Items.OrderBy(item => item.AccountNumber)) {
 			yield return type switch {
 				Type.Credit => new Credit(new AccountNumber(accountNumber), new Money(amount)),
 				Type.Debit => new Debit(new AccountNumber(accountNumber), new Money(amount)),

@@ -1,12 +1,12 @@
 using System.Text.Json;
-using EventStore.Client;
+using KurrentDB.Client;
 using Transacto.Infrastructure.EventStore;
 
 namespace Transacto.Framework;
 
 public static class UnitOfWorkExtensions {
 	public static IMessageHandlerBuilder<TCommand, Checkpoint> UnitOfWork<TCommand>(
-		this IMessageHandlerBuilder<TCommand, Checkpoint> builder, EventStoreClient eventStore,
+		this IMessageHandlerBuilder<TCommand, Checkpoint> builder, KurrentDBClient eventStore,
 		IMessageTypeMapper messageTypeMapper)
 		where TCommand : class => builder.Pipe(next => async (message, ct) => {
 		using var _ = Framework.UnitOfWork.Start();
@@ -18,7 +18,7 @@ public static class UnitOfWorkExtensions {
 			: await Commit(eventStore, messageTypeMapper, ct);
 	});
 
-	private static async Task<Checkpoint> Commit(EventStoreClient eventStore,
+	private static async Task<Checkpoint> Commit(KurrentDBClient eventStore,
 		IMessageTypeMapper messageTypeMapper, CancellationToken ct) {
 		var (streamName, aggregateRoot, expectedVersion) = Framework.UnitOfWork.Current.GetChanges().Single();
 
@@ -35,7 +35,7 @@ public static class UnitOfWorkExtensions {
 			var type = e.GetType();
 
 			return new EventData(Uuid.NewUuid(), messageTypeMapper.Map(type),
-				JsonSerializer.SerializeToUtf8Bytes(e, type, TransactoSerializerOptions.Events));
+				JsonSerializer.SerializeToUtf8Bytes(e, type, TransactoSerializerOptions.Messages));
 		}
 	}
 }

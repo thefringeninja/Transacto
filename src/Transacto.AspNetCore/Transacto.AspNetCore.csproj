@@ -4,34 +4,29 @@
 	</PropertyGroup>
 
 	<ItemGroup>
-		<PackageReference Include="AngleSharp" Version="0.14.0"/>
-		<PackageReference Include="Dapper" Version="2.0.35"/>
-		<PackageReference Include="EventStore.Client.Grpc.Streams" Version="23.2.1"/>
-		<PackageReference Include="Hallo" Version="2.1.0"/>
+		<PackageReference Include="AngleSharp" Version="1.4.0"/>
+		<PackageReference Include="Corvus.Json.JsonSchema.Draft201909" Version="4.5.8"/>
+		<PackageReference Include="Dapper" Version="2.1.66"/>
+		<PackageReference Include="DeterministicGuids" Version="1.0.10"/>
+		<PackageReference Include="Hallo" Version="3.0.2"/>
 		<PackageReference Include="Inflector.NetStandard" Version="1.2.2"/>
-		<PackageReference Include="Microsoft.CodeAnalysis" Version="3.3.0"/>
-		<PackageReference Include="Npgsql" Version="4.1.5"/>
-		<PackageReference Include="Polly" Version="7.2.3"/>
-		<PackageReference Include="Projac" Version="0.1.0"/>
-		<PackageReference Include="Projac.Sql" Version="0.1.0"/>
-		<PackageReference Include="RazorLight" Version="2.0.0-beta10"/>
-		<PackageReference Include="Serilog" Version="2.10.0"/>
-		<PackageReference Include="Serilog.AspNetCore" Version="3.4.0"/>
-		<PackageReference Include="Serilog.Sinks.Console" Version="3.1.1"/>
+		<PackageReference Include="Microsoft.AspNetCore.Mvc.Razor.RuntimeCompilation" Version="10.0.3"/>
+		<PackageReference Include="KurrentDB.Client" Version="1.2.0"/>
+		<PackageReference Include="NJsonSchema" Version="11.5.2"/>
+		<PackageReference Include="Npgsql.NodaTime" Version="10.0.1"/>
+		<PackageReference Include="Polly" Version="8.6.5"/>
+		<PackageReference Include="Serilog" Version="4.3.1"/>
+		<PackageReference Include="Serilog.AspNetCore" Version="10.0.0"/>
 		<PackageReference Include="SqlStreamStore" Version="1.2.1-*"/>
-	</ItemGroup>
-
-	<ItemGroup>
-		<ProjectReference Include="..\Projac\src\Projac.Npgsql\Projac.Npgsql.csproj"/>
-		<ProjectReference Include="..\Transacto\Transacto.csproj"/>
-	</ItemGroup>
+		<PackageReference Include="System.Reactive.Linq" Version="6.1.0"/>		
+		<PackageReference Include="System.Interactive.Async" Version="7.0.0"/>
+		</ItemGroup>
 
 	<ItemGroup>
 		<ProjectReference Include="..\Transacto.Schemo\Transacto.Schemo.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false"/>
+		<ProjectReference Include="..\Transacto.SourceGenerators\Transacto.SourceGenerators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false"/>
 	</ItemGroup>
-	<PropertyGroup>
-		<EmitCompilerGeneratedFiles>true</EmitCompilerGeneratedFiles>
-	</PropertyGroup>
+
 	<ItemGroup>
 		<!-- Don't include the output from a previous source generator execution into future runs; the */** trick here ensures that there's
 		at least one subdirectory, which is our key that it's coming from a source generator as opposed to something that is coming from
@@ -40,16 +35,30 @@
 		<None Include="$(OutputPath)/$(AssemblyName).dll" Pack="true" PackagePath="analyzers/dotnet/cs" Visible="false"/>
 	</ItemGroup>
 
+
 	<ItemGroup>
+		<ProjectReference Include="..\Projac\src\Projac.SQLite\Projac.SQLite.csproj" />
+		<ProjectReference Include="..\Projac\src\Projac\Projac.csproj"/>
+		<ProjectReference Include="..\Projac\src\Projac.Sql\Projac.Sql.csproj"/>
+		<ProjectReference Include="..\Projac\src\Projac.Npgsql\Projac.Npgsql.csproj"/>
+		<ProjectReference Include="..\Transacto\Transacto.csproj"/>
+	</ItemGroup>
+
+	<PropertyGroup>
+		<EmitCompilerGeneratedFiles>true</EmitCompilerGeneratedFiles>
+		<PreserveCompilationContext>true</PreserveCompilationContext>
+		<MvcRazorExcludeRefAssembliesFromPublish>false</MvcRazorExcludeRefAssembliesFromPublish>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<EmbeddedResource Include="**\*.uischema.json"/>
+		<AdditionalFiles Include="**\*.schema.json" Namespace="Transacto.Messages"/>
 		<EmbeddedResource Include="**\*.sql"/>
 		<EmbeddedResource Include="**\*.cshtml"/>
 		<None Remove="node_modules\**"/>
 		<EmbeddedResource Remove="node_modules\**"/>
 		<Compile Remove="node_modules\**"/>
 		<EmbeddedResource Include="Plugins\**\*.schema.json"/>
-		<AdditionalFiles Include="Plugins\BalanceSheet\**\*.schema.json" Namespace="Transacto.Plugins.BalanceSheet"/>
-		<AdditionalFiles Include="Plugins\ChartOfAccounts\**\*.schema.json" Namespace="Transacto.Plugins.ChartOfAccounts"/>
-		<AdditionalFiles Include="Plugins\GeneralLedger\**\*.schema.json" Namespace="Transacto.Plugins.GeneralLedger"/>
 		<CompilerVisibleProperty Include="RootNamespace"/>
 		<CompilerVisibleItemMetadata Include="AdditionalFiles" MetadataName="Namespace" Visible="false"/>
 	</ItemGroup>

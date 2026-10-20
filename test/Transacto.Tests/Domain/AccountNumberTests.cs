@@ -1,28 +1,10 @@
 namespace Transacto.Domain;
 
-public class AccountNumberTests {
-	[AutoFixtureData]
-	public void Equality(AccountNumber sut) {
-		var copy = new AccountNumber(sut.ToInt32());
-		Assert.Equal(sut, copy);
-	}
-
-	[AutoFixtureData]
-	public void EqualityOperator(AccountNumber sut) {
-		var copy = new AccountNumber(sut.ToInt32());
-		Assert.True(sut == copy);
-	}
-
-	[AutoFixtureData]
-	public void InequalityOperator(AccountNumber sut, AccountNumber other) {
-		Assert.False(sut == other);
-	}
-
+public class AccountNumberTests : ValueObjectTests<AccountNumber> {
 	public static IEnumerable<object[]> InvalidAccountNumberCases() {
-		yield return new object[] { -1 };
-		yield return new object[] { 999 };
-		yield return new object[] { 9000 };
-		yield return new object[] { int.MaxValue };
+		yield return [-1];
+		yield return [999];
+		yield return [9000];
 	}
 
 	[MemberData(nameof(InvalidAccountNumberCases))]

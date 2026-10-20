@@ -3,9 +3,9 @@ using Transacto.Domain;
 
 namespace Transacto.Messages;
 
-public partial record PostGeneralLedgerEntry {
-	[JsonPropertyName("document")] public required IBusinessTransaction BusinessTransaction { get; init; }
+public partial record PostGeneralLedgerEntry : IFormattableMessage {
+	[JsonPropertyName("document"), JsonIgnore] public required IBusinessTransaction BusinessTransaction { get; init; }
 
-	public override string ToString() =>
-		$"Posting general ledger entry {BusinessTransaction.SequenceNumber.ToString() ?? "unknown"} in period {Period} on {CreatedOn:O}.";
+	public FormattableString ToFormattableString() => 
+		$"Posting general ledger entry {GeneralLedgerEntryId} in accounting period {Period} on {CreatedOn:yyyy'-'MM'-'dd}"; 
 }

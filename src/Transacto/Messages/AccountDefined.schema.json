@@ -1,0 +1,30 @@
+{
+	"$schema": "http://json-schema.org/draft-07/schema",
+	"type": "object",
+	"title": "Account Defined",
+	"additionalProperties": false,
+	"required": [
+		"accountNumber",
+		"accountName",
+		"cashFlowCategory"
+	],
+	"properties": {
+		"accountNumber": {
+			"title": "Account Number",
+			"type": "integer"
+		},
+		"accountName": {
+			"title": "Account Name",
+			"type": "string",
+			"maxLength": 256
+		},
+		"cashFlowCategory": {
+			"$ref": "CashFlowCategoryType.schema.json"
+		},
+		"affectsCash" : {
+			"title": "Affects Cash",
+			"type": "boolean",
+			"default": false
+		}
+	}
+}

@@ -1,11 +1,12 @@
 {
-	"$schema": "https://json-schema.org/draft/2019-09/hyper-schema",
+	"$schema": "http://json-schema.org/draft-07/schema",
 	"type": "object",
 	"title": "Define Account",
 	"additionalProperties": false,
 	"required": [
 		"accountName",
-		"accountNumber"
+		"accountNumber",
+		"cashFlowCategory"
 	],
 	"properties": {
 		"accountName": {
@@ -15,6 +16,14 @@
 		"accountNumber": {
 			"title": "Account Number",
 			"type": "integer"
+		},
+		"cashFlowCategory": {
+			"$ref": "CashFlowCategoryType.schema.json"
+		},
+		"affectsCash" : {
+			"title": "Affects Cash",
+			"type": "boolean",
+			"default": false
 		}
 	}
 }

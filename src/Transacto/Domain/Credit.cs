@@ -1,16 +1,24 @@
+using System.Numerics;
+using System.Text;
+
 namespace Transacto.Domain;
 
-public readonly struct Credit : IEquatable<Credit> {
+public readonly struct Credit : IEquatable<Credit>,
+	IAdditiveIdentity<Credit, Money>,
+	IAdditionOperators<Credit, Money, Credit>,
+	IAdditionOperators<Credit, decimal, Credit>,
+	ISubtractionOperators<Credit, Money, Credit>,
+	ISubtractionOperators<Credit, decimal, Credit> {
+
+	public static Money AdditiveIdentity { get; } = Money.AdditiveIdentity;
+
 	public AccountNumber AccountNumber { get; }
 	public Money Amount { get; }
 
-	public Credit(AccountNumber accountNumber) : this(accountNumber, Money.Zero) {
-	}
+	public Credit(AccountNumber accountNumber) : this(accountNumber, Money.Zero) { }
 
 	public Credit(AccountNumber accountNumber, Money amount) {
-		if (amount < Money.Zero) {
-			throw new ArgumentOutOfRangeException(nameof(amount));
-		}
+		ArgumentOutOfRangeException.ThrowIfLessThan(amount, Money.Zero);
 
 		Amount = amount;
 		AccountNumber = accountNumber;
@@ -33,4 +41,15 @@ public readonly struct Credit : IEquatable<Credit> {
 
 	public static Credit operator -(Credit left, decimal right) =>
 		new(left.AccountNumber, left.Amount - right);
+
+	public override string ToString() {
+		var builder = new StringBuilder().Append(AccountNumber).Append('\t').Append('\t');
+		if (Amount < Money.Zero) {
+			builder.Append('(').Append(Amount).Append(')');
+		} else {
+			builder.Append(Amount);
+		}
+		
+		return builder.ToString();
+	}
 }

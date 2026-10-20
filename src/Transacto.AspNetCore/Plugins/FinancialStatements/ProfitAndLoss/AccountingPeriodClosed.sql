@@ -1,0 +1,3 @@
+DELETE
+FROM closing_transactions
+WHERE closing_general_ledger_entry_id = @closing_general_ledger_entry_id;

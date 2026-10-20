@@ -1,80 +1,77 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using NodaTime;
+using NodaTime.Serialization.SystemTextJson;
+using NodaTime.Text;
 using Transacto.Domain;
 
 namespace Transacto;
 
 public static class TransactoSerializerOptions {
-	public static readonly JsonSerializerOptions Events = new() {
+	public static readonly JsonSerializerOptions Messages = new() {
+		TypeInfoResolver = GeneratedJsonContext.Default,
 		PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
 		PropertyNameCaseInsensitive = true,
-		IncludeFields = true
+		IncludeFields = true,
+		Converters = {
+			new JsonStringEnumConverter(JsonNamingPolicy.CamelCase),
+			new MoneyConverter(),
+			new PercentageConverter(),
+			new AccountNumberConverter(),
+			new GeneralLedgerEntrySequenceNumberConverter(),
+			new GeneralLedgerEntryNumberConverter(),
+			new NodaPatternConverter<LocalDate>(LocalDatePattern.Iso),
+			new NodaPatternConverter<Period>(PeriodPattern.NormalizingIso),
+		}
 	};
 
-	public static JsonSerializerOptions BusinessTransactions(params Type[] businessTransactionTypes) =>
-		new() {
-			IncludeFields = true,
-			PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-			PropertyNameCaseInsensitive = true,
-			Converters = { new BusinessTransactionConverter(businessTransactionTypes) }
-		};
+	private class MoneyConverter : JsonConverter<Money> {
+		public override Money Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options) =>
+			new(reader.GetDecimal());
 
-	public static readonly JsonSerializerOptions Commands = new() {
-		PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-		PropertyNameCaseInsensitive = true,
-		IncludeFields = true
-	};
+		public override void Write(Utf8JsonWriter writer, Money value, JsonSerializerOptions options) =>
+			writer.WriteNumberValue(value.ToDecimal());
+	}
 
-	private class BusinessTransactionConverter : JsonConverter<IBusinessTransaction?> {
-		private readonly IDictionary<string, Type> _transactionTypes;
+	private class PercentageConverter : JsonConverter<Percentage> {
+		public override Percentage Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options) =>
+			new(reader.GetDecimal());
 
-		public BusinessTransactionConverter(params Type[] transactionTypes) {
-			_transactionTypes = transactionTypes.ToDictionary(GetBusinessTransactionPropertyName);
+		public override void Write(Utf8JsonWriter writer, Percentage value, JsonSerializerOptions options) {
+			writer.WriteNumberValue(value.ToDecimal());
+		}
+	}
+
+	private class AccountNumberConverter : JsonConverter<AccountNumber> {
+		public override AccountNumber Read(ref Utf8JsonReader reader, Type typeToConvert,
+			JsonSerializerOptions options) {
+			return new(reader.GetInt32());
 		}
 
-		private static string GetBusinessTransactionPropertyName(Type type) =>
-			char.ToLower(type.Name[0]) + type.Name[1..];
+		public override void Write(Utf8JsonWriter writer, AccountNumber value, JsonSerializerOptions options) {
+			writer.WriteNumberValue(value.ToInt32());
+		}
+	}
 
-		public override IBusinessTransaction? Read(ref Utf8JsonReader reader, Type typeToConvert,
+	private class GeneralLedgerEntrySequenceNumberConverter : JsonConverter<GeneralLedgerEntrySequenceNumber> {
+		public override GeneralLedgerEntrySequenceNumber Read(ref Utf8JsonReader reader, Type typeToConvert,
 			JsonSerializerOptions options) {
-			if (reader.TokenType != JsonTokenType.StartObject || !reader.Read()) {
-				throw new JsonException();
-			}
-
-			var typeName = reader.GetString()!;
-
-			if (!_transactionTypes.TryGetValue(typeName, out var type) ||
-			    !typeof(IBusinessTransaction).IsAssignableFrom(type)) {
-				reader.Skip();
-
-				reader.Read();
-
-				return null;
-			}
-
-			var businessTransaction = (IBusinessTransaction)JsonSerializer.Deserialize(ref reader, type, options)!;
-			reader.Read();
-
-			return businessTransaction;
+			return new(reader.GetInt32());
 		}
 
-		public override void Write(Utf8JsonWriter writer, IBusinessTransaction? value,
+		public override void Write(Utf8JsonWriter writer, GeneralLedgerEntrySequenceNumber value,
 			JsonSerializerOptions options) {
-			if (value == null) {
-				writer.WriteNullValue();
-				return;
-			}
+			writer.WriteNumberValue(value.ToInt32());
+		}
+	}
 
-			writer.WriteStartObject();
+	private class GeneralLedgerEntryNumberConverter : JsonConverter<GeneralLedgerEntryNumber> {
+		public override GeneralLedgerEntryNumber Read(ref Utf8JsonReader reader, Type typeToConvert,
+			JsonSerializerOptions options) => GeneralLedgerEntryNumber.Parse(reader.GetString()!);
 
-			writer.WritePropertyName(GetBusinessTransactionPropertyName(value.GetType()));
-
-			using var document = JsonDocument.Parse(
-				JsonSerializer.SerializeToUtf8Bytes(value, value.GetType(), Events));
-
-			document.RootElement.WriteTo(writer);
-
-			writer.WriteEndObject();
+		public override void Write(Utf8JsonWriter writer, GeneralLedgerEntryNumber value,
+			JsonSerializerOptions options) {
+			writer.WriteStringValue(value.ToString());
 		}
 	}
 }

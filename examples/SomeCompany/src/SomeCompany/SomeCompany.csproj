@@ -3,18 +3,18 @@
 		<OutputType>exe</OutputType>
 		<PreserveCompilationContext>true</PreserveCompilationContext>
 		<RootNamespace>SomeCompany</RootNamespace>
+		<NoWarn>NU1903</NoWarn>
 	</PropertyGroup>
 	<ItemGroup>
+		<PackageReference Include="Ductus.FluentDocker" Version="2.85.0" />
+		<PackageReference Include="Serilog.Sinks.Seq" Version="9.0.0"/>
+		<PackageReference Include="Newtonsoft.Json" Version="13.0.4" GeneratePathProperty="true" PrivateAssets="all"/>
 		<PackageReference Include="SqlStreamStore.Http" Version="1.2.1-*"/>
 	</ItemGroup>
 
 	<ItemGroup>
 		<ProjectReference Include="..\..\..\..\src\Transacto.Schemo\Transacto.Schemo.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false"/>
 	</ItemGroup>
-
-	<PropertyGroup>
-		<EmitCompilerGeneratedFiles>true</EmitCompilerGeneratedFiles>
-	</PropertyGroup>
 
 	<ItemGroup>
 		<ProjectReference Include="..\..\..\..\src\Projac\src\Projac.Npgsql\Projac.Npgsql.csproj"/>
@@ -27,6 +27,7 @@
 		<None Remove="node_modules\**"/>
 		<EmbeddedResource Remove="node_modules\**"/>
 		<Compile Remove="node_modules\**"/>
+		<Content Update="*.db" Watch="false"/>
 	</ItemGroup>
 
 	<ItemGroup>

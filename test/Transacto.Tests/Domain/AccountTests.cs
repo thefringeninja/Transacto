@@ -1,13 +1,11 @@
+using System.Reflection;
 using AutoFixture;
+using AutoFixture.Kernel;
 
 namespace Transacto.Domain;
 
 public class AccountTests {
-	private readonly ScenarioFixture _fixture;
-
-	public AccountTests() {
-		_fixture = new ScenarioFixture();
-	}
+	private readonly ScenarioFixture _fixture = new();
 
 	private static IEnumerable<int> GenerateAccountNumbers() {
 		var rand = new Random();
@@ -26,10 +24,10 @@ public class AccountTests {
 				>= 2000 and < 3000 => typeof(LiabilityAccount),
 				>= 3000 and < 4000 => typeof(EquityAccount),
 				>= 4000 and < 5000 => typeof(IncomeAccount),
-				>= 5000 and < 6000 => typeof(ExpenseAccount),
-				>= 6000 and < 7000 => typeof(ExpenseAccount),
-				>= 7000 and < 8000 => typeof(IncomeAccount),
-				>= 8000 and < 9000 => typeof(ExpenseAccount),
+				>= 5000 and < 6000 => typeof(CostOfRevenueExpenseAccount),
+				>= 6000 and < 7000 => typeof(OperatingExpenseAccount),
+				>= 7000 and < 8000 => typeof(OtherIncomeAccount),
+				>= 8000 and < 9000 => typeof(OtherExpenseAccount),
 				_ => throw new ArgumentOutOfRangeException()
 			}
 		});
@@ -38,22 +36,81 @@ public class AccountTests {
 	public void CreatesExpectedAccount(AccountNumber accountNumber, Type expected) =>
 		Assert.IsType(expected, Account.For(accountNumber, _fixture.Create<AccountName>()));
 
-	public class AssetTests : LeftSideTests<AssetAccount> {
+	public static IEnumerable<object[]> CannotBeCashAccountCases() => GenerateAccountNumbers()
+		.Where(an => an >= 2000)
+		.Select(an => (object[])[new AccountNumber(an)]);
+
+	[MemberData(nameof(CannotBeCashAccountCases))]
+	public void NonAssetAccountsAffectingThrow(AccountNumber accountNumber)
+		=> Assert.Throws<AccountCannotBeCashAccountException>(() =>
+			Account.For(accountNumber, _fixture.Create<AccountName>(), affectsCash: true));
+
+
+	// ReSharper disable once UnusedType.Global
+	public class ShortTermCashAssetAccountTests()
+		: LeftSideTests<AssetAccount>(true, CashFlowCategory.Investment, CashFlowCategory.Finance);
+
+	// ReSharper disable once UnusedType.Global
+	public class NonCashAssetAccountTests()
+		: LeftSideTests<AssetAccount>();
+
+	// ReSharper disable once UnusedType.Global
+	public class LiabilityAccountTests()
+		: RightSideTests<LiabilityAccount>(false, CashFlowCategory.Investment);
+
+	// ReSharper disable once UnusedType.Global
+	public class EquityAccountTests()
+		: RightSideTests<EquityAccount>(false, CashFlowCategory.Operations, CashFlowCategory.Investment);
+
+	// ReSharper disable once UnusedType.Global
+	public class IncomeAccountTests()
+		: RightSideTests<IncomeAccount>(false, CashFlowCategory.Investment, CashFlowCategory.Finance);
+
+	// ReSharper disable once UnusedType.Global
+	public class CostOfRevenueExpenseAccountTests()
+		: LeftSideTests<CostOfRevenueExpenseAccount>(false, CashFlowCategory.Investment, CashFlowCategory.Finance);
+
+	// ReSharper disable once UnusedType.Global
+	public class OperatingExpenseAccountTests() : LeftSideTests<OperatingExpenseAccount>(false, CashFlowCategory.Investment, CashFlowCategory.Finance);
+
+	// ReSharper disable once UnusedType.Global
+	public class OtherIncomeAccountTests : RightSideTests<OtherIncomeAccount>;
+
+	// ReSharper disable once UnusedType.Global
+	public class OtherExpenseAccountTests
+		: LeftSideTests<OtherExpenseAccount>;
+
+	public abstract class AccountTestsBase<TAccount>(
+		bool acceptsCash = false,
+		params CashFlowCategory[] invalidCashFlowCategories)
+		: ValueObjectTests<TAccount> where TAccount : Account {
+		[AutoFixtureData]
+		public void InvalidConfigurationsThrow(TAccount account) {
+			if (invalidCashFlowCategories.Length == 0) {
+				return;
+			}
+			Assert.Multiple(Array.ConvertAll<CashFlowCategory, Action>(invalidCashFlowCategories, cashFlowCategory =>
+				() => Assert.Throws<AccountExpectedCashFlowCategoryException>(() =>
+					Account.For(account.AccountNumber, account.AccountName, cashFlowCategory, acceptsCash))));
+		}
+
+		[AutoFixtureData]
+		public void ValidConfigurationsDoNotThrow(TAccount account) {
+			var cashFlowCategories = CashFlowCategory.All.Except(invalidCashFlowCategories).ToArray();
+			if (cashFlowCategories.Length == 0) {
+				return;
+			}
+
+			Assert.Multiple(Array.ConvertAll<CashFlowCategory, Action>(
+				cashFlowCategories, cashFlowCategory =>
+					() => _ = Account.For(account.AccountNumber, account.AccountName, cashFlowCategory, acceptsCash)));
+		}
 	}
 
-	public class LiabilityTests : RightSideTests<LiabilityAccount> {
-	}
-
-	public class EquityTests : RightSideTests<LiabilityAccount> {
-	}
-
-	public class IncomeTests : RightSideTests<LiabilityAccount> {
-	}
-
-	public class ExpenseTests : LeftSideTests<ExpenseAccount> {
-	}
-
-	public abstract class LeftSideTests<TAccount> where TAccount : Account {
+	public abstract class LeftSideTests<TAccount>(
+		bool acceptsCash = false,
+		params CashFlowCategory[] invalidCashFlowCategories)
+		: AccountTestsBase<TAccount>(acceptsCash, invalidCashFlowCategories) where TAccount : Account {
 		[AutoFixtureData]
 		public void DebitsIncreaseBalance(TAccount sut, Money amount) =>
 			Assert.Equal(amount, sut.Debit(amount).Balance);
@@ -63,11 +120,14 @@ public class AccountTests {
 			Assert.Equal(-amount, sut.Credit(amount).Balance);
 	}
 
-	public abstract class RightSideTests<TAccount> where TAccount : Account {
+	public abstract class RightSideTests<TAccount>(
+		bool acceptsCash = false,
+		params CashFlowCategory[] invalidCashFlowCategories)
+		: AccountTestsBase<TAccount>(acceptsCash, invalidCashFlowCategories) where TAccount : Account {
 		[AutoFixtureData]
 		public void CreditsIncreaseBalance(TAccount sut, Money amount) =>
 			Assert.Equal(amount, sut.Credit(amount).Balance);
-
+		
 		[AutoFixtureData]
 		public void DebitsDecreaseBalance(TAccount sut, Money amount) =>
 			Assert.Equal(-amount, sut.Debit(amount).Balance);

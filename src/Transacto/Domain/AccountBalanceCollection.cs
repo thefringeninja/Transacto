@@ -4,9 +4,7 @@ using System.Collections.Immutable;
 namespace Transacto.Domain;
 
 internal class AccountBalanceCollection : IEnumerable<Account> {
-	private ImmutableDictionary<AccountNumber, Account> _items;
-
-	public AccountBalanceCollection() => _items = ImmutableDictionary<AccountNumber, Account>.Empty;
+	private ImmutableDictionary<AccountNumber, Account> _items = ImmutableDictionary<AccountNumber, Account>.Empty;
 
 	public void AddOrUpdate(AccountNumber accountNumber, Func<Account> add, Func<Account, Account> update) =>
 		_items = _items.SetItem(accountNumber, _items.TryGetValue(accountNumber, out var account)
@@ -19,7 +17,7 @@ internal class AccountBalanceCollection : IEnumerable<Account> {
 	}).Sum();
 
 	public IEnumerator<Account> GetEnumerator() =>
-		_items.Values.OrderBy(account => account.AccountNumber.ToInt32()).GetEnumerator();
+		_items.Values.OrderBy(account => account.AccountNumber).GetEnumerator();
 
 	IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
 }

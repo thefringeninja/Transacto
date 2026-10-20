@@ -1,9 +1,6 @@
 namespace Transacto.Messages;
 
-public record BalanceLineItem {
-	public required int AccountNumber { get; init; }
-	public required decimal Amount { get; init; }
-
+partial record BalanceLineItem {
 	public void Deconstruct(out int accountNumber, out decimal amount) {
 		accountNumber = AccountNumber;
 		amount = Amount;

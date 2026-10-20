@@ -1,45 +1,44 @@
 using System.Collections;
 using Microsoft.Extensions.Configuration.CommandLine;
+using Npgsql;
 
 namespace SomeCompany;
 
-internal class SomeCompanyConfiguration {
-	private readonly ConfigurationData _configuration;
+internal class SomeCompanyConfiguration(string[] args, IDictionary environment) {
+	private readonly ConfigurationData _configuration = new(
+		new ConfigurationBuilder()
+			.Add(new CommandLineSource(args))
+			.Add(new EnvironmentVariablesSource(environment))
+			.Build());
 
-	public string ConnectionString => _configuration.ConnectionString ?? "esdb://localhost:2113/?tls=false";
+	public Uri EventStore => field ??= new(_configuration.EventStore ?? "esdb://localhost:2113/?tls=false");
 
-	public SomeCompanyConfiguration(string[] args, IDictionary environment) {
-		_configuration = new ConfigurationData(
-			new ConfigurationBuilder()
-				.Add(new CommandLineSource(args))
-				.Add(new EnvironmentVariablesSource(environment))
-				.Build());
+	public NpgsqlConnectionStringBuilder Postgres => field ??= new(_configuration.Postgres ?? "Host=localhost;Username=postgres;Password=Password;Port=5432;");
+
+	public Uri SqlStreamStore => field ??= new(_configuration.SqlStreamStore ?? "http://localhost:5002/");
+
+	public Uri Seq => field ??= new(_configuration.Seq ?? "http://localhost:5341"); 
+	public int TransactionsPerMonth => _configuration.TransactionsPerMonth ?? 100;
+	
+	public bool Seed => _configuration.Seed ?? false;
+
+	public LogLevel LogLevel => _configuration.LogLevel ?? LogLevel.Information;
+	
+	private class ConfigurationData(IConfigurationRoot configurationRoot) {
+		public string? EventStore => configurationRoot.GetValue<string>(nameof(EventStore));
+		public string? Postgres => configurationRoot.GetValue<string>(nameof(Postgres));
+		public string? SqlStreamStore => configurationRoot.GetValue<string>(nameof(SqlStreamStore));
+		public string? Seq => configurationRoot.GetValue<string>(nameof(Seq));
+		public int? TransactionsPerMonth => configurationRoot.GetValue<int?>(nameof(TransactionsPerMonth));
+		public bool? Seed => configurationRoot.GetValue<bool?>(nameof(Seed));
+		public LogLevel? LogLevel => configurationRoot.GetValue<LogLevel?>(nameof(LogLevel));
 	}
 
-	private class ConfigurationData {
-		private readonly IConfigurationRoot _configurationRoot;
-
-		public string? ConnectionString => _configurationRoot.GetValue<string>(nameof(ConnectionString));
-
-		public ConfigurationData(IConfigurationRoot configurationRoot) {
-			_configurationRoot = configurationRoot;
-		}
+	private class CommandLineSource(IEnumerable<string> args) : IConfigurationSource {
+		public IConfigurationProvider Build(IConfigurationBuilder builder) => new CommandLine(args);
 	}
 
-	private class CommandLineSource : IConfigurationSource {
-		private readonly IEnumerable<string> _args;
-
-		public CommandLineSource(IEnumerable<string> args) {
-			_args = args;
-		}
-
-		public IConfigurationProvider Build(IConfigurationBuilder builder) => new CommandLine(_args);
-	}
-
-	private class CommandLine : CommandLineConfigurationProvider {
-		public CommandLine(IEnumerable<string> args) : base(args) {
-		}
-
+	private class CommandLine(IEnumerable<string> args) : CommandLineConfigurationProvider(args) {
 		public override void Load() {
 			base.Load();
 
@@ -47,29 +46,18 @@ internal class SomeCompanyConfiguration {
 		}
 	}
 
-	private class EnvironmentVariablesSource : IConfigurationSource {
-		private readonly IDictionary _environment;
+	private class EnvironmentVariablesSource(IDictionary environment) : IConfigurationSource {
 		public string Prefix { get; set; } = "SC";
 
-		public EnvironmentVariablesSource(IDictionary environment) {
-			_environment = environment;
-		}
-
 		public IConfigurationProvider Build(IConfigurationBuilder builder)
-			=> new EnvironmentVariables(Prefix, _environment);
+			=> new EnvironmentVariables(Prefix, environment);
 	}
 
-	private class EnvironmentVariables : ConfigurationProvider {
-		private readonly IDictionary _environment;
-		private readonly string _prefix;
-
-		public EnvironmentVariables(string prefix, IDictionary environment) {
-			_prefix = $"{prefix}_";
-			_environment = environment;
-		}
+	private class EnvironmentVariables(string prefix, IDictionary environment) : ConfigurationProvider {
+		private readonly string _prefix = $"{prefix}_";
 
 		public override void Load() {
-			foreach (var (k, v) in _environment.OfType<DictionaryEntry>()) {
+			foreach (var (k, v) in environment.OfType<DictionaryEntry>()) {
 				var key = (string)k;
 				if (!key.StartsWith(_prefix)) {
 					continue;

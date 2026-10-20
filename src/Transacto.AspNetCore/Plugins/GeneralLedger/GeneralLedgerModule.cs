@@ -1,4 +1,4 @@
-using EventStore.Client;
+using KurrentDB.Client;
 using Transacto.Application;
 using Transacto.Framework;
 using Transacto.Framework.CommandHandling;
@@ -8,19 +8,20 @@ using Transacto.Messages;
 namespace Transacto.Plugins.GeneralLedger;
 
 internal class GeneralLedgerModule : CommandHandlerModule {
-	public GeneralLedgerModule(EventStoreClient eventStore, IMessageTypeMapper messageTypeMapper) {
+	public GeneralLedgerModule(KurrentDBClient eventStore, IMessageTypeMapper messageTypeMapper,
+		ILogger<GeneralLedgerModule> logger) {
 		var handlers = new GeneralLedgerHandlers(
 			new GeneralLedgerEventStoreRepository(eventStore, messageTypeMapper),
 			new ChartOfAccountsEventStoreRepository(eventStore, messageTypeMapper));
 		Build<OpenGeneralLedger>()
-			.Log()
+			.Log(logger)
 			.UnitOfWork(eventStore, messageTypeMapper)
 			.Handle(async (command, ct) => {
 				await handlers.Handle(command, ct);
 				return Checkpoint.None;
 			});
 		Build<BeginClosingAccountingPeriod>()
-			.Log()
+			.Log(logger)
 			.UnitOfWork(eventStore, messageTypeMapper)
 			.Handle(async (command, ct) => {
 				await handlers.Handle(command, ct);

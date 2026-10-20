@@ -1,0 +1,20 @@
+@using Transacto.Views.Shared;
+@using Link = Hallo.Link
+@inherits ComponentBase<Hallo.Link>
+@implements ILinkMatcher
+
+@code {
+
+	public static bool IsMatch(Link link) {
+		if (link is not { Templated: true, Rel: FinancialStatements.Relation2 }) return false;
+		return link.Href.EndsWith("?thru={thru}");
+	}
+
+}
+
+<form method="get" action="@Model.Href" style="background: white">
+	<label>Thru</label>
+	<input type="date" name="thru"/>
+
+	<input type="submit" value="Run Report"/>
+</form>

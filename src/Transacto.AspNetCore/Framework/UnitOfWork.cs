@@ -36,10 +36,11 @@ public class UnitOfWork {
 	/// Attaches the specified aggregate.
 	/// </summary>
 	/// <param name="transaction">The <see cref="Transaction"/>.</param>
-	/// <exception cref="ArgumentException">Thrown when <see cref="aggregate"/> has already been attached.</exception>
+	/// <exception cref="ArgumentException">Thrown when <see cref="transaction"/> has already been attached.</exception>
 	public void Attach(Transaction transaction) {
 		if (_transactions.Contains(transaction.StreamName))
-			throw new ArgumentException();
+			throw new ArgumentException($"Transaction {transaction.StreamName} is already attached",
+				nameof(transaction));
 		_transactions.Add(transaction);
 	}
 
@@ -65,25 +66,19 @@ public class UnitOfWork {
 	/// <returns>
 	///   <c>true</c> if this instance has aggregates with state changes; otherwise, <c>false</c>.
 	/// </returns>
-	public bool HasChanges => _transactions.Any(_ => _.Aggregate.HasChanges);
+	public bool HasChanges => _transactions.Any(Transaction.HasChanges);
 
 	/// <summary>
 	/// Gets the aggregates with state changes.
 	/// </summary>
 	/// <returns>An enumeration of <see cref="Transaction"/>.</returns>
-	public IEnumerable<Transaction> GetChanges() => _transactions.Where(_ => _.Aggregate.HasChanges);
+	public IEnumerable<Transaction> GetChanges() => _transactions.Where(Transaction.HasChanges);
 
 	private class TransactionCollection : KeyedCollection<string, Transaction> {
 		protected override string GetKeyForItem(Transaction item) => item.StreamName;
 	}
 
-	private class DisposableAction : IDisposable {
-		private readonly Action _onDispose;
-
-		public DisposableAction(Action onDispose) {
-			_onDispose = onDispose;
-		}
-
-		public void Dispose() => _onDispose();
+	private class DisposableAction(Action onDispose) : IDisposable {
+		public void Dispose() => onDispose();
 	}
 }

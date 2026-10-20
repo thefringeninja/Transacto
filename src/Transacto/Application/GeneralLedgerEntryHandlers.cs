@@ -4,30 +4,18 @@ using Transacto.Messages;
 
 namespace Transacto.Application;
 
-public class GeneralLedgerEntryHandlers {
-	private readonly IGeneralLedgerRepository _generalLedger;
-	private readonly IGeneralLedgerEntryRepository _generalLedgerEntries;
-	private readonly GetPrefix _getPrefix;
-	private readonly AccountIsDeactivated _accountIsDeactivated;
-
-	public GeneralLedgerEntryHandlers(IGeneralLedgerRepository generalLedger,
-		IGeneralLedgerEntryRepository generalLedgerEntries, GetPrefix getPrefix,
-		AccountIsDeactivated accountIsDeactivated) {
-		_generalLedger = generalLedger;
-		_generalLedgerEntries = generalLedgerEntries;
-		_getPrefix = getPrefix;
-		_accountIsDeactivated = accountIsDeactivated;
-	}
-
+public class GeneralLedgerEntryHandlers(
+	IGeneralLedgerRepository ledger,
+	IGeneralLedgerEntryRepository generalLedgerEntries,
+	IChartOfAccountsRepository chartOfAccounts) {
 	public async ValueTask Handle(PostGeneralLedgerEntry command, CancellationToken cancellationToken = default) {
-		var generalLedger = await _generalLedger.Get(cancellationToken);
+		var generalLedger = await ledger.Get(cancellationToken);
 
 		var entry = generalLedger.Create(new GeneralLedgerEntryIdentifier(command.GeneralLedgerEntryId),
-			command.BusinessTransaction, _getPrefix(command.BusinessTransaction),
-			OffsetDateTime.FromDateTimeOffset(command.CreatedOn).LocalDateTime, _accountIsDeactivated);
+			command.BusinessTransaction, await chartOfAccounts.Get(cancellationToken), command.CreatedOn);
 
 		entry.Post();
 
-		_generalLedgerEntries.Add(entry);
+		generalLedgerEntries.Add(entry);
 	}
 }

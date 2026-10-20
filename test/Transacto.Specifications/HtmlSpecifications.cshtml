@@ -1,0 +1,142 @@
+@using Transacto
+@using Transacto.Messages
+@using Transacto.Testing
+@inherits RazorEngineCore.RazorEngineTemplateBase<IEnumerable<(string name, IList<(string name, object specification)>)>>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<title></title>
+
+	<style>
+		body {
+			background-color: #000;
+			color: #fff;
+		}
+
+		summary > * {
+			display: inline;
+		}
+
+		.null {
+			color: #005fff;
+		}
+
+		.number {
+			color: #ff55ff;
+		}
+
+		.bool {
+			color: #005fff;
+		}
+
+		.string {
+			color: #00ffcc;
+		}
+
+		.dateTime {
+			color: #005faf;
+		}
+
+		.scalar {
+			color: #5fffaf;
+		}
+
+		.other {
+			color: #aaaaaa;
+		}
+		li {
+			white-space: pre-line;
+		}
+	</style>
+</head>
+<body>
+<main>
+	@foreach (var (groupName, specifications) in Model)
+	{
+		<section>
+			<h2>@groupName</h2>
+			@foreach (var (name, specification) in specifications)
+			{
+				<details>
+					<summary><h3>@name</h3></summary>
+					@switch (specification)
+					{
+						case EventCentricTestSpecification ev:
+						{
+							<section>
+								<header><h4>Given:</h4></header>
+								<ul>
+									@foreach (var given in ev.Givens)
+									{
+										<li>@{ WriteMessage(given.Event); }</li>
+									}
+								</ul>
+							</section>
+							<section>
+								<header><h4>When:</h4></header>
+								<ul>
+									<li>
+										@{ WriteMessage(ev.When); }
+									</li>
+								</ul>
+							</section>
+							<section>
+								<header><h4>Then:</h4></header>
+								<ul>
+									@foreach (var then in ev.Thens)
+									{
+										<li>@{ WriteMessage(then.Event); }</li>
+									}
+								</ul>
+							</section>
+							break;
+						}
+						case ExceptionCentricTestSpecification ex:
+						{
+							<section>
+								<header><h4>Given:</h4></header>
+								<ul>
+									@foreach (var given in ex.Givens)
+									{
+										<li>@{ WriteMessage(given.Event); }</li>
+									}
+								</ul>
+							</section>
+							<section>
+								<header><h4>When:</h4></header>
+								<ul>
+									<li>
+										@{ WriteMessage(ex.When); }
+									</li>
+								</ul>
+							</section>
+							<section>
+								<header><h4>Throws:</h4></header>
+								@{ WriteMessage(ex.Throws); }
+							</section>
+							break;
+						}
+					}
+
+				</details>
+			}
+		</section>
+	}
+
+	@{
+		void WriteMessage(object o)
+		{
+			@if (o is IFormattableMessage message)
+			{
+				@message.ToFormattableString().Colorize()
+			}
+			else
+			{
+				@o.ToString()
+			}
+		}
+	}
+
+</main>
+</body>
+</html>				

@@ -1,0 +1,95 @@
+@using NodaTime.Text
+@using Transacto.Framework.Http.Html
+@using Transacto.Views.Shared
+@inherits ComponentBase<ProfitAndLossReports>
+@inject Formatter Formatter
+@inject ViewContext context
+@{
+	var colspan = Model.Groups.Length + 1;
+	context.Title = "Profit and Loss";
+}
+<LayoutView Layout="typeof(Layout)">
+	<table>
+		<thead>
+		<tr>
+			<th colspan="@colspan"><h1>Profit and Loss</h1></th>
+		</tr>
+		<tr>
+			<th></th>
+			@foreach (var report in Model.Groups) {
+				<th>@Formatter.ShortDatePattern.Format(report.ReportRange.StartingOn) - @PeriodPattern.NormalizingIso.Format(report.ReportRange.Period)</th>
+			}
+		</tr>
+		</thead>
+		@{
+			RenderReportSection("Revenue", Model.AccountMap.GrossRevenue, report => report.GrossRevenue);
+			RenderReportSection("Cost of Revenue", Model.AccountMap.CostOfRevenue, report => report.CostOfRevenue);
+			RenderSubtotal("Gross Profit", report => report.GrossProfit);
+
+			RenderReportSection("Operating Expenses", Model.AccountMap.OperatingExpenses, report => report.OperatingExpenses);
+			RenderSubtotal("Operating Income", report => report.OperatingIncome);
+
+			RenderReportSection("Operating Expenses", Model.AccountMap.OtherExpenses, report => report.OtherExpenses);
+			RenderReportSection("Other Income", Model.AccountMap.OtherIncome, report => report.OtherIncome);
+			RenderSubtotal("Net Profit", report => report.NetProfit);
+		}
+		<tfoot>
+		<tr>
+		</tr>
+		</tfoot>
+
+		@{
+			void RenderReportSection(
+				string name,
+				IDictionary<int, string> accounts,
+				Func<ReportGroup, Report> getReport) {
+				<thead>
+				<tr>
+					<th colspan="@colspan">@name</th>
+				</tr>
+				</thead>
+				<tbody>
+				@foreach (var (accountNumber, accountName) in accounts) {
+					<tr>
+						<td>@accountNumber - @accountName</td>
+						@foreach (var reportGroup in Model.Groups) {
+							var report = getReport(reportGroup);
+
+							report.Lines.TryGetValue(accountNumber, out var line);
+
+							var balance = line?.Balance ?? 0m;
+
+							<td style="text-align: right">
+								<Balance Value="@balance"/>
+							</td>
+						}
+					</tr>
+				}
+				<tr>
+					<td>Total @name</td>
+					@foreach (var reportGroup in Model.Groups) {
+						var report = getReport(reportGroup);
+						<td style="text-align: right">
+							<Balance Value="@report.Total"/>
+						</td>
+					}
+				</tr>
+				</tbody>
+			}
+
+			void RenderSubtotal(string name, Func<ReportGroup, decimal> getSubtotal) {
+				<tbody>
+				<tr>
+					<td>@name</td>
+					@foreach (decimal subtotal in Model.Groups.Select(getSubtotal)) {
+						<td style="text-align: right">
+							<Balance Value="@subtotal"/>
+						</td>
+					}
+				</tr>
+				</tbody>
+			}
+		}
+	</table>
+
+</LayoutView>

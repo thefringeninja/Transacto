@@ -1,81 +1,59 @@
 namespace Transacto.Framework;
 
-internal class MessageHandlerBuilder<TMessage, TReturn> : IMessageHandlerBuilder<TMessage, TReturn> {
-	private readonly Action<Func<TMessage, CancellationToken, ValueTask<TReturn>>> _build;
-
-	public MessageHandlerBuilder(Action<Func<TMessage, CancellationToken, ValueTask<TReturn>>> build) {
-		_build = build;
-	}
-
+internal class MessageHandlerBuilder<TMessage, TReturn>(
+	Action<Func<TMessage, CancellationToken, ValueTask<TReturn>>> build)
+	: IMessageHandlerBuilder<TMessage, TReturn> {
 	public IMessageHandlerBuilder<TMessage, TReturn> Pipe(
 		Func<Func<TMessage, CancellationToken, ValueTask<TReturn>>,
 			Func<TMessage, CancellationToken, ValueTask<TReturn>>> pipe) =>
-		new WithPipeline(_build, pipe);
+		new WithPipeline(build, pipe);
 
 	public IMessageHandlerBuilder<TNext, TReturn> Transform<TNext>(
 		Func<Func<TNext, CancellationToken, ValueTask<TReturn>>,
 			Func<TMessage, CancellationToken, ValueTask<TReturn>>> pipe) =>
-		new WithTransformedPipeline<TNext>(_build, pipe);
+		new WithTransformedPipeline<TNext>(build, pipe);
 
-	public void Handle(Func<TMessage, CancellationToken, ValueTask<TReturn>> handler) => _build(handler);
+	public void Handle(Func<TMessage, CancellationToken, ValueTask<TReturn>> handler) => build(handler);
 
-	private class WithPipeline : IMessageHandlerBuilder<TMessage, TReturn> {
-		private readonly Action<Func<TMessage, CancellationToken, ValueTask<TReturn>>> _build;
-
-		private readonly Func<Func<TMessage, CancellationToken, ValueTask<TReturn>>,
+	private class WithPipeline(
+		Action<Func<TMessage, CancellationToken, ValueTask<TReturn>>> build,
+		Func<Func<TMessage, CancellationToken, ValueTask<TReturn>>,
 				Func<TMessage, CancellationToken, ValueTask<TReturn>>>
-			_pipeline;
-
-		public WithPipeline(Action<Func<TMessage, CancellationToken, ValueTask<TReturn>>> build,
-			Func<Func<TMessage, CancellationToken, ValueTask<TReturn>>,
-					Func<TMessage, CancellationToken, ValueTask<TReturn>>>
-				pipeline) {
-			_build = build;
-			_pipeline = pipeline;
-		}
-
+			pipeline)
+		: IMessageHandlerBuilder<TMessage, TReturn> {
 		public IMessageHandlerBuilder<TMessage, TReturn> Pipe(
 			Func<Func<TMessage, CancellationToken, ValueTask<TReturn>>,
 					Func<TMessage, CancellationToken, ValueTask<TReturn>>>
 				pipe) =>
-			new WithPipeline(_build, next => _pipeline(pipe(next)));
+			new WithPipeline(build, next => pipeline(pipe(next)));
 
 		public IMessageHandlerBuilder<TNext, TReturn> Transform<TNext>(
 			Func<Func<TNext, CancellationToken, ValueTask<TReturn>>,
 				Func<TMessage, CancellationToken, ValueTask<TReturn>>> pipe) =>
-			new WithTransformedPipeline<TNext>(_build, next => _pipeline(pipe(next)));
+			new WithTransformedPipeline<TNext>(build, next => pipeline(pipe(next)));
 
 		public void Handle(Func<TMessage, CancellationToken, ValueTask<TReturn>> handler) =>
-			_build(_pipeline(handler));
+			build(pipeline(handler));
 	}
 
-	private class WithTransformedPipeline<TCurrent> : IMessageHandlerBuilder<TCurrent, TReturn> {
-		private readonly Action<Func<TMessage, CancellationToken, ValueTask<TReturn>>> _build;
-
-		private readonly Func<Func<TCurrent, CancellationToken, ValueTask<TReturn>>,
-				Func<TMessage, CancellationToken, ValueTask<TReturn>>>
-			_pipeline;
-
-		public WithTransformedPipeline(Action<Func<TMessage, CancellationToken, ValueTask<TReturn>>> build,
-			Func<Func<TCurrent, CancellationToken, ValueTask<TReturn>>,
-				Func<TMessage, CancellationToken, ValueTask<TReturn>>> pipeline) {
-			_build = build;
-			_pipeline = pipeline;
-		}
-
+	private class WithTransformedPipeline<TCurrent>(
+		Action<Func<TMessage, CancellationToken, ValueTask<TReturn>>> build,
+		Func<Func<TCurrent, CancellationToken, ValueTask<TReturn>>,
+			Func<TMessage, CancellationToken, ValueTask<TReturn>>> pipeline)
+		: IMessageHandlerBuilder<TCurrent, TReturn> {
 		public IMessageHandlerBuilder<TCurrent, TReturn> Pipe(
 			Func<Func<TCurrent, CancellationToken, ValueTask<TReturn>>,
 					Func<TCurrent, CancellationToken, ValueTask<TReturn>>>
 				pipe) =>
-			new WithTransformedPipeline<TCurrent>(_build, next => _pipeline(pipe(next)));
+			new WithTransformedPipeline<TCurrent>(build, next => pipeline(pipe(next)));
 
 		public IMessageHandlerBuilder<TNext, TReturn> Transform<TNext>(
 			Func<Func<TNext, CancellationToken, ValueTask<TReturn>>,
 					Func<TCurrent, CancellationToken, ValueTask<TReturn>>>
 				pipe) =>
-			new WithTransformedPipeline<TNext>(_build, next => _pipeline(pipe(next)));
+			new WithTransformedPipeline<TNext>(build, next => pipeline(pipe(next)));
 
 		public void Handle(Func<TCurrent, CancellationToken, ValueTask<TReturn>> handler) =>
-			_build(_pipeline(handler));
+			build(pipeline(handler));
 	}
 }

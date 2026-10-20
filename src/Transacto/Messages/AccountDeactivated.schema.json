@@ -1,0 +1,15 @@
+{
+	"$schema": "http://json-schema.org/draft-07/schema",
+	"type": "object",
+	"title": "Account Deactivated",
+	"additionalProperties": false,
+	"required": [
+		"accountNumber"
+	],
+	"properties": {
+		"accountNumber": {
+			"title": "Account Number",
+			"type": "integer"
+		}
+	}
+}

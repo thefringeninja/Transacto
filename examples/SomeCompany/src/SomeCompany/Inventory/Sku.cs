@@ -1,13 +1,10 @@
 namespace SomeCompany.Inventory;
 
-public readonly struct Sku : IEquatable<Sku> {
-	private readonly string _value;
-
-	public Sku(string value) =>
-		_value = value.Length switch {
-			0 or > 256 => throw new ArgumentOutOfRangeException(nameof(value)),
-			_ => value
-		};
+public readonly struct Sku(string value) : IEquatable<Sku> {
+	private readonly string _value = value.Length switch {
+		0 or > 256 => throw new ArgumentOutOfRangeException(nameof(value)),
+		_ => value
+	};
 
 	public bool Equals(Sku other) => _value == other._value;
 	public override bool Equals(object? obj) => obj is Sku other && Equals(other);

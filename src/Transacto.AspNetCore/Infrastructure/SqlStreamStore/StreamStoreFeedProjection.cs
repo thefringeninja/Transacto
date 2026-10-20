@@ -5,35 +5,28 @@ using Transacto.Framework;
 
 namespace Transacto.Infrastructure.SqlStreamStore;
 
-public abstract class StreamStoreFeedProjection<TFeedEntry> : StreamStoreProjection
+public abstract class StreamStoreFeedProjection<TFeedEntry>(
+	string streamName,
+	IMessageTypeMapper messageTypeMapper,
+	JsonSerializerOptions? serializerOptions = null)
+	: StreamStoreProjection(streamName)
 	where TFeedEntry : IFeedEntry {
-	private readonly IMessageTypeMapper _messageTypeMapper;
-	private readonly JsonSerializerOptions _serializerOptions;
+	private readonly JsonSerializerOptions _serializerOptions = serializerOptions ?? TransactoSerializerOptions.Messages;
 
-	protected StreamStoreFeedProjection(string streamName, IMessageTypeMapper messageTypeMapper,
-		JsonSerializerOptions? serializerOptions = null) : base(streamName) {
-		_messageTypeMapper = messageTypeMapper;
-		_serializerOptions = serializerOptions ?? TransactoSerializerOptions.Events;
-	}
-
-	protected void When<TEvent>(Func<TEvent, TFeedEntry, TFeedEntry> apply)
+	protected void When<TEvent>(Func<TEvent, TFeedEntry> apply)
 		=> When<Envelope>(async (streamStore, e, ct) => {
-			var page = await streamStore.ReadStreamBackwards(StreamName, StreamVersion.End, 1,
-				true, ct);
-
-			var (target, expectedVersion) = page.Status == PageReadStatus.StreamNotFound
-				? (Activator.CreateInstance<TFeedEntry>(), ExpectedVersion.NoStream)
-				: (JsonSerializer.Deserialize<TFeedEntry>(await page.Messages[0].GetJsonData(ct))!,
-					page.Messages[0].StreamVersion);
-
-			if (!_messageTypeMapper.TryMap(typeof(TEvent), out var type)) {
-				type = "unknown";
+			if (!messageTypeMapper.TryMap(typeof(TEvent), out var type)) {
+				return;
 			}
 
-			target.Events.Add(type);
+			if (e.Message is not TEvent o) {
+				return;
+			}
 
-			await streamStore.AppendToStream(StreamName, expectedVersion,
-				new NewStreamMessage(Guid.NewGuid(), _messageTypeMapper.Map(typeof(TEvent)),
+			var target = apply(o);
+
+			await streamStore.AppendToStream(StreamName, ExpectedVersion.Any,
+				new NewStreamMessage(Guid.NewGuid(), messageTypeMapper.Map(typeof(TEvent)),
 					JsonSerializer.Serialize(target, _serializerOptions),
 					JsonSerializer.Serialize(new Dictionary<string, string> {
 						["commit"] = e.Position.CommitPosition.ToString(),

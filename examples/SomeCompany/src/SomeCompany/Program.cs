@@ -1,31 +1,151 @@
 using System.Globalization;
 using Dapper;
-using EventStore.Client;
-using Npgsql;
+using Ductus.FluentDocker.Builders;
+using Ductus.FluentDocker.Common;
+using Ductus.FluentDocker.Model.Common;
+using Ductus.FluentDocker.Services;
+using Ductus.FluentDocker.Services.Extensions;
+using KurrentDB.Client;
+using NodaTime;
+using Polly;
 using Serilog;
+using Serilog.Events;
 using SomeCompany;
+using SomeCompany.PurchaseOrders;
+using SomeCompany.Sales;
 using SqlStreamStore;
 using Transacto;
+using Transacto.Domain;
+using Transacto.Framework.CommandHandling;
+using Transacto.Infrastructure.Logging;
+using Transacto.Messages;
+using Transacto.Plugins;
 
 var configuration = new SomeCompanyConfiguration(args, Environment.GetEnvironmentVariables());
 DefaultTypeMap.MatchNamesWithUnderscores = true;
 Inflector.Inflector.SetDefaultCultureFunc = () => new CultureInfo("en-US");
-Log.Logger = new LoggerConfiguration()
-	.MinimumLevel.Verbose()
-	//.MinimumLevel.Override("Microsoft.AspNetCore", LogEventLevel.Warning)
+
+await using var logger = new LoggerConfiguration()
+	.MinimumLevel.Is(LogEventLevel.Verbose)
+	.MinimumLevel.Override("Microsoft", LogEventLevel.Information)
+	.MinimumLevel.Override("Grpc.Net.Client.Internal.GrpcCall", LogEventLevel.Warning)
 	.Enrich.FromLogContext()
+	.Destructure.With<DestructuringPolicy>()
+	.WriteTo.Seq(configuration.Seq.ToString())
 	.WriteTo.Console(
+		applyThemeToRedirectedOutput: true,
+		restrictedToMinimumLevel: LogEventLevel.Information,
 		outputTemplate:
-		"[{Timestamp:HH:mm:ss} {Level:u3}] [{SourceContext}] {Message:lj}{NewLine}{Exception}")
+		"[{Timestamp:HH:mm:ss} {Level:u3}] [{SourceContext}] {Message:lj} {Properties:j}{NewLine}{Exception}")
 	.CreateLogger();
 
-var builder = WebApplication.CreateBuilder().AddTransacto(
-	new EventStoreClient(EventStoreClientSettings.Create("esdb://localhost:2113/?tls=false")),
-	new NpgsqlConnectionStringBuilder(configuration.ConnectionString),
-	new HttpClientSqlStreamStore(new() { BaseAddress = new UriBuilder { Port = 5002 }.Uri }));
+var openedOn = new LocalDate(2025, 11, 1);
+var period = AccountingPeriod.Open(openedOn);
+
+var dockerHostUri = new DockerUri(Environment.GetEnvironmentVariable("DOCKER_HOST") ??
+                                  "unix:///run/user/1000/docker.sock");
+
+var containerHostBuilder = new Builder()
+	.UseHost()
+	.FromUri(dockerHostUri);
+
+var containerHost = containerHostBuilder.Build();
+
+using var eventStore = BuildAndStartContainer(
+		"transacto-some-company-kurrent",
+		"eventstore/eventstore:lts",
+		configuration.EventStore.Port, 2113,
+		("EVENTSTORE_ENABLE_ATOM_PUB_OVER_HTTP", true), ("EVENTSTORE_INSECURE", true))
+	.WaitForMessageInLogs("IS LEADER... SPARTA!", 10000);
+
+using var sqlStreamStore = BuildAndStartContainer(
+		"transacto-some-company-sss",
+		"sql-stream-store:latest",
+		configuration.SqlStreamStore.Port, 8080)
+	.WaitForMessageInLogs("Application started. Press Ctrl+C to shut down.", 10000);
+
+using var postgres = BuildAndStartContainer(
+		"transacto-some-company-pgsql",
+		"postgres:18-alpine",
+		configuration.Postgres.Port, 5432,
+		("POSTGRES_USER", configuration.Postgres.Username ?? ""),
+		("POSTGRES_PASSWORD", configuration.Postgres.Password ?? ""))
+	.WaitForMessageInLogs("database system is ready to accept connections", 10000);
+
+using var seq = BuildAndStartContainer(
+		"transacto-some-company-seq",
+		"datalust/seq:latest",
+		configuration.Seq.Port, 80,
+		("ACCEPT_EULA", "Y"),
+		("SEQ_FIRSTRUN_ADMINPASSWORD", "Password"))
+	.WaitForMessageInLogs("Ingestion enabled", 10000);
+
+
+var builder = WebApplication.CreateBuilder(args);
+builder.Environment.EnvironmentName = Environments.Development;
+
+builder.Host.UseSerilog(logger);
+
+builder.Logging.SetMinimumLevel(configuration.LogLevel);
+
+var salesPlugin = new Sales();
+var purchaseOrderPlugin = new PurchaseOrders();
+
+var eventStoreClientSettings = KurrentDBClientSettings.Create(configuration.EventStore.ToString());
+
+builder.Services.AddTransacto(
+	eventStoreClientSettings,
+	configuration.Postgres,
+	SQLiteConnectionStringBuilderFactories.OnDisk,
+	new HttpClientSqlStreamStore(new() { BaseAddress = configuration.SqlStreamStore }),
+	[salesPlugin, purchaseOrderPlugin]);
 
 var app = builder.Build();
-app.UseTransacto();
+
+//await CreateNpgsqlDatabaseAsync(configuration.Postgres.ConnectionString, app.Services.GetRequiredService<ILoggerFactory>());
+
+
+// var manager = new RecyclableMemoryStreamManager();
+// var parser = new HtmlParser();
+
+// app.Use(async (HttpContext context, Func<Task> next) => {
+// 	using var buffer = manager.GetStream();
+// 	var responseStream = context.Response.Body;
+//
+// 	try {
+//
+// 		context.Response.Body = buffer;
+//
+// 		await next();
+//
+// 		buffer.Position = 0;
+//
+// 		context.Response.Body = responseStream;
+//
+// 		if (context.Response.ContentType != "text/html") {
+// 			await buffer.CopyToAsync(context.Response.Body);
+//
+// 			return;
+// 		}
+//
+// 		var document = await parser.ParseDocumentAsync(buffer);
+// 		var html = document.ToHtml(new PrettyMarkupFormatter {
+// 			Indentation = "\t",
+// 			NewLine = "\n"
+// 		});
+//
+// 		await context.Response.WriteAsync(html);
+// 	} finally {
+// 		context.Response.Body = responseStream;
+// 	}
+// });
+app.UseTransacto([salesPlugin, purchaseOrderPlugin]);
+
+var client = app.Services.GetRequiredService<KurrentDBClient>();
+
+if (configuration.Seed) {
+	_ = Seed();
+}
 
 try {
 	await app.RunAsync();
@@ -35,4 +155,240 @@ try {
 	return 1;
 } finally {
 	Log.CloseAndFlush();
+}
+
+async Task Seed() {
+	var generalLedger = app.Services.GetRequiredKeyedService<IServiceProvider>(Standard.GeneralLedger)
+		.GetRequiredService<CommandDispatcher>();
+
+	var chartOfAccounts = app.Services.GetRequiredKeyedService<IServiceProvider>(Standard.ChartOfAccounts)
+		.GetRequiredService<CommandDispatcher>();
+
+	try {
+		DeleteReadModels();
+		await OpenBooks();
+		await DefineChartOfAccounts();
+		await CreateAndPayInvoices();
+	} catch (Exception ex) {
+		app.Logger.LogError(ex, "Seeding failed");
+	}
+
+	async Task CreateAndPayInvoices() {
+		int invoiceNumber = 0;
+		for (var month = 0; month < 12; month++) {
+			var yearMonth = openedOn.PlusMonths(month).ToYearMonth();
+			var ledgerEntryIds = new List<Guid>();
+			for (var i = 0; i < configuration.TransactionsPerMonth; i++) {
+				var invoice = new Invoice(++invoiceNumber, new(100m), new(7.5m), new(45m), Percentage.Of(8.25m));
+				var payment = new Payment(invoiceNumber, invoice.Total);
+
+				var invoiceEntryId = Guid.NewGuid();
+				var invoiceDate = yearMonth
+					.OnDayOfMonth(i % yearMonth.Calendar.GetDaysInMonth(yearMonth.Year, yearMonth.Month) + 1);
+				await generalLedger.Handle(new PostGeneralLedgerEntry {
+					BusinessTransaction = invoice,
+					CreatedOn = invoiceDate,
+					GeneralLedgerEntryId = invoiceEntryId,
+					Period = period.ToString()
+				});
+				ledgerEntryIds.Add(invoiceEntryId);
+
+				var paymentEntryId = Guid.NewGuid();
+				await generalLedger.Handle(new PostGeneralLedgerEntry {
+					BusinessTransaction = payment,
+					CreatedOn = invoiceDate.PlusDays(15),
+					GeneralLedgerEntryId = paymentEntryId,
+					Period = period.ToString()
+				});
+				ledgerEntryIds.Add(paymentEntryId);
+			}
+
+			var purchaseOrder = new PurchaseOrder {
+				PurchaseOrderId = Guid.NewGuid(),
+				VendorId = Guid.NewGuid(),
+				PurchaseOrderReference = null,
+				PurchaseOrderNumber = month + 1,
+				ShippingAddress = new Address {
+					Name = "Three J",
+					Street = "123 Sesame St",
+					City = "Springfield",
+					Country = "USA"
+				},
+				BillingAddress = new Address {
+					Name = "Three J",
+					Street = "123 Sesame St",
+					City = "Springfield",
+					Country = "USA"
+				},
+				PurchaseOrderItems = [
+					new PurchaseOrderItem {
+						ItemId = Guid.NewGuid(),
+						Quantity = 1,
+						Sku = "A-1",
+						UnitPrice = 45 * configuration.TransactionsPerMonth
+					}
+				],
+			};
+			var purchaseOrderId = Guid.NewGuid();
+			ledgerEntryIds.Add(purchaseOrderId);
+			await generalLedger.Handle(new PostGeneralLedgerEntry {
+				BusinessTransaction = purchaseOrder,
+				CreatedOn = yearMonth.PlusMonths(1).OnDayOfMonth(1),
+				GeneralLedgerEntryId = purchaseOrderId,
+				Period = period.ToString()
+			});
+
+			await using var subscription = client.SubscribeToStream(GeneralLedger.Identifier, FromStream.End);
+
+			var closingGeneralLedgerEntryId = Guid.NewGuid();
+
+			await generalLedger.Handle(new BeginClosingAccountingPeriod {
+				ClosingGeneralLedgerEntryId = closingGeneralLedgerEntryId,
+				GeneralLedgerEntryIds = [..ledgerEntryIds],
+				RetainedEarningsAccountNumber = 3900,
+				ClosingOn = openedOn.PlusMonths(month + 1).PlusDays(-1)
+			});
+
+			await foreach (var message in subscription.Messages) {
+				if (message is not StreamMessage.Event (var resolvedEvent)) {
+					continue;
+				}
+
+				if (resolvedEvent is { Event.EventType: nameof(AccountingPeriodClosed) }) {
+					break;
+				}
+			}
+
+			period = period.Next();
+		}
+	}
+
+	async Task DefineChartOfAccounts() {
+		await chartOfAccounts.Handle(new ConfigureChartOfAccounts {
+			AccountNumberWidth = 4,
+			AccountsReceivable = 1100,
+			AccountsPayable = 2100,
+			RetainedEarnings = 3900
+		});
+		await chartOfAccounts.Handle(new DefineAccount {
+			AccountName = "Bank", AccountNumber = 1000, AffectsCash = true,
+			CashFlowCategory = CashFlowCategoryType.Operations
+		});
+		await chartOfAccounts.Handle(new DefineAccount {
+			AccountName = "A/R", AccountNumber = 1100, AffectsCash = false,
+			CashFlowCategory = CashFlowCategoryType.Operations
+		});
+		await chartOfAccounts.Handle(new DefineAccount {
+			AccountName = "Inventory", AccountNumber = 1200, AffectsCash = false,
+			CashFlowCategory = CashFlowCategoryType.Investment
+		});
+		await chartOfAccounts.Handle(new DefineAccount {
+			AccountName = "A/P", AccountNumber = 2100, AffectsCash = false,
+			CashFlowCategory = CashFlowCategoryType.Operations
+		});
+		await chartOfAccounts.Handle(new DefineAccount {
+			AccountName = "Sales Tax Payable", AccountNumber = 2300, AffectsCash = false,
+			CashFlowCategory = CashFlowCategoryType.Operations
+		});
+		await chartOfAccounts.Handle(new DefineAccount {
+			AccountName = "Retained Earnings", AccountNumber = 3900, AffectsCash = false,
+			CashFlowCategory = CashFlowCategoryType.Finance
+		});
+		await chartOfAccounts.Handle(new DefineAccount {
+			AccountName = "COGS", AccountNumber = 5000, AffectsCash = false,
+			CashFlowCategory = CashFlowCategoryType.Operations
+		});
+		await chartOfAccounts.Handle(new DefineAccount {
+			AccountName = "Sales", AccountNumber = 4000, AffectsCash = false,
+			CashFlowCategory = CashFlowCategoryType.Operations
+		});
+		await chartOfAccounts.Handle(new DefineAccount {
+			AccountName = "Shipping", AccountNumber = 4050, AffectsCash = false,
+			CashFlowCategory = CashFlowCategoryType.Operations
+		});
+	}
+
+	async Task OpenBooks() {
+		await generalLedger.Handle(new OpenGeneralLedger {
+			OpenedOn = openedOn
+		});
+	}
+}
+
+void DeleteReadModels() {
+	foreach (var fi in new DirectoryInfo(app.Environment.ContentRootPath).EnumerateFiles("*.db")) {
+		fi.Delete();
+	}
+}
+
+IContainerService BuildAndStartContainer(string name, string image, int hostPort, int containerPort,
+	params (string key, object value)[] environment) {
+	return Policy.Handle<FluentDockerException>(ex =>
+			ex.Message.Contains("You have to remove (or rename) that container to be able to reuse that name"))
+		.Retry(5, StopContainer)
+		.Execute(() => containerHostBuilder
+			.UseContainer()
+			.WithName(name)
+			.UseImage(image)
+			.ReuseIfExists()
+			.KeepRunning()
+			.KeepContainer()
+			.ExposePort(hostPort, containerPort)
+			.WithEnvironment(Array.ConvertAll(environment, input => $"{input.key}={input.value}"))
+			.Build()
+			.Start());
+
+	void StopContainer(Exception ex, int attempt) => containerHost
+		.GetRunningContainers()
+		.FirstOrDefault(x => x.Name == name)?.Stop();
+}
+
+// async Task CreateNpgsqlDatabaseAsync(string connectionString, ILoggerFactory loggerFactory) {
+// 	var builder = new NpgsqlDataSourceBuilder(connectionString).UseLoggerFactory(loggerFactory);
+//
+// 	await using var dataSource = builder.Build();
+// 	
+// 	await using var connection = await dataSource.OpenConnectionAsync();
+//
+// 	var getExists = new NpgsqlCommand(
+// 		$"SELECT 1 FROM pg_database WHERE datname = '{builder.ConnectionStringBuilder.Database}'",
+// 		connection);
+// 	var exists = await getExists.ExecuteScalarAsync() != null;
+//
+// 	if (!exists) {
+// 		await using var command = new NpgsqlCommand(
+// 			$"CREATE DATABASE {builder.ConnectionStringBuilder.Database}",
+// 			connection);
+// 		await command.ExecuteNonQueryAsync();
+// 	}
+// }
+
+internal static class BusinessTransactionExtensions {
+	extension(IBusinessTransaction businessTransaction) {
+		public JournalEntry ToJournalEntry() {
+			return businessTransaction switch {
+				JournalEntry entry => entry,
+				_ => new JournalEntry {
+					Items = [..businessTransaction.Items]
+				}
+			};
+		}
+
+		private IEnumerable<JournalEntry.Item> Items {
+			get {
+				foreach (var t in businessTransaction.GetTransactionItems(ChartOfAccounts.Factory())) {
+					switch (t) {
+						case Debit debit:
+							yield return new JournalEntry.Item(debit.AccountNumber.Value, debit.Amount.ToDecimal(),
+								JournalEntry.Type.Debit);
+							break;
+						case Credit credit:
+							yield return new JournalEntry.Item(credit.AccountNumber.Value, credit.Amount.ToDecimal(),
+								JournalEntry.Type.Credit);
+							break;
+					}
+				}
+			}
+		}
+	}
 }

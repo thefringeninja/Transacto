@@ -1,5 +1,6 @@
 namespace Transacto.Messages;
 
-public partial record DefineAccount {
-	public override string ToString() => $"Defining account {AccountName}-{AccountNumber}.";
+public partial record DefineAccount : IFormattableMessage {
+	public FormattableString ToFormattableString() =>
+		$"Defining account {AccountNumber} - {AccountName}; Affects cash: {AffectsCash}; Cash Flow Category {CashFlowCategory}.";
 }

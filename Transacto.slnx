@@ -1,0 +1,31 @@
+<Solution>
+	<Project Path=".github/.github.shproj" />
+	<Folder Name="/.sln/">
+		<File Path="Directory.Build.props" />
+	</Folder>
+	<Folder Name="/examples/" />
+	<Folder Name="/examples/SomeCompany/" />
+	<Folder Name="/examples/SomeCompany/src/">
+		<Project Path="examples/SomeCompany/src/SomeCompany/SomeCompany.csproj" />
+		<Project Path="examples/SomeCompany/src/StandardProjections/StandardProjections.csproj" />
+	</Folder>
+	<Folder Name="/src/">
+		<Project Path="src/transacto-omehcs/transacto-omehcs.csproj" />
+		<Project Path="src/Transacto.AspNetCore/Transacto.AspNetCore.csproj" />
+		<Project Path="src/Transacto.Schemo/Transacto.Schemo.csproj" />
+		<Project Path="src/Transacto.SourceGenerators/Transacto.SourceGenerators.csproj" />
+		<Project Path="src/Transacto/Transacto.csproj" />
+	</Folder>
+	<Folder Name="/src/Projac/" />
+	<Folder Name="/src/Projac/src/">
+		<Project Path="src/Projac/src/Projac.Npgsql/Projac.Npgsql.csproj" />
+		<Project Path="src/Projac/src/Projac.SQLite/Projac.SQLite.csproj" />
+	</Folder>
+	<Folder Name="/test/">
+		<File Path="test/Directory.Build.props" />
+		<Project Path="test/Transacto.IntegrationTests/Transacto.IntegrationTests.csproj" />
+		<Project Path="test/Transacto.Specifications/Transacto.Specifications.csproj" />
+		<Project Path="test/Transacto.Tests/Transacto.Tests.csproj" />
+	</Folder>
+
+</Solution>

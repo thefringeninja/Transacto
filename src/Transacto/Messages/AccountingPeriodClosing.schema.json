@@ -1,0 +1,43 @@
+{
+	"$schema": "http://json-schema.org/draft-07/schema",
+	"type": "object",
+	"title": "Accounting Period Closing",
+	"additionalProperties": false,
+	"required": [
+		"closingGeneralLedgerEntryId",
+		"closingOn",
+		"retainedEarningsAccountNumber",
+		"generalLedgerEntryIds",
+		"period"
+	],
+	"properties": {
+		"closingGeneralLedgerEntryId": {
+			"title": "Closing General Ledger Entry Id",
+			"$ref": "Uuid.schema.json",
+			"x-schema-form": {
+				"key": "vendorId",
+				"type": "uuid"
+			}
+		},
+		"retainedEarningsAccountNumber": {
+			"title": "Retained Earnings Account Number",
+			"type": "integer"
+		},
+		"closingOn": {
+			"title": "Closing On",
+			"type": "string",
+			"format": "date"
+		},
+		"generalLedgerEntryIds": {
+			"title": "General Ledger Entry Ids",
+			"type": "array",
+			"items": {
+				"$ref": "Uuid.schema.json"
+			}
+		},
+		"period": {
+			"title": "Period",
+			"type": "string"
+		}
+	}
+}
