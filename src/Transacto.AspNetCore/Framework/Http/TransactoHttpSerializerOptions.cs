@@ -62,7 +62,7 @@ public static class TransactoHttpSerializerOptions {
 		}
 	}
 
-	public static JsonSerializerOptions BusinessTransactions(params Type[] businessTransactionTypes) =>
+	public static JsonSerializerOptions BusinessTransactions(Type businessTransactionTypes) =>
 		new() {
 			IncludeFields = true,
 			PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
@@ -125,7 +125,7 @@ public static class TransactoHttpSerializerOptions {
 			writer.WritePropertyName(GetBusinessTransactionPropertyName(value.GetType()));
 
 			using var document = JsonDocument.Parse(
-				JsonSerializer.SerializeToUtf8Bytes(value, value.GetType(), TransactoSerializerOptions.Events));
+				JsonSerializer.SerializeToUtf8Bytes(value, value.GetType(), TransactoSerializerOptions.Messages));
 
 			document.RootElement.WriteTo(writer);
 

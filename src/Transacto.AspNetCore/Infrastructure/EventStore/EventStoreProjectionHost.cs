@@ -72,7 +72,7 @@ public partial class EventStoreProjectionHost<TProcessManager>(
 				continue;
 			}
 
-			var e = JsonSerializer.Deserialize(resolvedEvent.Event.Data.Span, type, TransactoSerializerOptions.Events)!;
+			var e = JsonSerializer.Deserialize(resolvedEvent.Event.Data.Span, type, TransactoSerializerOptions.Messages)!;
 
 			await _dispatcher.Handle(e, ct);
 		}

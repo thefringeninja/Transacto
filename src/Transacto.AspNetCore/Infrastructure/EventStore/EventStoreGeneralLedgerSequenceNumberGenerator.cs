@@ -162,7 +162,7 @@ public class EventStoreSequenceNumberGenerator : IGeneralLedgerEntrySequenceNumb
 			DeterministicGuid.Version.SHA256));
 
 		var eventData = new EventData(eventId, _messageTypeMapper.Map(typeof(GeneralLedgerEntryNumberAllocated)),
-			JsonSerializer.SerializeToUtf8Bytes(assigned, TransactoSerializerOptions.Events));
+			JsonSerializer.SerializeToUtf8Bytes(assigned, TransactoSerializerOptions.Messages));
 
 		await _channel.Writer.WriteAsync((year, eventData), cancellationToken);
 

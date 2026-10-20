@@ -60,7 +60,7 @@ public class AccountingPeriodClosingProcessIntegrationTests(TextWriter textWrite
 					case nameof(AccountingPeriodClosed):
 						accountingPeriodClosed = JsonSerializer.Deserialize<AccountingPeriodClosed>(
 							Encoding.UTF8.GetString(resolvedEvent.OriginalEvent.Data.Span),
-							TransactoSerializerOptions.Events)!;
+							TransactoSerializerOptions.Messages)!;
 						position = resolvedEvent.OriginalPosition!.Value;
 						break;
 				}

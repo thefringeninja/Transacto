@@ -23,8 +23,18 @@
 		</ItemGroup>
 
 	<ItemGroup>
+		<ProjectReference Include="..\Transacto.Schemo\Transacto.Schemo.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false"/>
 		<ProjectReference Include="..\Transacto.SourceGenerators\Transacto.SourceGenerators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false"/>
 	</ItemGroup>
+
+	<ItemGroup>
+		<!-- Don't include the output from a previous source generator execution into future runs; the */** trick here ensures that there's
+		at least one subdirectory, which is our key that it's coming from a source generator as opposed to something that is coming from
+		some other tool. -->
+		<Compile Remove="$(CompilerGeneratedFilesOutputPath)/*/**/*.cs"/>
+		<None Include="$(OutputPath)/$(AssemblyName).dll" Pack="true" PackagePath="analyzers/dotnet/cs" Visible="false"/>
+	</ItemGroup>
+
 
 	<ItemGroup>
 		<ProjectReference Include="..\Projac\src\Projac.SQLite\Projac.SQLite.csproj" />
@@ -39,18 +49,6 @@
 		<PreserveCompilationContext>true</PreserveCompilationContext>
 		<MvcRazorExcludeRefAssembliesFromPublish>false</MvcRazorExcludeRefAssembliesFromPublish>
 	</PropertyGroup>
-
-	<ItemGroup>
-		<ProjectReference Include="..\Transacto.Schemo\Transacto.Schemo.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false"/>
-	</ItemGroup>
-
-	<ItemGroup>
-		<!-- Don't include the output from a previous source generator execution into future runs; the */** trick here ensures that there's
-		at least one subdirectory, which is our key that it's coming from a source generator as opposed to something that is coming from
-		some other tool. -->
-		<Compile Remove="$(CompilerGeneratedFilesOutputPath)/*/**/*.cs"/>
-		<None Include="$(OutputPath)/$(AssemblyName).dll" Pack="true" PackagePath="analyzers/dotnet/cs" Visible="false"/>
-	</ItemGroup>
 
 	<ItemGroup>
 		<EmbeddedResource Include="**\*.uischema.json"/>

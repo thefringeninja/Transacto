@@ -7,7 +7,7 @@ namespace SomeCompany.Inventory;
 
 public class InventoryItemRepository(KurrentDBClient eventStore, IMessageTypeMapper messageTypeMapper) {
 	private readonly EventStoreRepository<InventoryItem> _inner = new(eventStore, messageTypeMapper,
-		TransactoSerializerOptions.Events);
+		TransactoSerializerOptions.Messages);
 
 	public void Add(InventoryItem inventoryItem) => _inner.Add(inventoryItem);
 }

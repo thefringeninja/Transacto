@@ -24,9 +24,9 @@ public partial class EventLogging(
 			}
 
 			var eventRecord = resolvedEvent.Event;
-
+			
 			var e = messageTypeMapper.TryMap(eventRecord.EventType, out var messageType)
-				? JsonSerializer.Deserialize(eventRecord.Data.Span, messageType, TransactoSerializerOptions.Events)
+				? JsonSerializer.Deserialize(eventRecord.Data.Span, messageType, TransactoSerializerOptions.Messages)
 				: null;
 
 			LogReceivedMessage(logger, eventRecord.EventStreamId, eventRecord.EventNumber, eventRecord.EventType,

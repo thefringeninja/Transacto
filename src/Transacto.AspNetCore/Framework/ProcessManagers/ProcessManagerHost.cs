@@ -70,7 +70,7 @@ public partial class ProcessManagerHost(
 			}
 
 			var e = JsonSerializer.Deserialize(resolvedEvent.Event.Data.Span, type,
-				TransactoSerializerOptions.Events) ?? throw new InvalidOperationException();
+				TransactoSerializerOptions.Messages) ?? throw new InvalidOperationException();
 
 			LogDispatchingMessage(logger);
 

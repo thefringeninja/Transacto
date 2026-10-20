@@ -2,6 +2,7 @@ using System.Text.Json;
 using Hallo;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Net.Http.Headers;
+using Transacto;
 using Transacto.Domain;
 using Transacto.Framework;
 using Transacto.Framework.CommandHandling;
@@ -16,7 +17,7 @@ public static partial class ApplicationBuilderExtensions {
 	extension(IEndpointRouteBuilder builder) {
 		public IEndpointRouteBuilder MapCommands(string route, params Type[] commandTypes) =>
 			builder
-				.MapCommandsInternal(route, TransactoHttpSerializerOptions.Commands, commandTypes);
+				.MapCommandsInternal(route, TransactoSerializerOptions.Messages, commandTypes);
 
 		public IEndpointRouteBuilder MapBusinessTransaction<T>(string route) where T : IBusinessTransaction =>
 			builder.MapCommandsInternal(route, TransactoHttpSerializerOptions.BusinessTransactions(typeof(T)),

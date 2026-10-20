@@ -32,7 +32,7 @@ public class GeneralLedgerEventStoreRepository(KurrentDBClient eventStore, IMess
 
 			var @event = JsonSerializer.Deserialize(resolvedEvent.OriginalEvent.Data.Span,
 				messageTypeMapper.Map(resolvedEvent.OriginalEvent.EventType),
-				TransactoSerializerOptions.Events)!;
+				TransactoSerializerOptions.Messages)!;
 			stack.Push(@event);
 
 			if (@event is GeneralLedgerOpened or AccountingPeriodClosed) {

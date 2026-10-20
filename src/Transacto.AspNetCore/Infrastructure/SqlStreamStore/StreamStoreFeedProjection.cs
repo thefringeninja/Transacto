@@ -11,7 +11,7 @@ public abstract class StreamStoreFeedProjection<TFeedEntry>(
 	JsonSerializerOptions? serializerOptions = null)
 	: StreamStoreProjection(streamName)
 	where TFeedEntry : IFeedEntry {
-	private readonly JsonSerializerOptions _serializerOptions = serializerOptions ?? TransactoSerializerOptions.Events;
+	private readonly JsonSerializerOptions _serializerOptions = serializerOptions ?? TransactoSerializerOptions.Messages;
 
 	protected void When<TEvent>(Func<TEvent, TFeedEntry> apply)
 		=> When<Envelope>(async (streamStore, e, ct) => {

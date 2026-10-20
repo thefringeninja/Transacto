@@ -35,7 +35,7 @@ public static class UnitOfWorkExtensions {
 			var type = e.GetType();
 
 			return new EventData(Uuid.NewUuid(), messageTypeMapper.Map(type),
-				JsonSerializer.SerializeToUtf8Bytes(e, type, TransactoSerializerOptions.Events));
+				JsonSerializer.SerializeToUtf8Bytes(e, type, TransactoSerializerOptions.Messages));
 		}
 	}
 }

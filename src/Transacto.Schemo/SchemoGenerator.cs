@@ -2,9 +2,11 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Text.Json.SourceGeneration;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
+using Microsoft.CodeAnalysis.Text;
 using NJsonSchema;
 using NJsonSchema.CodeGeneration.CSharp;
 using NJsonSchema.Generation;
@@ -57,17 +59,24 @@ public class SchemoGenerator : IIncrementalGenerator {
 				var unit = (name, path: text.Path, subpath, @namespace, source: text.GetText(ct)!.ToString());
 
 				return unit;
-			}).Collect();
+			});
 
-		var resolverFactory = (JsonSchema jsonSchema) => {
-			return new JsonReferenceResolver(new JsonSchemaResolver(jsonSchema,
-				new SystemTextJsonSchemaGeneratorSettings {
-					TypeNameGenerator = new TypeNameGenerator()
-				}));
-		};
+		var compilationAndItems = context.CompilationProvider.Combine(items.Collect()).Combine(rootNamespaceProvider);
 
-		context.RegisterSourceOutput(items, (spc, allItems) => {
+		var resolverFactory = (JsonSchema jsonSchema) => new JsonReferenceResolver(new JsonSchemaResolver(jsonSchema,
+			new SystemTextJsonSchemaGeneratorSettings {
+				TypeNameGenerator = new TypeNameGenerator()
+			}));
+
+		context.RegisterSourceOutput(compilationAndItems, (spc, tuple) => {
+			var ((compilation, allItems), rootNamespace) = tuple;
+
 			var rewriter = new RewriteClassesToRecords();
+
+			var generatedTrees = new List<SyntaxTree>();
+			var pendingSources = new List<(string hint, SourceText text)>();
+
+			var parseOptions = (CSharpParseOptions)compilation.SyntaxTrees.First().Options;
 
 			foreach (var item in allItems) {
 				spc.ReportDiagnostic(Diagnostic.Create(
@@ -102,7 +111,12 @@ public class SchemoGenerator : IIncrementalGenerator {
 						continue;
 					}
 
-					spc.AddSource(item.subpath, result.NormalizeWhitespace().GetText(Encoding.UTF8));
+
+					var sourceText = result.NormalizeWhitespace().GetText(Encoding.UTF8);
+
+					pendingSources.Add((item.subpath, sourceText));
+
+					generatedTrees.Add(CSharpSyntaxTree.ParseText(sourceText, parseOptions));
 				} catch (Exception ex) {
 					spc.ReportDiagnostic(Diagnostic.Create(
 						new DiagnosticDescriptor(
@@ -113,6 +127,44 @@ public class SchemoGenerator : IIncrementalGenerator {
 							DiagnosticSeverity.Error,
 							true),
 						Location.None));
+				}
+			}
+
+			if (pendingSources.Count == 0) {
+				return;
+			}
+
+			foreach (var (hint, text) in pendingSources) {
+				spc.AddSource(hint, text);
+			}
+			
+			var allRecordNames = generatedTrees
+				.SelectMany(t => t.GetCompilationUnitRoot().DescendantNodes().OfType<RecordDeclarationSyntax>())
+				.Select(r => {
+					var ns = r.Ancestors().OfType<BaseNamespaceDeclarationSyntax>().FirstOrDefault()?.Name.ToString();
+					return ns is not null ? $"{ns}.{r.Identifier.Text}" : r.Identifier.Text;
+				});
+
+			var contextSource = new StringBuilder();
+			contextSource.AppendLine("using System.Text.Json.Serialization;").AppendLine();
+			contextSource.Append("namespace ").Append(rootNamespace).Append(';').AppendLine();
+			foreach (var name in allRecordNames)
+				contextSource.AppendLine($"[JsonSerializable(typeof({name}))]");
+			contextSource.AppendLine("partial class GeneratedJsonContext : JsonSerializerContext { }");
+
+			var contextText = contextSource.ToString();
+			spc.AddSource("GeneratedJsonContext.g.cs", contextText);
+			generatedTrees.Add(CSharpSyntaxTree.ParseText(contextText, parseOptions));
+
+			// Run STJ generator over a compilation that includes your generated types
+			var augmentedCompilation = compilation.AddSyntaxTrees(generatedTrees);
+			var stjDriver = CSharpGeneratorDriver
+				.Create(new JsonSourceGenerator())
+				.RunGenerators(augmentedCompilation);
+
+			foreach (var genResult in stjDriver.GetRunResult().Results) {
+				foreach (var generated in genResult.GeneratedSources) {
+					spc.AddSource($"STJ_{generated.HintName}", generated.SourceText);
 				}
 			}
 		});
@@ -164,8 +216,18 @@ public class SchemoGenerator : IIncrementalGenerator {
 			return base.Visit(node);
 		}
 
-		public override SyntaxNode? VisitRecordDeclaration(RecordDeclarationSyntax node) {
-			return SyntaxFactory.RecordDeclaration(
+		public override SyntaxNode? VisitNamespaceDeclaration(NamespaceDeclarationSyntax node) {
+			var visited = (NamespaceDeclarationSyntax)base.VisitNamespaceDeclaration(node)!;
+
+			return SyntaxFactory.FileScopedNamespaceDeclaration(visited.Name)
+				.WithMembers(visited.Members)
+				.WithUsings(visited.Usings)
+				.WithLeadingTrivia(visited.GetLeadingTrivia())
+				.WithTrailingTrivia(visited.GetTrailingTrivia());
+		}
+
+		public override SyntaxNode? VisitRecordDeclaration(RecordDeclarationSyntax node) =>
+			SyntaxFactory.RecordDeclaration(
 					node.AttributeLists,
 					node.Modifiers,
 					SyntaxFactory.Token(SyntaxKind.RecordKeyword),
@@ -175,14 +237,13 @@ public class SchemoGenerator : IIncrementalGenerator {
 					SyntaxFactory.Token(SyntaxKind.CloseBraceToken), node.SemicolonToken)
 				.AddMembers(node.Members.OfType<PropertyDeclarationSyntax>().Select(BuildProperty).Where(member =>
 					member switch {
-						PropertyDeclarationSyntax p => p.Identifier.Text != "AdditionalProperties",
+						{ } p => p.Identifier.Text != "AdditionalProperties",
 						_ => true
 					}).ToArray())
 				.NormalizeWhitespace();
-		}
 
-		private static PropertyDeclarationSyntax BuildProperty(PropertyDeclarationSyntax prop) {
-			return SyntaxFactory
+		private static PropertyDeclarationSyntax BuildProperty(PropertyDeclarationSyntax prop) =>
+			SyntaxFactory
 				.PropertyDeclaration(prop.Type, prop.Identifier)
 				.AddModifiers(prop.Modifiers.ToArray())
 				.AddAttributeLists(prop.AttributeLists.ToArray())
@@ -191,7 +252,6 @@ public class SchemoGenerator : IIncrementalGenerator {
 						.WithSemicolonToken(SyntaxFactory.Token(SyntaxKind.SemicolonToken)),
 					SyntaxFactory.AccessorDeclaration(SyntaxKind.InitAccessorDeclaration)
 						.WithSemicolonToken(SyntaxFactory.Token(SyntaxKind.SemicolonToken)));
-		}
 	}
 
 	private class CodeGeneratorSettings : CSharpGeneratorSettings {

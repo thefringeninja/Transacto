@@ -15,7 +15,7 @@ public class BalanceSheetHttpSpecifications {
 		new Scenario()
 			.Given("", HttpRequest.Command(new OpenGeneralLedger {
 				OpenedOn = openedOn
-			}, "/general-ledger", TransactoSerializerOptions.Events))
+			}, "/general-ledger", TransactoSerializerOptions.Messages))
 			.When(HttpRequest.GetHalJson(
 				$"/financial-statements/balance-sheet?thru={LocalDatePattern.Iso.Format(openedOn)}"))
 			.Then("", HttpResponse.HalJson(new BalanceSheetReports([

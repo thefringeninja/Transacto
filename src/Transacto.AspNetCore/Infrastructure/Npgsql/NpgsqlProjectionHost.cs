@@ -149,7 +149,7 @@ public partial class NpgsqlProjectionHost(
 
 					var messages = batch.Select(re => JsonSerializer.Deserialize(re.Event.Data.Span,
 							messageTypeMap.Map(re.Event.EventType),
-							TransactoSerializerOptions.Events) ?? throw new InvalidOperationException())
+							TransactoSerializerOptions.Messages) ?? throw new InvalidOperationException())
 						.ToArray();
 
 					var resolvedEvent = batch[0];

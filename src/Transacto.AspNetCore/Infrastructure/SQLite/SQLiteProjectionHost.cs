@@ -175,7 +175,7 @@ public partial class SQLiteProjectionHost<T>(
 						.Project(batch.Select(re => JsonSerializer.Deserialize(
 							re.Event.Data.Span,
 							messageTypeMap.Map(re.Event.EventType),
-							TransactoSerializerOptions.Events) ?? throw new InvalidOperationException()));
+							TransactoSerializerOptions.Messages) ?? throw new InvalidOperationException()));
 
 					var position = batch[^1].Event.Position;
 					WriteCheckpoint(transaction, position);
