@@ -2,11 +2,11 @@ using System.Data.SQLite;
 using System.Globalization;
 using System.Net;
 using System.Text.Json;
-using Ductus.FluentDocker.Builders;
-using Ductus.FluentDocker.Common;
-using Ductus.FluentDocker.Model.Common;
-using Ductus.FluentDocker.Services;
-using Ductus.FluentDocker.Services.Extensions;
+using FluentDocker.Builders;
+using FluentDocker.Common;
+using FluentDocker.Kernel;
+using FluentDocker.Services;
+using FluentDocker.Services.Extensions;
 using KurrentDB.Client;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.TestHost;
@@ -29,10 +29,9 @@ namespace Transacto.Integration;
 public abstract class IntegrationTests : IAsyncDisposable {
 	private static int s_RunId = -1;
 	private static int s_Port = 2113;
-	
+
 	private readonly HttpClientSqlStreamStore _streamStoreClient;
 	private readonly WebApplication _app;
-	private readonly TestServer _testServer;
 	private readonly int _runId = Interlocked.Increment(ref s_RunId);
 	private readonly int _eventStorePort = Interlocked.Increment(ref s_Port);
 
@@ -41,6 +40,7 @@ public abstract class IntegrationTests : IAsyncDisposable {
 	//private readonly IntegrationTestFactory _webApplicationFactory;
 
 	private readonly List<FileInfo> _sqliteDatabases = [];
+	private readonly FluentDockerKernel _kernel;
 	protected HttpClient HttpClient { get; }
 	protected KurrentDBClient KurrentDBClient { get; }
 
@@ -49,31 +49,18 @@ public abstract class IntegrationTests : IAsyncDisposable {
 	}
 
 	protected IntegrationTests(TextWriter logOutput) {
-		var dockerHost = new DockerUri(Environment.GetEnvironmentVariable("DOCKER_HOST") ??
-		                               "unix:///run/user/1000/docker.sock");
+		var serilogLoggerProvider = new SerilogLoggerProvider(new LoggerConfiguration()
+			.MinimumLevel.Verbose()
+			.MinimumLevel.Override("KurrentDB", LogEventLevel.Warning)
+			.MinimumLevel.Override("Microsoft", LogEventLevel.Warning)
+			.MinimumLevel.Override("Grpc", LogEventLevel.Warning)
+			.Enrich.FromLogContext()
+			.WriteTo.TextWriter(logOutput,
+				outputTemplate:
+				"[{Timestamp:HH:mm:ss} {Level:u3}] [{SourceContext}] {Message:lj} {Properties:j}{NewLine}{Exception}")
+			.CreateLogger());
 
-		var hostBuilder = new Builder()
-			.UseHost()
-			.FromUri(dockerHost);
 
-		var host = hostBuilder.Build();
-
-		_eventStore = BuildAndStartContainer(
-				$"transacto-kurrent-test-{_runId}",
-				"ghcr.io/kurrent-io/eventstore:23.10.8-alpine",
-				_eventStorePort, 2113,
-				("EVENTSTORE_ENABLE_ATOM_PUB_OVER_HTTP", true), ("EVENTSTORE_INSECURE", true))
-			.WaitForMessageInLogs("IS LEADER... SPARTA!", 10000);
-		// _streamStore = new Builder()
-		// 	.UseContainer()
-		// 	.WithName("transacto-sss-test")
-		// 	.UseImage("ghcr.io/thefringeninja/sqlstreamstore-server:1.2.0-beta.8-alpine3.9")
-		// 	.ReuseIfExists()
-		// 	.ExposePort(5000, 80)
-		// 	.WaitForHttp("http://localhost:5000", contentType: "application/hal+json")
-		// 	.Build();
-
-		//_webApplicationFactory = new IntegrationTestFactory();
 
 		var eventStoreClientSettings = new KurrentDBClientSettings {
 			ConnectivitySettings = {
@@ -103,14 +90,6 @@ public abstract class IntegrationTests : IAsyncDisposable {
 			}, true)
 		});
 
-		var serilogLoggerProvider = new SerilogLoggerProvider(new LoggerConfiguration()
-			.MinimumLevel.Verbose()
-			.MinimumLevel.Override("Microsoft", LogEventLevel.Warning)
-			.Enrich.FromLogContext()
-			.WriteTo.TextWriter(logOutput,
-				outputTemplate: "[{Timestamp:HH:mm:ss} {Level:u3}] [{SourceContext}] {Message:lj} {Properties:j}{NewLine}{Exception}")
-			.CreateLogger());
-
 		var builder = WebApplication.CreateBuilder();
 		builder.Logging.ClearProviders().AddProvider(serilogLoggerProvider);
 
@@ -121,33 +100,50 @@ public abstract class IntegrationTests : IAsyncDisposable {
 			_streamStoreClient);
 		builder.WebHost.UseTestServer();
 		_app = builder.Build();
+
+		_kernel = FluentDockerKernel.Create(_app.Services.GetRequiredService<ILoggerFactory>())
+			.WithDockerCli("docker", d => d.AsDefault())
+			.Build();
+		
 		KurrentDBClient = _app.Services.GetRequiredService<KurrentDBClient>();
 		_app.UseTransacto();
 		_app.Start();
+		
+		_eventStore = BuildAndStartContainer(
+			$"transacto-kurrent-test-{_runId}",
+			"ghcr.io/kurrent-io/eventstore:23.10.8-alpine",
+			_eventStorePort, 2113, "IS LEADER... SPARTA!",
+			("EVENTSTORE_ENABLE_ATOM_PUB_OVER_HTTP", true), ("EVENTSTORE_INSECURE", true));
+		// _streamStore = new Builder()
+		// 	.UseContainer()
+		// 	.WithName("transacto-sss-test")
+		// 	.UseImage("ghcr.io/thefringeninja/sqlstreamstore-server:1.2.0-beta.8-alpine3.9")
+		// 	.ReuseIfExists()
+		// 	.ExposePort(5000, 80)
+		// 	.WaitForHttp("http://localhost:5000", contentType: "application/hal+json")
+		// 	.Build();
 
-		_testServer = _app.GetTestServer();
+		//_webApplicationFactory = new IntegrationTestFactory();
 
-		HttpClient = _testServer.CreateClient();
+		var testServer = _app.GetTestServer();
+
+		HttpClient = testServer.CreateClient();
 		return;
 
 		IContainerService BuildAndStartContainer(string name, string image, int hostPort, int containerPort,
-			params (string key, object value)[] environment) {
+			string readyLogMessage, params (string key, object value)[] environment) {
 			return Policy.Handle<FluentDockerException>(ex =>
 					ex.Message.Contains("You have to remove (or rename) that container to be able to reuse that name"))
-				.Retry(5, StopContainer)
-				.Execute(() => hostBuilder
-					.UseContainer()
-					.WithName(name)
-					.UseImage(image)
-					.DeleteIfExists()
-					.ExposePort(hostPort, containerPort)
-					.WithEnvironment(Array.ConvertAll(environment, input => $"{input.key}={input.value}"))
-					.Build()
-					.Start());
-
-			void StopContainer(Exception ex, int attempt) =>
-				host.GetRunningContainers().FirstOrDefault(x => x.Name == name)
-					?.Stop();
+				.Retry(5)
+				.Execute(() => new Builder()
+					.WithinDockerCli("docker", _kernel)
+					.UseContainer(c => _ = environment.Aggregate(c.UseImage(image)
+						.WithName(name)
+						.ExposePort(hostPort, containerPort)
+						.WaitForPort($"{containerPort}/tcp")
+						.WaitForLogMessage(readyLogMessage, 10000)
+						.DestroyIfExists(), (seed, env) => seed.WithEnvironment(env.key, $"{env.value}")))
+					.Build()).GetContainer(name);
 		}
 
 		SQLiteConnectionStringBuilder SQLiteInTempFolder(Type projectionType) {
@@ -217,5 +213,6 @@ public abstract class IntegrationTests : IAsyncDisposable {
 		_sqliteDatabases.ForEach(fileInfo => fileInfo.Delete());
 		//_streamStore.Dispose();
 		_eventStore.Dispose();
+		await _kernel.DisposeAsync();
 	}
 }

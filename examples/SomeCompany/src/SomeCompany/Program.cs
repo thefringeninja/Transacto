@@ -42,14 +42,11 @@ await using var logger = new LoggerConfiguration()
 var openedOn = new LocalDate(2025, 11, 1);
 var period = AccountingPeriod.Open(openedOn);
 
-var dockerHostUri = new DockerUri(Environment.GetEnvironmentVariable("DOCKER_HOST") ??
-                                  "unix:///run/user/1000/docker.sock");
+var containerHostBuilder = new Builder();
 
-var containerHostBuilder = new Builder()
+var containerHost = containerHostBuilder
 	.UseHost()
-	.FromUri(dockerHostUri);
-
-var containerHost = containerHostBuilder.Build();
+	.Build();
 
 using var eventStore = BuildAndStartContainer(
 		"transacto-some-company-kurrent",
