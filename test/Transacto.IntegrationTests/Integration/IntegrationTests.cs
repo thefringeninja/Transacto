@@ -141,7 +141,7 @@ public abstract class IntegrationTests : IAsyncDisposable {
 						.WithName(name)
 						.ExposePort(hostPort, containerPort)
 						.WaitForPort($"{containerPort}/tcp")
-						.WaitForLogMessage(readyLogMessage, 10000)
+						.WaitForLogMessage(readyLogMessage, 60000)
 						.DestroyIfExists(), (seed, env) => seed.WithEnvironment(env.key, $"{env.value}")))
 					.Build()).GetContainer(name);
 		}

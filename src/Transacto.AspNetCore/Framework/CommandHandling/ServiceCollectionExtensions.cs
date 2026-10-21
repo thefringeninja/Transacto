@@ -1,3 +1,4 @@
+using System.Text.Json;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Transacto.Domain;
 using Transacto.Framework.CommandHandling;

@@ -1,5 +1,6 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using System.Text.Json.Serialization.Metadata;
 using Hallo.Serialization;
 using NodaTime;
 using NodaTime.Serialization.SystemTextJson;
@@ -62,23 +63,22 @@ public static class TransactoHttpSerializerOptions {
 		}
 	}
 
-	public static JsonSerializerOptions BusinessTransactions(Type businessTransactionTypes) =>
-		new() {
-			IncludeFields = true,
-			PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-			PropertyNameCaseInsensitive = true,
-			Converters = {
-				new BusinessTransactionConverter(businessTransactionTypes),
-				new JsonStringEnumConverter(JsonNamingPolicy.CamelCase)
-			},
-		};
-
-	public static readonly JsonSerializerOptions Commands = new() {
-		PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-		PropertyNameCaseInsensitive = true,
-		IncludeFields = true,
-		Converters = { new JsonStringEnumConverter(JsonNamingPolicy.CamelCase) }
+	// Client-side options must match the server's converters (NodaTime, Money, ledger numbers, ...) or
+	// requests are rejected with 400. The generated context covers the Transacto message types; reflection
+	// covers plugin business transactions such as JournalEntry that the context does not know.
+	private static JsonSerializerOptions FromMessages() => new(TransactoSerializerOptions.Messages) {
+		TypeInfoResolver = JsonTypeInfoResolver.Combine(
+			TransactoSerializerOptions.Messages.TypeInfoResolver!,
+			new DefaultJsonTypeInfoResolver())
 	};
+
+	public static readonly JsonSerializerOptions Commands = FromMessages();
+
+	public static JsonSerializerOptions BusinessTransactions(params Type[] businessTransactionTypes) {
+		var options = FromMessages();
+		options.Converters.Insert(0, new BusinessTransactionConverter(businessTransactionTypes));
+		return options;
+	}
 
 	private class BusinessTransactionConverter(params Type[] transactionTypes) : JsonConverter<object?> {
 		private readonly Dictionary<string, Type> _transactionTypes =
@@ -87,28 +87,36 @@ public static class TransactoHttpSerializerOptions {
 		private static string GetBusinessTransactionPropertyName(Type type) =>
 			char.ToLower(type.Name[0]) + type.Name[1..];
 
-		public override bool CanConvert(Type typeToConvert) =>
-			typeof(IBusinessTransaction).IsAssignableFrom(typeToConvert);
+		// Only the declared interface is handled here. Concrete business transaction types must fall through to
+		// default serialization, otherwise the converter would recurse into itself.
+		public override bool CanConvert(Type typeToConvert) => typeToConvert == typeof(IBusinessTransaction);
 
 		public override object? Read(ref Utf8JsonReader reader, Type typeToConvert,
 			JsonSerializerOptions options) {
-			if (reader.TokenType != JsonTokenType.StartObject || !reader.Read()) {
+			// Wrapper shape: { "<transactionTypeName>": { ...transaction... } }
+			if (reader.TokenType != JsonTokenType.StartObject || !reader.Read() ||
+			    reader.TokenType != JsonTokenType.PropertyName) {
 				throw new JsonException();
 			}
 
 			var typeName = reader.GetString()!;
 
-			if (!_transactionTypes.TryGetValue(typeName, out var type) ||
-			    !typeof(IBusinessTransaction).IsAssignableFrom(type)) {
+			// Move onto the transaction's value.
+			reader.Read();
+
+			object? businessTransaction = null;
+
+			if (_transactionTypes.TryGetValue(typeName, out var type) &&
+			    typeof(IBusinessTransaction).IsAssignableFrom(type)) {
+				businessTransaction = JsonSerializer.Deserialize(ref reader, type, options);
+			} else {
 				reader.Skip();
-
-				reader.Read();
-
-				return null;
 			}
 
-			var businessTransaction = JsonSerializer.Deserialize(ref reader, type, options)!;
-			reader.Read();
+			// The reader now sits on the transaction's last token. Advance to the wrapper's closing brace.
+			if (!reader.Read() || reader.TokenType != JsonTokenType.EndObject) {
+				throw new JsonException();
+			}
 
 			return businessTransaction;
 		}
@@ -124,10 +132,7 @@ public static class TransactoHttpSerializerOptions {
 
 			writer.WritePropertyName(GetBusinessTransactionPropertyName(value.GetType()));
 
-			using var document = JsonDocument.Parse(
-				JsonSerializer.SerializeToUtf8Bytes(value, value.GetType(), TransactoSerializerOptions.Messages));
-
-			document.RootElement.WriteTo(writer);
+			JsonSerializer.Serialize(writer, value, value.GetType(), options);
 
 			writer.WriteEndObject();
 		}

@@ -21,7 +21,7 @@ public static partial class ApplicationBuilderExtensions {
 
 		public IEndpointRouteBuilder MapBusinessTransaction<T>(string route) where T : IBusinessTransaction =>
 			builder.MapCommandsInternal(route, TransactoHttpSerializerOptions.BusinessTransactions(typeof(T)),
-				[typeof(PostGeneralLedgerEntry)]);
+				typeof(PostGeneralLedgerEntry));
 
 		private IEndpointRouteBuilder MapCommandsInternal(string route,
 			JsonSerializerOptions serializerOptions, params Type[] commandTypes) {

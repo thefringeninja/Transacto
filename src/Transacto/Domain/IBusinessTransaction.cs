@@ -7,7 +7,7 @@ public interface IBusinessTransaction {
 	
 	public GeneralLedgerEntrySequenceNumber? SequenceNumber { get; set; }
 	
-	public static abstract GeneralLedgerEntryNumberPrefix Prefix { get; }
+	public static virtual GeneralLedgerEntryNumberPrefix Prefix => throw new NotImplementedException();
 
 	public GeneralLedgerEntryNumber? ReferenceNumber { get; }
 }

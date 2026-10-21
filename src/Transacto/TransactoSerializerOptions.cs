@@ -9,7 +9,7 @@ namespace Transacto;
 
 public static class TransactoSerializerOptions {
 	public static readonly JsonSerializerOptions Messages = new() {
-		TypeInfoResolver = GeneratedJsonContext.Default,
+		TypeInfoResolverChain = { GeneratedJsonContext.Default },
 		PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
 		PropertyNameCaseInsensitive = true,
 		IncludeFields = true,

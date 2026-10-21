@@ -61,20 +61,33 @@ public class SchemoGenerator : IIncrementalGenerator {
 				return unit;
 			});
 
-		var compilationAndItems = context.CompilationProvider.Combine(items.Collect()).Combine(rootNamespaceProvider);
+		var businessTransactions = context.SyntaxProvider
+			.CreateSyntaxProvider(
+				predicate: static (node, _) =>
+					node is TypeDeclarationSyntax { BaseList: not null } and not InterfaceDeclarationSyntax,
+				transform: static (ctx, ct) => BusinessTransactionJsonContextSource.ToModel(ctx, ct))
+			.Where(static model => model is not null)
+			.Select(static (model, _) => model!)
+			.Collect();
+
+		var inputs = context.CompilationProvider
+			.Combine(items.Collect())
+			.Combine(rootNamespaceProvider)
+			.Combine(businessTransactions);
 
 		var resolverFactory = (JsonSchema jsonSchema) => new JsonReferenceResolver(new JsonSchemaResolver(jsonSchema,
 			new SystemTextJsonSchemaGeneratorSettings {
 				TypeNameGenerator = new TypeNameGenerator()
 			}));
 
-		context.RegisterSourceOutput(compilationAndItems, (spc, tuple) => {
-			var ((compilation, allItems), rootNamespace) = tuple;
+		context.RegisterSourceOutput(inputs, (spc, tuple) => {
+			var (((compilation, allItems), rootNamespace), transactions) = tuple;
 
 			var rewriter = new RewriteClassesToRecords();
 
 			var generatedTrees = new List<SyntaxTree>();
 			var pendingSources = new List<(string hint, SourceText text)>();
+			var contextNames = new List<string>();
 
 			var parseOptions = (CSharpParseOptions)compilation.SyntaxTrees.First().Options;
 
@@ -130,31 +143,65 @@ public class SchemoGenerator : IIncrementalGenerator {
 				}
 			}
 
-			if (pendingSources.Count == 0) {
-				return;
-			}
-
 			foreach (var (hint, text) in pendingSources) {
 				spc.AddSource(hint, text);
 			}
-			
-			var allRecordNames = generatedTrees
-				.SelectMany(t => t.GetCompilationUnitRoot().DescendantNodes().OfType<RecordDeclarationSyntax>())
-				.Select(r => {
-					var ns = r.Ancestors().OfType<BaseNamespaceDeclarationSyntax>().FirstOrDefault()?.Name.ToString();
-					return ns is not null ? $"{ns}.{r.Identifier.Text}" : r.Identifier.Text;
-				});
 
-			var contextSource = new StringBuilder();
-			contextSource.AppendLine("using System.Text.Json.Serialization;").AppendLine();
-			contextSource.Append("namespace ").Append(rootNamespace).Append(';').AppendLine();
-			foreach (var name in allRecordNames)
-				contextSource.AppendLine($"[JsonSerializable(typeof({name}))]");
-			contextSource.AppendLine("partial class GeneratedJsonContext : JsonSerializerContext { }");
+			if (pendingSources.Count > 0) {
+				var allRecordNames = generatedTrees
+					.SelectMany(t => t.GetCompilationUnitRoot().DescendantNodes().OfType<RecordDeclarationSyntax>())
+					.Select(r => {
+						var ns = r.Ancestors().OfType<BaseNamespaceDeclarationSyntax>().FirstOrDefault()?.Name.ToString();
+						return ns is not null ? $"{ns}.{r.Identifier.Text}" : r.Identifier.Text;
+					});
 
-			var contextText = contextSource.ToString();
-			spc.AddSource("GeneratedJsonContext.g.cs", contextText);
-			generatedTrees.Add(CSharpSyntaxTree.ParseText(contextText, parseOptions));
+				var contextSource = new StringBuilder();
+				contextSource.AppendLine("using System.Text.Json.Serialization;").AppendLine();
+				contextSource.Append("namespace ").Append(rootNamespace).Append(';').AppendLine();
+				foreach (var name in allRecordNames)
+					contextSource.AppendLine($"[JsonSerializable(typeof({name}))]");
+				contextSource.AppendLine("partial class GeneratedJsonContext : JsonSerializerContext { }");
+
+				var contextText = contextSource.ToString();
+				spc.AddSource("GeneratedJsonContext.g.cs", contextText);
+				generatedTrees.Add(CSharpSyntaxTree.ParseText(contextText, parseOptions));
+				contextNames.Add("GeneratedJsonContext");
+			}
+
+			var businessTransactionTypes = new SortedSet<string>(StringComparer.Ordinal);
+			foreach (var transaction in transactions) {
+				if (transaction.IsAccessible) {
+					businessTransactionTypes.Add(transaction.FullyQualifiedName);
+					continue;
+				}
+
+				spc.ReportDiagnostic(Diagnostic.Create(
+					new DiagnosticDescriptor(
+						"SCHEMOO004",
+						"Business transaction skipped",
+						$"Business transaction {transaction.FullyQualifiedName} is not accessible from namespace scope and was not registered for JSON serialization.",
+						nameof(SchemoGenerator),
+						DiagnosticSeverity.Info,
+						true),
+					Location.None));
+			}
+
+			if (businessTransactionTypes.Count > 0) {
+				var contextNamespace = string.IsNullOrEmpty(rootNamespace)
+					? compilation.AssemblyName ?? "Transacto"
+					: rootNamespace!;
+				var businessTransactionContextText =
+					BusinessTransactionJsonContextSource.GenerateContext(contextNamespace, businessTransactionTypes);
+
+				spc.AddSource($"{BusinessTransactionJsonContextSource.ContextName}.g.cs",
+					SourceText.From(businessTransactionContextText, Encoding.UTF8));
+				generatedTrees.Add(CSharpSyntaxTree.ParseText(businessTransactionContextText, parseOptions));
+				contextNames.Add(BusinessTransactionJsonContextSource.ContextName);
+			}
+
+			if (contextNames.Count == 0) {
+				return;
+			}
 
 			// Run STJ generator over a compilation that includes your generated types
 			var augmentedCompilation = compilation.AddSyntaxTrees(generatedTrees);
@@ -164,6 +211,12 @@ public class SchemoGenerator : IIncrementalGenerator {
 
 			foreach (var genResult in stjDriver.GetRunResult().Results) {
 				foreach (var generated in genResult.GeneratedSources) {
+					// Only keep metadata for the contexts this generator emitted. Other contexts in the
+					// compilation already have their own generated metadata.
+					if (!contextNames.Any(name => generated.HintName.StartsWith(name + ".", StringComparison.Ordinal))) {
+						continue;
+					}
+
 					spc.AddSource($"STJ_{generated.HintName}", generated.SourceText);
 				}
 			}
