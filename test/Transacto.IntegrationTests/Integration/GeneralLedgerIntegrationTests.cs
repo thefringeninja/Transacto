@@ -62,7 +62,7 @@ public class GeneralLedgerIntegrationTests : IntegrationTests {
 			checkpoint)));	
 	}
 
-	private class BusinessTransaction() : IBusinessTransaction {
+	private class BusinessTransaction : IBusinessTransaction {
 		public GeneralLedgerEntrySequenceNumber? SequenceNumber { get; set; }
 		public static GeneralLedgerEntryNumberPrefix Prefix { get; } = new("b");
 		public GeneralLedgerEntryNumber? ReferenceNumber =>

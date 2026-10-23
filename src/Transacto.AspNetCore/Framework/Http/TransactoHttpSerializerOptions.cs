@@ -72,7 +72,11 @@ public static class TransactoHttpSerializerOptions {
 			new DefaultJsonTypeInfoResolver())
 	};
 
-	public static readonly JsonSerializerOptions Commands = FromMessages();
+	// Any IBusinessTransaction-typed value is written by runtime type inside the
+	// { "<typeName>": {...} } wrapper, so commands built with these options can be
+	// posted to a MapBusinessTransaction<T> route. Reading a document back needs the
+	// type list, so use BusinessTransactions(...) for that.
+	public static readonly JsonSerializerOptions Commands = BusinessTransactions();
 
 	public static JsonSerializerOptions BusinessTransactions(params Type[] businessTransactionTypes) {
 		var options = FromMessages();
