@@ -11,7 +11,7 @@ public class InMemoryProjection<T>(Func<T, object, T> handler) : InMemoryProject
 
 			var model = optional.HasValue ? optional.Value : new T();
 			target.Set(handler(model, message) with {
-				Checkpoint = position
+				Position = position
 			});
 		})
 		.Build()) where T : MemoryReadModel, new() {

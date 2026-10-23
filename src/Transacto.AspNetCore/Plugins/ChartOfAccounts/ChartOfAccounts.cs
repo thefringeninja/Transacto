@@ -16,22 +16,19 @@ public class ChartOfAccounts : IPlugin {
 	public void Configure(IEndpointRouteBuilder builder) {
 		builder.MapGet(string.Empty,
 			([FromServices] InMemoryProjectionDatabase database,
-				[FromServices] ChartOfAccountsRepresentation representation) => {
-				return database.Get<ReadModel>() switch {
-					{ HasValue: true } optional => Results.Hal(optional.Value,
-						optional.Value.Checkpoint.ToCheckpoint(), representation),
-					_ => Results.Hal(ReadModel.None, Checkpoint.None, representation)
-				};
+				[FromServices] ChartOfAccountsRepresentation representation) => database.Get<ReadModel>() switch {
+				{ HasValue: true } optional => Results.Hal(optional.Value,
+					optional.Value.Position.ToCheckpoint(), representation),
+				_ => Results.Hal(ReadModel.None, Checkpoint.None, representation)
 			});
 
 		builder.MapCommands(string.Empty,
-		[
 			typeof(ConfigureChartOfAccounts),
 			typeof(DefineAccount),
 			typeof(RenameAccount),
 			typeof(DeactivateAccount),
 			typeof(ReactivateAccount)
-		]);
+		);
 	}
 
 	public void ConfigureServices(IServiceCollection services) => services

@@ -13,6 +13,7 @@ using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using NodaTime;
 using Npgsql;
 using Polly;
@@ -49,6 +50,24 @@ public abstract class IntegrationTests : IAsyncDisposable {
 	}
 
 	protected IntegrationTests(TextWriter logOutput) {
+		_kernel = FluentDockerKernel.Create(NullLoggerFactory.Instance)
+			.WithDockerCli("docker", d => d.AsDefault())
+			.Build();
+
+		_eventStore = BuildAndStartContainer(
+			$"transacto-kurrent-test-{_runId}",
+			"ghcr.io/kurrent-io/eventstore:23.10.8-alpine",
+			_eventStorePort, 2113, "IS LEADER... SPARTA!",
+			("EVENTSTORE_ENABLE_ATOM_PUB_OVER_HTTP", true), ("EVENTSTORE_INSECURE", true));
+		// _streamStore = new Builder()
+		// 	.UseContainer()
+		// 	.WithName("transacto-sss-test")
+		// 	.UseImage("ghcr.io/thefringeninja/sqlstreamstore-server:1.2.0-beta.8-alpine3.9")
+		// 	.ReuseIfExists()
+		// 	.ExposePort(5000, 80)
+		// 	.WaitForHttp("http://localhost:5000", contentType: "application/hal+json")
+		// 	.Build();
+
 		var serilogLoggerProvider = new SerilogLoggerProvider(new LoggerConfiguration()
 			.MinimumLevel.Verbose()
 			.MinimumLevel.Override("KurrentDB", LogEventLevel.Warning)
@@ -59,8 +78,6 @@ public abstract class IntegrationTests : IAsyncDisposable {
 				outputTemplate:
 				"[{Timestamp:HH:mm:ss} {Level:u3}] [{SourceContext}] {Message:lj} {Properties:j}{NewLine}{Exception}")
 			.CreateLogger());
-
-
 
 		var eventStoreClientSettings = new KurrentDBClientSettings {
 			ConnectivitySettings = {
@@ -101,30 +118,10 @@ public abstract class IntegrationTests : IAsyncDisposable {
 		builder.WebHost.UseTestServer();
 		_app = builder.Build();
 
-		_kernel = FluentDockerKernel.Create(_app.Services.GetRequiredService<ILoggerFactory>())
-			.WithDockerCli("docker", d => d.AsDefault())
-			.Build();
-		
 		KurrentDBClient = _app.Services.GetRequiredService<KurrentDBClient>();
 		_app.UseTransacto();
 		_app.Start();
 		
-		_eventStore = BuildAndStartContainer(
-			$"transacto-kurrent-test-{_runId}",
-			"ghcr.io/kurrent-io/eventstore:23.10.8-alpine",
-			_eventStorePort, 2113, "IS LEADER... SPARTA!",
-			("EVENTSTORE_ENABLE_ATOM_PUB_OVER_HTTP", true), ("EVENTSTORE_INSECURE", true));
-		// _streamStore = new Builder()
-		// 	.UseContainer()
-		// 	.WithName("transacto-sss-test")
-		// 	.UseImage("ghcr.io/thefringeninja/sqlstreamstore-server:1.2.0-beta.8-alpine3.9")
-		// 	.ReuseIfExists()
-		// 	.ExposePort(5000, 80)
-		// 	.WaitForHttp("http://localhost:5000", contentType: "application/hal+json")
-		// 	.Build();
-
-		//_webApplicationFactory = new IntegrationTestFactory();
-
 		var testServer = _app.GetTestServer();
 
 		HttpClient = testServer.CreateClient();

@@ -179,9 +179,8 @@ public static class ProjectionPolicy {
 	public static AsyncRetryPolicy RetryExponentially(Action<Exception, TimeSpan> onRetry) =>
 		Policy
 			.Handle<Exception>(ex => ex is not OperationCanceledException)
-			.WaitAndRetryAsync(
-				retryCount: 5,
-				sleepDurationProvider: attempt => TimeSpan.FromMilliseconds(Math.Pow(2, attempt * 10)),
-				onRetry: onRetry
-			);
+			.WaitAndRetryForeverAsync(
+				// 1s, 2s, 4s, ... capped at 30s; never gives up so a dropped subscription can't fault the host.
+				attempt => TimeSpan.FromSeconds(Math.Min(Math.Pow(2, attempt - 1), 30)),
+				onRetry);
 }

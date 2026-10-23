@@ -44,7 +44,7 @@ internal class HalResult<T>(T? resource, Checkpoint checkpoint, IHal hal, HttpSt
 				}
 
 				context.Response.StatusCode = (int)HttpStatusCode.PreconditionFailed;
-				return NegotiateFromHeaders(requestHeaders, default, hal).ExecuteAsync(context);
+				return NegotiateFromHeaders(requestHeaders, resource, hal).ExecuteAsync(context);
 			}
 
 			context.Response.Headers.ETag = checkpoint.ToString();

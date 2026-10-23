@@ -98,7 +98,7 @@ public class LotsOfDataSmokeTests : SmokeTests {
 
 			period = period.Next();
 			await Policy.HandleResult<string?>(s => !AccountingPeriod.TryParse(s, out var p) || p != period)
-				.WaitAndRetryAsync(10, _ => TimeSpan.FromMilliseconds(200))
+				.WaitAndRetryAsync(10, attempt => TimeSpan.FromMilliseconds(100 * Math.Pow(2, attempt)))
 				.ExecuteAsync(async () => {
 					using var response = await HttpClient.GetFromJsonAsync<JsonDocument>("/general-ledger/period");
 					return response?.RootElement.GetProperty("period").GetString();

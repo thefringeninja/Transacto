@@ -22,7 +22,7 @@ public class ChartOfAccountsIntegrationTests(TextWriter textWriter) : Integratio
 			.EnumerateObject()
 			.Where(x => x.Name != "_links" && x.Name != "_embedded")
 			.Select(x => new {
-				accountName = x.Value.GetString()!,
+				accountName = x.Value.GetProperty("accountName").GetString()!,
 				accountNumber = int.Parse(x.Name)
 			}).OrderBy(x => x.accountNumber);
 		var expected = ChartOfAccounts

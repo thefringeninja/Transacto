@@ -11,7 +11,7 @@ public class InMemoryProjectionDatabase(IEnumerable<MemoryReadModel> readModels)
 			: Optional<T>.Empty;
 
 	public void Set<T>(T instance) where T : MemoryReadModel =>
-		_readModelsByType.AddOrUpdate(typeof(T), static (_, instance) => instance, static (_, instance, _) => instance,
+		_readModelsByType.AddOrUpdate(typeof(T), static (_, instance) => instance, static (_, _, instance) => instance,
 			instance);
 
 	public void Clear() => _readModelsByType.Clear();

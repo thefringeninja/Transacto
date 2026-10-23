@@ -37,8 +37,8 @@ internal class GeneralLedger : IPlugin {
 			var period = optionalPeriod.ToObject<CurrentPeriod>();
 			var entries = optionalEntries.HasValue ? optionalEntries.Value.NotClosed : [];
 
-			var checkpoint = period?.Checkpoint.HasValue ?? false
-				? period.Checkpoint.Value.ToCheckpoint()
+			var checkpoint = period?.Position.HasValue ?? false
+				? period.Position.Value.ToCheckpoint()
 				: Checkpoint.None;
 			return Results.Hal(new Index(entries, period?.Period, checkpoint.ToString()), checkpoint, representation);
 		});
@@ -48,7 +48,7 @@ internal class GeneralLedger : IPlugin {
 			return optional switch {
 				{ HasValue: true, Value.Period: { } period } => Results.Hal(
 					new Plugins.GeneralLedger.CurrentPeriod(period),
-					optional.Value.Checkpoint.ToCheckpoint(), new CurrentPeriodRepresentation()),
+					optional.Value.Position.ToCheckpoint(), new CurrentPeriodRepresentation()),
 				_ => Results.NotFound()
 			};
 		});
