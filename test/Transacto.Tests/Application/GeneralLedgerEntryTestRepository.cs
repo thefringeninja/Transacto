@@ -10,10 +10,15 @@ internal class GeneralLedgerEntryTestRepository(IFactRecorder facts) : IGeneralL
 	public async ValueTask<GeneralLedgerEntry> Get(GeneralLedgerEntryIdentifier identifier,
 		CancellationToken cancellationToken = default) {
 		var optional = await GetOptional(identifier, cancellationToken);
-		return optional.HasValue ? optional.Value : throw new GeneralLedgerEntryNotFoundException(identifier);
+
+		return optional switch {
+			Some<GeneralLedgerEntry> { Value: var value } => value,
+			None => throw new GeneralLedgerEntryNotFoundException(identifier)
+		};
 	}
 
-	public async ValueTask<Optional<GeneralLedgerEntry>> GetOptional(GeneralLedgerEntryIdentifier identifier, CancellationToken cancellationToken = default) =>
+	public async ValueTask<Option<GeneralLedgerEntry>> GetOptional(GeneralLedgerEntryIdentifier identifier,
+		CancellationToken cancellationToken = default) =>
 		await _inner.GetOptional(GeneralLedgerEntry.FormatStreamIdentifier(identifier),
 			cancellationToken);
 

@@ -41,8 +41,8 @@ public class EventCentricTestSpecification {
 	/// </summary>
 	/// <returns>A new <see cref="EventCentricTestResult" />.</returns>
 	public EventCentricTestResult Pass() {
-		return new EventCentricTestResult(this, TestResultState.Passed, Optional<Fact[]>.Empty,
-			Optional<Exception>.Empty);
+		return new EventCentricTestResult(this, TestResultState.Passed, Option<Fact[]>.None,
+			Option<Exception>.None);
 	}
 
 	/// <summary>
@@ -50,8 +50,8 @@ public class EventCentricTestSpecification {
 	/// </summary>
 	/// <returns>A new <see cref="EventCentricTestResult" />.</returns>
 	public EventCentricTestResult Fail() {
-		return new EventCentricTestResult(this, TestResultState.Failed, Optional<Fact[]>.Empty,
-			Optional<Exception>.Empty);
+		return new EventCentricTestResult(this, TestResultState.Failed, Option<Fact[]>.None,
+			Option<Exception>.None);
 	}
 
 	/// <summary>
@@ -62,8 +62,8 @@ public class EventCentricTestSpecification {
 	public EventCentricTestResult Fail(Fact[] actual) {
 		ArgumentNullException.ThrowIfNull(actual);
 		return new EventCentricTestResult(this, TestResultState.Failed,
-			new Optional<Fact[]>(actual),
-			Optional<Exception>.Empty);
+			new Option<Fact[]>(actual),
+			Option<Exception>.None);
 	}
 
 	/// <summary>
@@ -74,8 +74,8 @@ public class EventCentricTestSpecification {
 	public EventCentricTestResult Fail(Exception actual) {
 		ArgumentNullException.ThrowIfNull(actual);
 		return new EventCentricTestResult(this, TestResultState.Failed,
-			Optional<Fact[]>.Empty,
-			new Optional<Exception>(actual));
+			Option<Fact[]>.None,
+			new Option<Exception>(actual));
 	}
 
 	/// <summary>
