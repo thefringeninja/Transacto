@@ -1,4 +1,5 @@
 using Transacto.Domain;
+using Transacto.Framework;
 using Transacto.Testing;
 
 namespace Transacto.Application;
@@ -8,8 +9,9 @@ internal class GeneralLedgerTestRepository(IFactRecorder factRecorder) : IGenera
 
 	public async ValueTask<GeneralLedger> Get(CancellationToken cancellationToken = default) {
 		var optional = await _inner.GetOptional(GeneralLedger.Identifier, cancellationToken);
-		if (optional.HasValue) {
-			return optional.Value;
+		
+		if (optional is Some<GeneralLedger> { Value: var value }) {
+			return value;
 		}
 
 		var generalLedger = GeneralLedger.Factory();

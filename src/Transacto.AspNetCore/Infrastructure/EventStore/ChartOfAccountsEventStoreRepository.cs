@@ -8,12 +8,12 @@ public class ChartOfAccountsEventStoreRepository(KurrentDBClient eventStore, IMe
 	: IChartOfAccountsRepository {
 	private readonly EventStoreRepository<ChartOfAccounts> _inner = new(eventStore, messageTypeMapper);
 
-	public ValueTask<Optional<ChartOfAccounts>> GetOptional(CancellationToken cancellationToken = default)
+	public ValueTask<Option<ChartOfAccounts>> GetOptional(CancellationToken cancellationToken = default)
 		=> _inner.GetById(ChartOfAccounts.Identifier, cancellationToken);
 
 	public async ValueTask<ChartOfAccounts> Get(CancellationToken cancellationToken = default) =>
 		await GetOptional(cancellationToken) switch {
-			{ HasValue: true } optional => optional.Value,
+			Some<ChartOfAccounts> some => some.Value,
 			_ => throw new ChartOfAccountsNotFoundException()
 		};
 

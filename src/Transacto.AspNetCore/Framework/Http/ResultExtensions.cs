@@ -12,9 +12,12 @@ public static class ResultExtensions {
 			return new SeeOtherResult(location);
 		}
 
-		public static IResult Hal<T>(Optional<T> optionalResource, Checkpoint checkpoint, IHal hal) =>
-			Hal(optionalResource.HasValue ? optionalResource.Value : default, checkpoint, hal,
-				optionalResource.HasValue ? HttpStatusCode.OK : HttpStatusCode.NotFound);
+		public static IResult Hal<T>(Option<T> optionalResource, Checkpoint checkpoint, IHal hal) {
+			return optionalResource switch {
+				Some<T> some => Results.Hal(some.Value, checkpoint, hal),
+				None => Results.Hal(default(T), checkpoint, hal, HttpStatusCode.NotFound),
+			};
+		}
 
 		public static IResult Hal<T>(T? resource, Checkpoint checkpoint, IHal hal,
 			HttpStatusCode statusCode = HttpStatusCode.OK) =>

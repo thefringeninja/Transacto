@@ -41,8 +41,8 @@ public class ExceptionCentricTestSpecification {
 	/// </summary>
 	/// <returns>A new <see cref="ExceptionCentricTestResult" />.</returns>
 	public ExceptionCentricTestResult Pass() {
-		return new ExceptionCentricTestResult(this, TestResultState.Passed, Optional<Exception>.Empty,
-			Optional<Fact[]>.Empty);
+		return new ExceptionCentricTestResult(this, TestResultState.Passed, Option<Exception>.None,
+			Option<Fact[]>.None);
 	}
 
 	/// <summary>
@@ -50,8 +50,8 @@ public class ExceptionCentricTestSpecification {
 	/// </summary>
 	/// <returns>A new <see cref="ExceptionCentricTestResult" />.</returns>
 	public ExceptionCentricTestResult Fail() {
-		return new ExceptionCentricTestResult(this, TestResultState.Failed, Optional<Exception>.Empty,
-			Optional<Fact[]>.Empty);
+		return new ExceptionCentricTestResult(this, TestResultState.Failed, Option<Exception>.None,
+			Option<Fact[]>.None);
 	}
 
 	/// <summary>
@@ -61,8 +61,8 @@ public class ExceptionCentricTestSpecification {
 	/// <returns>A new <see cref="ExceptionCentricTestResult" />.</returns>
 	public ExceptionCentricTestResult Fail(Exception actual) {
 		ArgumentNullException.ThrowIfNull(actual);
-		return new ExceptionCentricTestResult(this, TestResultState.Failed, new Optional<Exception>(actual),
-			Optional<Fact[]>.Empty);
+		return new ExceptionCentricTestResult(this, TestResultState.Failed, new Option<Exception>(actual),
+			Option<Fact[]>.None);
 	}
 
 	/// <summary>
@@ -72,8 +72,8 @@ public class ExceptionCentricTestSpecification {
 	/// <returns>A new <see cref="ExceptionCentricTestResult" />.</returns>
 	public ExceptionCentricTestResult Fail(Fact[] actual) {
 		ArgumentNullException.ThrowIfNull(actual);
-		return new ExceptionCentricTestResult(this, TestResultState.Failed, Optional<Exception>.Empty,
-			new Optional<Fact[]>(actual));
+		return new ExceptionCentricTestResult(this, TestResultState.Failed, Option<Exception>.None,
+			new Option<Fact[]>(actual));
 	}
 
 	/// <summary>

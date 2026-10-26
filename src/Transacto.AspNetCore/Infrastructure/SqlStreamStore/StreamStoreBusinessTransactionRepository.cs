@@ -7,9 +7,9 @@ using Transacto.Framework;
 namespace Transacto.Infrastructure.SqlStreamStore;
 
 public readonly record struct BusinessTransactionEnvelope<TBusinessTransaction>(
-	Optional<TBusinessTransaction> BusinessTransaction, int ExpectedRevision = ExpectedVersion.NoStream - 1) {
+	Option<TBusinessTransaction> BusinessTransaction, int ExpectedRevision = ExpectedVersion.NoStream - 1) {
 	public static readonly BusinessTransactionEnvelope<TBusinessTransaction> Empty =
-		new(Optional<TBusinessTransaction>.Empty);
+		new(Option<TBusinessTransaction>.None);
 }
 
 public class StreamStoreBusinessTransactionRepository<TBusinessTransaction>(
@@ -26,14 +26,15 @@ public class StreamStoreBusinessTransactionRepository<TBusinessTransaction>(
 					.GetJsonData(cancellationToken), serializerOptions)
 				switch {
 					null => BusinessTransactionEnvelope<TBusinessTransaction>.Empty,
-					var businessTransaction => new(businessTransaction, page.Messages[0].StreamVersion)
+					var businessTransaction => new(Option<TBusinessTransaction>.Some(businessTransaction),
+						page.Messages[0].StreamVersion)
 				}
 		};
 
 	public async ValueTask<BusinessTransactionEnvelope<TBusinessTransaction>> Get(string id,
 		CancellationToken cancellationToken = default) =>
 		await GetOptional(id, cancellationToken) switch {
-			{ BusinessTransaction.HasValue: true } optionalTransaction => optionalTransaction,
+			Some<BusinessTransactionEnvelope<TBusinessTransaction>> some => some.Value,
 			_ => throw new InvalidOperationException()
 		};
 

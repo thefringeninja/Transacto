@@ -6,7 +6,7 @@ public interface IGeneralLedgerEntryRepository {
 	ValueTask<GeneralLedgerEntry> Get(GeneralLedgerEntryIdentifier identifier,
 		CancellationToken cancellationToken = default);
 
-	ValueTask<Optional<GeneralLedgerEntry>> GetOptional(GeneralLedgerEntryIdentifier identifier,
+	ValueTask<Option<GeneralLedgerEntry>> GetOptional(GeneralLedgerEntryIdentifier identifier,
 		CancellationToken cancellationToken = default);
 
 	void Add(GeneralLedgerEntry generalLedgerEntry);

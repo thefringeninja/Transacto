@@ -1,4 +1,5 @@
 using System.Collections;
+using KurrentDB.Client;
 using Projac;
 
 namespace Transacto.Framework.Projections;
@@ -8,10 +9,14 @@ public class InMemoryProjection<T>(Func<T, object, T> handler) : InMemoryProject
 		.When<Envelope>((target, envelope) => {
 			var optional = target.Get<T>();
 			var (message, position) = envelope;
+			
+			var model = optional switch{
+				Some<T> some => some.Value,
+				None => new T()
+			};
 
-			var model = optional.HasValue ? optional.Value : new T();
 			target.Set(handler(model, message) with {
-				Position = position
+				Position = Option<Position>.Some(position)
 			});
 		})
 		.Build()) where T : MemoryReadModel, new() {

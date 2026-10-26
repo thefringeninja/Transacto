@@ -18,15 +18,14 @@ public class ExceptionCentricTestSpecificationRunner : IExceptionCentricTestSpec
 	}
 
 	public async Task<ExceptionCentricTestResult> Run(ExceptionCentricTestSpecification specification) {
-		var methodInfo = _handler.GetType().GetMethods().Single(
-			mi => {
-				var parameters = mi.GetParameters();
-				return mi.IsPublic &&
-				       mi.ReturnType == typeof(ValueTask) &&
-				       parameters.Length == 2 &&
-				       parameters[0].ParameterType == specification.When.GetType() &&
-				       parameters[1].ParameterType == typeof(CancellationToken);
-			});
+		var methodInfo = _handler.GetType().GetMethods().Single(mi => {
+			var parameters = mi.GetParameters();
+			return mi.IsPublic &&
+			       mi.ReturnType == typeof(ValueTask) &&
+			       parameters.Length == 2 &&
+			       parameters[0].ParameterType == specification.When.GetType() &&
+			       parameters[1].ParameterType == typeof(CancellationToken);
+		});
 
 		ValueTask Handler(object o, CancellationToken ct) {
 			return (ValueTask)methodInfo.Invoke(_handler, [o, ct])!;
@@ -34,20 +33,21 @@ public class ExceptionCentricTestSpecificationRunner : IExceptionCentricTestSpec
 
 		_factRecorder.Record(specification.Givens);
 
-		var optionalException = Optional<Exception>.Empty;
+		var optionalException = Option<Exception>.None;
 
 		try {
 			await Handler(specification.When, CancellationToken.None);
 		} catch (Exception ex) {
-			optionalException = ex;
+			optionalException = new Option<Exception>(ex);
 		}
 
 		var then = _factRecorder.GetFacts().Skip(specification.Givens.Length).ToArray();
+
 		return new ExceptionCentricTestResult(specification,
-			optionalException.HasValue &&
-			!_comparer.Compare(specification.Throws, optionalException.Value).Any()
+			optionalException is Some<Exception> { Value: var value } &&
+			!_comparer.Compare(specification.Throws, value).Any()
 				? TestResultState.Passed
 				: TestResultState.Failed,
-			optionalException, then);
+			optionalException, Option<Fact[]>.Some(then));
 	}
 }
