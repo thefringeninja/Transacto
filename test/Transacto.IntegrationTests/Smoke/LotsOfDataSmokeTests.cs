@@ -51,7 +51,7 @@ public class LotsOfDataSmokeTests(TextWriter textWriter) : SmokeTests(textWriter
 			int day = 0;
 			var current = OpenDate.PlusMonths(month);
 			var daysInMonth = CalendarSystem.Gregorian.GetDaysInMonth(current.Year, current.Month);
-			for (var i = 0; i < 10; i++) {
+			for (var i = 0; i < 100; i++) {
 				sequenceNumber++;
 				if (sequenceNumber % 2 != 0) {
 					var invoiceId = Guid.NewGuid();
@@ -68,7 +68,8 @@ public class LotsOfDataSmokeTests(TextWriter textWriter) : SmokeTests(textWriter
 				} else {
 					var paymentId = Guid.NewGuid();
 					await HttpClient.SendCommand("/general-ledger/entries", new PostGeneralLedgerEntry {
-							BusinessTransaction = new CreditCardPayment(new Money(108.25m + 7.95m), new Money(.5m), Percentage.Of(1.25m))
+							BusinessTransaction = new CreditCardPayment(new Money(108.25m + 7.95m), new Money(.5m),
+									Percentage.Of(1.25m))
 								.ToJournalEntry(ChartOfAccounts.Factory()),
 							CreatedOn = current.PlusDays(day),
 							GeneralLedgerEntryId = paymentId,
@@ -85,7 +86,7 @@ public class LotsOfDataSmokeTests(TextWriter textWriter) : SmokeTests(textWriter
 			await HttpClient.SendCommand("/general-ledger", new BeginClosingAccountingPeriod {
 					ClosingGeneralLedgerEntryId = closingGeneralLedgerEntryId,
 					ClosingOn = new LocalDate(current.Year, current.Month, daysInMonth),
-					GeneralLedgerEntryIds = [..entryIds],
+					GeneralLedgerEntryIds = [.. entryIds],
 					RetainedEarningsAccountNumber = 3030
 				},
 				jsonSerializerOptions);
@@ -102,27 +103,25 @@ public class LotsOfDataSmokeTests(TextWriter textWriter) : SmokeTests(textWriter
 			await _textWriter.WriteLineAsync($"Books opened {period}");
 			entryIds.Clear();
 		}
-		
+
 		var crawler = new HalCrawler(HttpClient, "/");
 
-		var links = await crawler.CrawlAsync();
-
-		await Task.WhenAll(Array.ConvertAll(links, async href => {
-			using var request = new HttpRequestMessage(HttpMethod.Get, href) {
+		await foreach (var link in crawler.CrawlAsync().Take(1024)) {
+			using var request = new HttpRequestMessage(HttpMethod.Get, link) {
 				Headers = { Accept = { new MediaTypeWithQualityHeaderValue("application/hal+html") } }
 			};
 
 			using var response = await HttpClient.SendAsync(request);
-			
+
 			Assert.InRange(response.StatusCode, HttpStatusCode.OK, (HttpStatusCode)399);
-		}));
+		}
 	}
 
 	private class Invoice(Money subtotal, Money shipping, Percentage salesTaxRate, Money inventory)
 		: IBusinessTransaction {
-
 		public GeneralLedgerEntrySequenceNumber? SequenceNumber { get; set; }
 		public static GeneralLedgerEntryNumberPrefix Prefix { get; } = new("invoice");
+
 		public GeneralLedgerEntryNumber? ReferenceNumber =>
 			SequenceNumber.HasValue ? new GeneralLedgerEntryNumber(Prefix, SequenceNumber.Value) : null;
 
@@ -142,6 +141,7 @@ public class LotsOfDataSmokeTests(TextWriter textWriter) : SmokeTests(textWriter
 		: IBusinessTransaction {
 		public GeneralLedgerEntrySequenceNumber? SequenceNumber { get; set; }
 		public static GeneralLedgerEntryNumberPrefix Prefix { get; } = new("payment");
+
 		public GeneralLedgerEntryNumber? ReferenceNumber =>
 			SequenceNumber.HasValue ? new GeneralLedgerEntryNumber(Prefix, SequenceNumber.Value) : null;
 
