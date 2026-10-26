@@ -6,6 +6,7 @@ using Hallo;
 using Polly;
 using Transacto;
 using Transacto.Framework;
+using Transacto.Framework.Http;
 
 // ReSharper disable once CheckNamespace
 namespace System.Net;
@@ -52,7 +53,10 @@ internal static class HttpClientExtensions {
 				}, cancellationToken);
 
 			var x = await response.Content.ReadAsStringAsync(cancellationToken);
-			var resource = JsonSerializer.Deserialize<T>(x);
+			if (!response.IsSuccessStatusCode) {
+				throw new HttpRequestException($"DIAG {requestUri} -> {(int)response.StatusCode} {response.Content.Headers.ContentType}: {x}");
+			}
+			var resource = JsonSerializer.Deserialize<T>(x, TransactoHttpSerializerOptions.HalJsonSerializerOptions);
 
 			var links = (JsonNode.Parse(x) as JsonObject).ParseLinks();
 

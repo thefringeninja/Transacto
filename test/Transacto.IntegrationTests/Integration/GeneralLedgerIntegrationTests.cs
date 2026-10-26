@@ -53,12 +53,13 @@ public class GeneralLedgerIntegrationTests : IntegrationTests {
 				TransactoHttpSerializerOptions.Commands);
 		}
 
-		var searchResults = await HttpClient.ConditionalGetAsync2<SearchResults>("/general-ledger/search", checkpoint);
+		await Task.Delay(500);
+		var searchResults = await HttpClient.ConditionalGetAsync2<SearchResults>("/general-ledger/entries/search", checkpoint);
 		Assert.Equal(10, searchResults.State.Results.Length);
 		var links = searchResults.Links.Where(link => link.Rel == "t:ledger").ToArray();
 		Assert.Equal(10, links.Length);
 		var entries = await Task.WhenAll(Array.ConvertAll(links, link => HttpClient.ConditionalGetAsync2<JournalLedgerEntry>(
-			$"/general-ledger/entries/{link.Href}",
+			link.Href,
 			checkpoint)));	
 	}
 

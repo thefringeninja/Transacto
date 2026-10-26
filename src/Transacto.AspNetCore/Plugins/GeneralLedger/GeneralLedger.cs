@@ -112,6 +112,7 @@ internal class GeneralLedger : IPlugin {
 				return new LedgerEntryIndex.SearchResults([..results]);
 			};
 		})
+		.AddSingleton<LedgerEntryIndex.SearchResultsRepresentation>()
 		.AddInMemoryProjection<UnclosedGeneralLedgerEntries>((readModel, e) => readModel with {
 			EntriesByPeriod = e switch {
 				GeneralLedgerEntryPosted p => readModel.EntriesByPeriod.SetItem(p.Period,

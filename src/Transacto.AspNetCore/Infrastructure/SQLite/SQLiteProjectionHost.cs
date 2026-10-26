@@ -171,11 +171,12 @@ public partial class SQLiteProjectionHost<T>(
 					connection.Open();
 					await using var transaction = connection.BeginTransaction();
 
+					var convertedBatch = batch.ConvertAll(re => JsonSerializer.Deserialize(
+						re.Event.Data.Span,
+						messageTypeMap.Map(re.Event.EventType),
+						TransactoSerializerOptions.Messages) ?? throw new InvalidOperationException());	
 					new SqlProjector(_resolver, new ConnectedTransactionalSqlCommandExecutor(transaction))
-						.Project(batch.Select(re => JsonSerializer.Deserialize(
-							re.Event.Data.Span,
-							messageTypeMap.Map(re.Event.EventType),
-							TransactoSerializerOptions.Messages) ?? throw new InvalidOperationException()));
+						.Project(convertedBatch);
 
 					var position = batch[^1].Event.Position;
 					WriteCheckpoint(transaction, position);
