@@ -11,7 +11,8 @@ public static partial class ServiceCollectionExtensions {
 	public static IServiceCollection AddProcessManager<TProcessManager>(this IServiceCollection services,
 		string checkpointStreamName) where TProcessManager : ProcessManagerEventHandlerModule => services
 		.AddSingleton<TProcessManager>()
-		.AddHostedService(provider => new ProcessManagerHost(
+		// AddHostedService would dedupe on ProcessManagerHost and silently drop every process manager after the first.
+	.AddSingleton<IHostedService>(provider => new ProcessManagerHost(
 			provider.GetRequiredService<KurrentDBClient>(),
 			provider.GetRequiredService<IMessageTypeMapper>(),
 			checkpointStreamName,

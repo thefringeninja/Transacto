@@ -52,11 +52,11 @@ internal class GeneralLedger : IPlugin {
 				_ => Results.NotFound()
 			};
 		});
-		builder.MapGet("/entries/search", async ([FromQuery] string prefix,
+		builder.MapGet("/entries/search", async ([FromQuery] string? prefix,
 			[FromServices] LedgerEntryIndex.SearchJournalEntriesAsync search,
 			[FromServices] LedgerEntryIndex.SearchResultsRepresentation representation,
 			CancellationToken ct) => {
-			var results = await search(prefix, ct);
+			var results = await search(prefix ?? "", ct);
 
 			return Results.Hal(results, Checkpoint.None, representation);
 		});
@@ -93,9 +93,9 @@ internal class GeneralLedger : IPlugin {
 
 				await using var command = new SQLiteCommand(connection) {
 					CommandText = """
-					              SELECT reference_number, general_ledger_entry_id, created_on 
+					              SELECT '' as reference_number, general_ledger_entry_id, created_on 
 					              FROM ledger_entry_index 
-					              WHERE reference_number LIKE CONCAT(@prefix, '%')
+					              --WHERE reference_number LIKE CONCAT(@prefix, '%')
 					              LIMIT 25
 					              """
 				};
@@ -162,33 +162,7 @@ internal class GeneralLedger : IPlugin {
 					provider);
 			};
 		})
-		.AddEventStoreProjection<GeneralLedgerEntrySequenceNumberAllocatorModule>(
-			provider => new GeneralLedgerEntrySequenceNumberAllocatorModule(
-				provider.GetRequiredService<KurrentDBClient>(),
-				provider.GetRequiredService<IMessageTypeMapper>(),
-				provider.GetRequiredService<GetSequenceNumbers>(),
-				provider.GetRequiredService<ILoggerFactory>()
-					.CreateLogger<GeneralLedgerEntrySequenceNumberAllocatorModule>()),
-			provider => {
-				var messageTypeMapper = provider.GetRequiredService<IMessageTypeMapper>();
-				var eventFilter = EventTypeFilter.OfType<GeneralLedgerEntryNumberAssigned>(messageTypeMapper);
-
-				return async (eventStore, ct) => {
-					await foreach (var message in eventStore
-						               .ReadAllAsync(Direction.Backwards, Position.End,
-							               eventFilter: eventFilter,
-							               cancellationToken: ct).Messages
-						               .WithCancellation(ct)) {
-						if (message is not StreamMessage.Event (var resolvedEvent)) {
-							continue;
-						}
-
-						return FromAll.After(resolvedEvent.Event.Position);
-					}
-
-					return FromAll.Start;
-				};
-			});
+		.AddProcessManager<GeneralLedgerEntrySequenceNumberAllocatorModule>("generalLedgerEntrySequenceNumberAllocatorCheckpoint");
 
 	private record DeactivatedAccounts : MemoryReadModel {
 		public ImmutableHashSet<int> AccountNumbers { get; init; } = ImmutableHashSet<int>.Empty;

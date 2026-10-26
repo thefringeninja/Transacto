@@ -70,9 +70,19 @@ public class GeneralLedger : AggregateRoot, IAggregateRoot<GeneralLedger> {
 		});
 	}
 
-	public void CompleteClosingPeriod(ImmutableHashSet<GeneralLedgerEntryIdentifier> generalLedgerEntryIdentifiers,
+	/// <summary>
+	/// True when <paramref name="accountingPeriod"/> has already been closed. Used to make replayed closing requests a no-op.
+	/// </summary>
+	public bool HasClosed(AccountingPeriod accountingPeriod) => accountingPeriod < _state.AccountingPeriod;
+
+	public void CompleteClosingPeriod(AccountingPeriod accountingPeriod,
+		ImmutableHashSet<GeneralLedgerEntryIdentifier> generalLedgerEntryIdentifiers,
 		GeneralLedgerEntry closingEntry, TrialBalance trialBalance) {
-		if (!_state.PeriodClosing) {
+		if (HasClosed(accountingPeriod)) {
+			return;
+		}
+
+		if (!_state.PeriodClosing || accountingPeriod != _state.AccountingPeriod) {
 			throw new PeriodOpenException(_state.AccountingPeriod);
 		}
 

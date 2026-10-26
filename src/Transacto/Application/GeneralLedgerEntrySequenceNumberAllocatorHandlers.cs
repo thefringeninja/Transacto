@@ -20,6 +20,10 @@ public class GeneralLedgerEntrySequenceNumberAllocatorHandlers(
 			return;
 		}
 
+		if (generalLedgerEntry.SequenceNumber.HasValue) {
+			return;
+		}
+
 		var sequenceNumbers = getSequenceNumbers(businessTransaction);
 
 		var sequenceNumber = await sequenceNumbers.NextAsync(generalLedgerEntry, cancellationToken);

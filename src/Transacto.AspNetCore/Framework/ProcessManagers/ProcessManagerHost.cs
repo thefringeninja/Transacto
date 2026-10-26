@@ -3,6 +3,7 @@ using KurrentDB.Client;
 using Polly;
 using Transacto.Framework.Logging;
 using Transacto.Framework.Projections;
+using Transacto.Infrastructure.EventStore;
 
 namespace Transacto.Framework.ProcessManagers;
 
@@ -74,19 +75,29 @@ public partial class ProcessManagerHost(
 
 			LogDispatchingMessage(logger);
 
-			checkpoint = await _dispatcher.Handle(e, ct);
+			try {
 
-			if (checkpoint == Checkpoint.None) {
-				LogNoCheckpoint(logger);
-				continue;
+				await _dispatcher.Handle(e, ct);
+
+				// Checkpoint every handled event, not only ones that wrote something, so a restart never replays them.
+				if (!processManagerModule.Handles(type)) {
+					LogNoCheckpoint(logger);
+					continue;
+				}
+
+				checkpoint = resolvedEvent.Event.Position.ToProcessManagerCheckpoint();
+
+				await eventStore.AppendToStreamAsync(checkpointStreamName, StreamState.Any, [
+					new EventData(Uuid.NewUuid(), "checkpoint", checkpoint.Memory,
+						contentType: "application/octet-stream")
+				], cancellationToken: ct);
+
+				LogPersistedCheckpoint(logger, checkpoint, checkpointStreamName);
+			} catch (Exception ex) {
+				logger.LogError(ex, "Process manager {processManager} failed to handle message {message}", _name,
+					message.ToString());
+				throw;
 			}
-
-			await eventStore.AppendToStreamAsync(checkpointStreamName, StreamState.Any, [
-				new EventData(Uuid.NewUuid(), "checkpoint", checkpoint.Memory,
-					contentType: "application/octet-stream")
-			], cancellationToken: ct);
-
-			LogPersistedCheckpoint(logger, checkpoint, checkpointStreamName);
 		}
 	}
 

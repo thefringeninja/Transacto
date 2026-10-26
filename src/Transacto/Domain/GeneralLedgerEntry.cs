@@ -22,6 +22,8 @@ public class GeneralLedgerEntry : AggregateRoot, IAggregateRoot<GeneralLedgerEnt
 
 	public GeneralLedgerEntrySequenceNumber ReferenceNumber => _state.SequenceNumber ?? default;
 
+	public GeneralLedgerEntrySequenceNumber? SequenceNumber => _state.SequenceNumber;
+
 	public IBusinessTransaction? BusinessTransaction => _state.BusinessTransaction;
 
 	public static string FormatStreamIdentifier(GeneralLedgerEntryIdentifier identifier) =>
@@ -126,17 +128,15 @@ public class GeneralLedgerEntry : AggregateRoot, IAggregateRoot<GeneralLedgerEnt
 	public void AssignSequenceNumber(GeneralLedgerEntrySequenceNumber sequenceNumber) {
 		MustBePosted();
 
+		// First allocation wins; a redelivered allocation must not append a second assignment.
+		if (_state.SequenceNumber.HasValue) {
+			return;
+		}
+
 		Apply(new GeneralLedgerEntryNumberAssigned {
 			GeneralLedgerEntryId = _state.Identifier.ToGuid(),
 			GeneralLedgerEntrySequenceNumber = sequenceNumber.ToInt32()
 		});
-	}
-
-	private void MustNotHaveAssignedGeneralLedgerEntrySequenceNumber(GeneralLedgerEntrySequenceNumber sequenceNumber) {
-		if (_state.SequenceNumber.HasValue && _state.SequenceNumber.Value != sequenceNumber) {
-			throw new GeneralLedgerEntryAlreadyAssignedSequenceNumberException(_state.Identifier,
-				_state.SequenceNumber.Value, sequenceNumber);
-		}
 	}
 
 	private void MustNotBePosted() {
@@ -169,12 +169,11 @@ public class GeneralLedgerEntry : AggregateRoot, IAggregateRoot<GeneralLedgerEnt
 		public Money Balance => Debits.Sum() - Credits.Sum();
 
 		public State AssignSequenceNumber(GeneralLedgerEntrySequenceNumber sequenceNumber) {
-			if (BusinessTransaction is null) {
-				return this;
+			if (BusinessTransaction is not null) {
+				BusinessTransaction.SequenceNumber = sequenceNumber;
 			}
 
-			BusinessTransaction.SequenceNumber = sequenceNumber;
-			return this;
+			return this with { SequenceNumber = sequenceNumber };
 		}
 	}
 }

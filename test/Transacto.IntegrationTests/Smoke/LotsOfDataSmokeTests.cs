@@ -15,12 +15,8 @@ using Transacto.Plugins.FinancialStatements;
 
 namespace Transacto.Smoke;
 
-public class LotsOfDataSmokeTests : SmokeTests {
-	private readonly TextWriter _textWriter;
-
-	public LotsOfDataSmokeTests(TextWriter textWriter) : base(textWriter) {
-		_textWriter = textWriter;
-	}
+public class LotsOfDataSmokeTests(TextWriter textWriter) : SmokeTests(textWriter) {
+	private readonly TextWriter _textWriter = textWriter;
 
 	public async Task one_year_of_invoices_and_payments() {
 		var period = Period;
@@ -94,15 +90,16 @@ public class LotsOfDataSmokeTests : SmokeTests {
 				},
 				jsonSerializerOptions);
 
-			await _textWriter.WriteAsync("Books closed");
+			await _textWriter.WriteLineAsync($"Books closed {period}");
 
 			period = period.Next();
 			await Policy.HandleResult<string?>(s => !AccountingPeriod.TryParse(s, out var p) || p != period)
-				.WaitAndRetryAsync(10, attempt => TimeSpan.FromMilliseconds(100 * Math.Pow(2, attempt)))
+				.WaitAndRetryAsync(5, attempt => TimeSpan.FromMilliseconds(100 * Math.Pow(2, attempt)))
 				.ExecuteAsync(async () => {
 					using var response = await HttpClient.GetFromJsonAsync<JsonDocument>("/general-ledger/period");
 					return response?.RootElement.GetProperty("period").GetString();
 				});
+			await _textWriter.WriteLineAsync($"Books opened {period}");
 			entryIds.Clear();
 		}
 		
@@ -111,12 +108,12 @@ public class LotsOfDataSmokeTests : SmokeTests {
 		var links = await crawler.CrawlAsync();
 
 		await Task.WhenAll(Array.ConvertAll(links, async href => {
-
 			using var request = new HttpRequestMessage(HttpMethod.Get, href) {
 				Headers = { Accept = { new MediaTypeWithQualityHeaderValue("application/hal+html") } }
 			};
 
 			using var response = await HttpClient.SendAsync(request);
+			
 			Assert.InRange(response.StatusCode, HttpStatusCode.OK, (HttpStatusCode)399);
 		}));
 	}
