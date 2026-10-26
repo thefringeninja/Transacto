@@ -1,6 +1,7 @@
 using System.Data.SQLite;
 using System.Globalization;
 using System.Net;
+using System.Security.Cryptography;
 using System.Text.Json;
 using FluentDocker.Builders;
 using FluentDocker.Common;
@@ -28,13 +29,10 @@ using Transacto.Messages;
 namespace Transacto.Integration;
 
 public abstract class IntegrationTests : IAsyncDisposable {
-	private static int s_RunId = -1;
-	private static int s_Port = 2113;
 
 	private readonly HttpClientSqlStreamStore _streamStoreClient;
 	private readonly WebApplication _app;
-	private readonly int _runId = Interlocked.Increment(ref s_RunId);
-	private readonly int _eventStorePort = Interlocked.Increment(ref s_Port);
+	private readonly int _eventStorePort = GetFreePort();
 
 	private readonly IContainerService _eventStore;
 	//private readonly IContainerService _streamStore;
@@ -45,17 +43,28 @@ public abstract class IntegrationTests : IAsyncDisposable {
 	protected HttpClient HttpClient { get; }
 	protected KurrentDBClient KurrentDBClient { get; }
 
+	// An OS-assigned port per instance, so a leftover process can never share a port with a new run.
+	private static int GetFreePort() {
+		var listener = new System.Net.Sockets.TcpListener(System.Net.IPAddress.Loopback, 0);
+		listener.Start();
+		var port = ((System.Net.IPEndPoint)listener.LocalEndpoint).Port;
+		listener.Stop();
+		return port;
+	}
+
 	static IntegrationTests() {
 		Inflector.Inflector.SetDefaultCultureFunc = () => new CultureInfo("en-US");
 	}
 
 	protected IntegrationTests(TextWriter logOutput) {
+		var runId = Convert.ToHexStringLower(Guid.NewGuid().ToByteArray()[..4]);
+		
 		_kernel = FluentDockerKernel.Create(NullLoggerFactory.Instance)
 			.WithDockerCli("docker", d => d.AsDefault())
 			.Build();
 
 		_eventStore = BuildAndStartContainer(
-			$"transacto-kurrent-test-{_runId}",
+			$"transacto-kurrent-test-{runId}",
 			"ghcr.io/kurrent-io/eventstore:23.10.8-alpine",
 			_eventStorePort, 2113, "IS LEADER... SPARTA!",
 			("EVENTSTORE_ENABLE_ATOM_PUB_OVER_HTTP", true), ("EVENTSTORE_INSECURE", true));
@@ -109,7 +118,7 @@ public abstract class IntegrationTests : IAsyncDisposable {
 
 		var builder = WebApplication.CreateBuilder();
 		builder.Logging.ClearProviders().AddProvider(serilogLoggerProvider);
-
+		
 		builder.Services.AddTransacto(
 			eventStoreClientSettings,
 			new NpgsqlConnectionStringBuilder("Host=localhost;Username=postgres;Password=Password;Port=5432"),
@@ -144,7 +153,7 @@ public abstract class IntegrationTests : IAsyncDisposable {
 		}
 
 		SQLiteConnectionStringBuilder SQLiteInTempFolder(Type projectionType) {
-			var dataSource = Path.Combine(Path.GetTempPath(), $"{projectionType.FullName}-{_runId}.db");
+			var dataSource = Path.Combine(Path.GetTempPath(), $"{projectionType.FullName}-{runId}.db");
 			_sqliteDatabases.Add(new FileInfo(dataSource));
 			return new SQLiteConnectionStringBuilder {
 				JournalMode = SQLiteJournalModeEnum.Wal,
