@@ -35,8 +35,7 @@
 		<Compile Remove="$(CompilerGeneratedFilesOutputPath)/*/**/*.cs"/>
 		<None Include="$(OutputPath)/$(AssemblyName).dll" Pack="true" PackagePath="analyzers/dotnet/cs" Visible="false"/>
 	</ItemGroup>
-
-
+	
 	<ItemGroup>
 		<ProjectReference Include="..\Projac\src\Projac.SQLite\Projac.SQLite.csproj" />
 		<ProjectReference Include="..\Projac\src\Projac\Projac.csproj"/>

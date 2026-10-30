@@ -37,7 +37,7 @@
 	<PropertyGroup>
 		<GetTargetPathDependsOn>$(GetTargetPathDependsOn);GetDependencyTargetPaths</GetTargetPathDependsOn>
 	</PropertyGroup>
-	<Target Name="GetDependencyTargetPaths" AfterTargets="ResolvePackageDependenciesForBuild">
+	<Target Name="GetDependencyTargetPaths" DependsOnTargets="ResolvePackageDependenciesForBuild">
 		<ItemGroup>
 			<TargetPathWithTargetPlatformMoniker Include="@(ResolvedCompileFileDefinitions)" IncludeRuntimeDependency="false" />
 		</ItemGroup>

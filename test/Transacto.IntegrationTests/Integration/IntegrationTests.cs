@@ -3,25 +3,21 @@ using System.Globalization;
 using System.Net;
 using System.Security.Cryptography;
 using System.Text.Json;
-using FluentDocker.Builders;
-using FluentDocker.Common;
-using FluentDocker.Kernel;
-using FluentDocker.Services;
-using FluentDocker.Services.Extensions;
+using DotNet.Testcontainers.Builders;
+using DotNet.Testcontainers.Containers;
 using KurrentDB.Client;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Logging.Abstractions;
 using NodaTime;
 using Npgsql;
-using Polly;
 using Serilog;
 using Serilog.Events;
 using Serilog.Extensions.Logging;
 using SqlStreamStore;
+using Testcontainers.PostgreSql;
 using Transacto.Domain;
 using Transacto.Framework.Http;
 using Transacto.Messages;
@@ -32,42 +28,36 @@ public abstract class IntegrationTests : IAsyncDisposable {
 
 	private readonly HttpClientSqlStreamStore _streamStoreClient;
 	private readonly WebApplication _app;
-	private readonly int _eventStorePort = GetFreePort();
 
-	private readonly IContainerService _eventStore;
+	private readonly IContainer _eventStore;
+	private readonly PostgreSqlContainer _postgres;
 	//private readonly IContainerService _streamStore;
 	//private readonly IntegrationTestFactory _webApplicationFactory;
 
 	private readonly List<FileInfo> _sqliteDatabases = [];
-	private readonly FluentDockerKernel _kernel;
 	protected HttpClient HttpClient { get; }
 	protected KurrentDBClient KurrentDBClient { get; }
-
-	// An OS-assigned port per instance, so a leftover process can never share a port with a new run.
-	private static int GetFreePort() {
-		var listener = new System.Net.Sockets.TcpListener(System.Net.IPAddress.Loopback, 0);
-		listener.Start();
-		var port = ((System.Net.IPEndPoint)listener.LocalEndpoint).Port;
-		listener.Stop();
-		return port;
-	}
 
 	static IntegrationTests() {
 		Inflector.Inflector.SetDefaultCultureFunc = () => new CultureInfo("en-US");
 	}
 
-	protected IntegrationTests(TextWriter logOutput) {
+	protected IntegrationTests(TextWriter logOutput, params IPlugin[] plugins) {
 		var runId = Convert.ToHexStringLower(Guid.NewGuid().ToByteArray()[..4]);
-		
-		_kernel = FluentDockerKernel.Create(NullLoggerFactory.Instance)
-			.WithDockerCli("docker", d => d.AsDefault())
+
+		_eventStore = new ContainerBuilder("ghcr.io/kurrent-io/eventstore:23.10.8-alpine")
+			.WithPortBinding(2113, true)
+			.WithEnvironment("EVENTSTORE_ENABLE_ATOM_PUB_OVER_HTTP", "True")
+			.WithEnvironment("EVENTSTORE_INSECURE", "True")
+			.WithWaitStrategy(Wait.ForUnixContainer().UntilMessageIsLogged("IS LEADER... SPARTA!"))
 			.Build();
 
-		_eventStore = BuildAndStartContainer(
-			$"transacto-kurrent-test-{runId}",
-			"ghcr.io/kurrent-io/eventstore:23.10.8-alpine",
-			_eventStorePort, 2113, "IS LEADER... SPARTA!",
-			("EVENTSTORE_ENABLE_ATOM_PUB_OVER_HTTP", true), ("EVENTSTORE_INSECURE", true));
+		_postgres = new PostgreSqlBuilder("postgres:18-alpine")
+			.WithUsername("postgres")
+			.WithPassword("Password")
+			.Build();
+
+		Task.WhenAll(_eventStore.StartAsync(), _postgres.StartAsync()).GetAwaiter().GetResult();
 		// _streamStore = new Builder()
 		// 	.UseContainer()
 		// 	.WithName("transacto-sss-test")
@@ -91,7 +81,7 @@ public abstract class IntegrationTests : IAsyncDisposable {
 		var eventStoreClientSettings = new KurrentDBClientSettings {
 			ConnectivitySettings = {
 				Address = new UriBuilder {
-					Port = _eventStorePort
+					Port = _eventStore.GetMappedPublicPort(2113)
 				}.Uri,
 				Insecure = true
 			},
@@ -121,36 +111,21 @@ public abstract class IntegrationTests : IAsyncDisposable {
 		
 		builder.Services.AddTransacto(
 			eventStoreClientSettings,
-			new NpgsqlConnectionStringBuilder("Host=localhost;Username=postgres;Password=Password;Port=5432"),
+			new NpgsqlConnectionStringBuilder(_postgres.GetConnectionString()),
 			SQLiteInTempFolder,
-			_streamStoreClient);
+			_streamStoreClient,
+			plugins);
 		builder.WebHost.UseTestServer();
 		_app = builder.Build();
 
 		KurrentDBClient = _app.Services.GetRequiredService<KurrentDBClient>();
-		_app.UseTransacto();
+		_app.UseTransacto(plugins);
 		_app.Start();
 		
 		var testServer = _app.GetTestServer();
 
 		HttpClient = testServer.CreateClient();
 		return;
-
-		IContainerService BuildAndStartContainer(string name, string image, int hostPort, int containerPort,
-			string readyLogMessage, params (string key, object value)[] environment) {
-			return Policy.Handle<FluentDockerException>(ex =>
-					ex.Message.Contains("You have to remove (or rename) that container to be able to reuse that name"))
-				.Retry(5)
-				.Execute(() => new Builder()
-					.WithinDockerCli("docker", _kernel)
-					.UseContainer(c => _ = environment.Aggregate(c.UseImage(image)
-						.WithName(name)
-						.ExposePort(hostPort, containerPort)
-						.WaitForPort($"{containerPort}/tcp")
-						.WaitForLogMessage(readyLogMessage, 60000)
-						.DestroyIfExists(), (seed, env) => seed.WithEnvironment(env.key, $"{env.value}")))
-					.Build()).GetContainer(name);
-		}
 
 		SQLiteConnectionStringBuilder SQLiteInTempFolder(Type projectionType) {
 			var dataSource = Path.Combine(Path.GetTempPath(), $"{projectionType.FullName}-{runId}.db");
@@ -218,7 +193,7 @@ public abstract class IntegrationTests : IAsyncDisposable {
 
 		_sqliteDatabases.ForEach(fileInfo => fileInfo.Delete());
 		//_streamStore.Dispose();
-		_eventStore.Dispose();
-		await _kernel.DisposeAsync();
+		await _eventStore.DisposeAsync();
+		await _postgres.DisposeAsync();
 	}
 }
