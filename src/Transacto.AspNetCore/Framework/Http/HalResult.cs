@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using System.Net;
 using System.Reflection;
 using AngleSharp;
@@ -104,22 +105,26 @@ internal class HalResult<T>(T? resource, Checkpoint checkpoint, IHal hal, HttpSt
 
 		private static readonly IReadOnlyList<Type> s_LinkRenderers = GetLinkRenderers();
 
+		private readonly ConcurrentDictionary<Type, string> _typeNameCache = [];
+
 		public async Task ExecuteAsync(HttpContext context) {
-			await using var htmlRenderer = new HtmlRenderer(context.RequestServices,
-				context.RequestServices.GetRequiredService<ILoggerFactory>());
+			var loggerFactory = context.RequestServices.GetRequiredService<ILoggerFactory>();
+
+			await using var htmlRenderer = new HtmlRenderer(context.RequestServices, loggerFactory);
+			
 			context.Response.ContentType = HalHtmlContentType;
 
 			var representation = await hal.RepresentationOfAsync(resource);
 
 			var viewContext = context.RequestServices.GetRequiredService<ViewContext>();
-			viewContext._links = representation.Links.ToArray();
+			viewContext._links = [.. representation.Links];
 			viewContext._embedded = representation.Embedded;
 			viewContext.GetTemplatedLink = link => {
 				foreach (var r in s_LinkRenderers) {
 					if ((bool)r.GetMethod("IsMatch", BindingFlags.Public | BindingFlags.Static)!
 					    .Invoke(null, [link])!) {
 						return r;
-					};
+					}
 				}
 				return typeof(Link);
 			};
@@ -128,13 +133,15 @@ internal class HalResult<T>(T? resource, Checkpoint checkpoint, IHal hal, HttpSt
 				["Model"] = representation.State
 			};
 
-			var viewTypeName = $"{typeof(T).FullName}_view".Replace('+', '_');
+			var viewTypeName = _typeNameCache.GetOrAdd(typeof(T),
+				t => $"{t.FullName}_view, {t.Assembly.GetName().Name}".Replace('+', '_'));
+
 			var viewType = Type.GetType(viewTypeName);
 
 			if (viewType is null) {
 				viewType = typeof(ProblemDetails_view);
 				parameters["Model"] = new ProblemDetails {
-					Detail = $"The view {viewTypeName}, {typeof(T).Assembly} was not found and no html could be rendered.",
+					Detail = $"The view {viewTypeName} was not found and no html could be rendered.",
 					Status = 406
 				};
 			}
