@@ -4,6 +4,7 @@ using System.Data.SQLite;
 using Hallo;
 using KurrentDB.Client;
 using Microsoft.AspNetCore.Mvc;
+using NodaTime;
 using Transacto.Domain;
 using Transacto.Framework;
 using Transacto.Framework.Http;
@@ -105,7 +106,7 @@ internal class GeneralLedger : IPlugin {
 					results.Add(new LedgerEntryIndex.SearchResult(
 						reader.GetString(0),
 						reader.GetGuid(1),
-						reader.GetDateTime(2)));
+						LocalDate.FromDateTime(reader.GetDateTime(2))));
 				}
 
 				return new LedgerEntryIndex.SearchResults([.. results]);

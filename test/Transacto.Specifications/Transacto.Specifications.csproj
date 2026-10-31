@@ -13,6 +13,7 @@
 	
 	<ItemGroup>
 		<PackageReference Include="Bogus.Text" Version="35.6.5"/>
+		<PackageReference Include="DiffPlex" Version="1.9.0"/>
 		<PackageReference Include="Hallo" Version="3.0.2"/>
 		<PackageReference Include="Microsoft.AspNetCore.Html.Abstractions" Version="2.3.9"/>
 		<PackageReference Include="Microsoft.AspNetCore.Http" Version="2.3.9"/>
@@ -24,9 +25,7 @@
 	</ItemGroup>
 	
 	<ItemGroup>
-	  <None Remove="HtmlSpecifications.cshtml" />
 	  <EmbeddedResource Include="HtmlSpecifications.cshtml" />
-	  <None Remove="ChartOfAccounts.json" />
 	  <EmbeddedResource Include="ChartOfAccounts.json" />
 	</ItemGroup>
 	<ItemGroup>

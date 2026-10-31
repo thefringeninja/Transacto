@@ -5,25 +5,32 @@ using System.Text.Json.Nodes;
 using Hallo;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Headers;
+using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.Extensions.Primitives;
 using Microsoft.Net.Http.Headers;
 using Transacto.Framework.Http;
 
-namespace Transacto.Http;
+namespace Transacto.Testing.Http;
 
 public record HttpResponse(
 	HttpStatusCode StatusCode,
 	string? ReasonPhrase = null,
 	ResponseHeaders? Headers = null,
 	byte[]? Body = null) {
-	public static HttpResponse HalJson<T>(T resource, IHal hal) {
+	public static HttpResponse HalJson<T>(T resource, IHal hal, HttpStatusCode statusCode = HttpStatusCode.OK) {
 		var body = JsonSerializer.SerializeToUtf8Bytes(hal.RepresentationOfAsync(resource).Result,
 			TransactoHttpSerializerOptions.HalJsonSerializerOptions);
 
-		return new HttpResponse(HttpStatusCode.OK, "OK", new ResponseHeaders(new HeaderDictionary()) {
-			ContentType = new MediaTypeHeaderValue("application/hal+json")
-		}, body);
+		return new HttpResponse(statusCode, ReasonPhrases.GetReasonPhrase((int)statusCode),
+			new ResponseHeaders(new HeaderDictionary()) {
+				ContentType = new MediaTypeHeaderValue("application/hal+json")
+			}, body);
 	}
+
+	public static HttpResponse NotFound() => new(HttpStatusCode.NotFound,
+		ReasonPhrases.GetReasonPhrase((int)HttpStatusCode.NotFound), new ResponseHeaders(new HeaderDictionary()) {
+			ContentType = new MediaTypeHeaderValue("text/plain")
+		}, [.. "Status Code: 404; Not Found"u8]);
 
 	public static implicit operator HttpResponse(HttpResponseMessage httpResponseMessage) {
 		var headers = new HeaderDictionary(httpResponseMessage.Headers.Concat(httpResponseMessage.Content.Headers)

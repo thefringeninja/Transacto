@@ -8,7 +8,7 @@ using Serilog;
 using Serilog.Extensions.Logging;
 using Serilog.Sinks.SystemConsole.Themes;
 using Transacto;
-using Transacto.Http;
+using Transacto.HttpSpecifications;
 using Transacto.Specifications;
 
 Inflector.Inflector.SetDefaultCultureFunc = () => CultureInfo.CurrentCulture;

@@ -2,7 +2,7 @@ using AutoFixture;
 
 namespace Transacto;
 
-partial class ScenarioFixture {
+public partial class ScenarioFixture {
 	public ScenarioFixture() {
 		this.CustomizeNodaTime();
 

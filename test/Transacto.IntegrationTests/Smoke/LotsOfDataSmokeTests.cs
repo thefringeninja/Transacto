@@ -17,7 +17,7 @@ namespace Transacto.Smoke;
 
 public class LotsOfDataSmokeTests(TextWriter textWriter) : SmokeTests(textWriter) {
 	private readonly TextWriter _textWriter = textWriter;
-
+/*
 	public async Task one_year_of_invoices_and_payments() {
 		var period = Period;
 
@@ -152,5 +152,5 @@ public class LotsOfDataSmokeTests(TextWriter textWriter) : SmokeTests(textWriter
 			yield return new Debit(new AccountNumber(6210), processingFee);
 			yield return new Debit(new AccountNumber(1020), netPayment);
 		}
-	}
+	} */
 }

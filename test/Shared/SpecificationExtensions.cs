@@ -1,14 +1,15 @@
 ﻿using System.Text.Json;
+using DiffPlex.Renderer;
 using KellermanSoftware.CompareNetObjects;
 using KellermanSoftware.CompareNetObjects.TypeComparers;
 using Transacto.Framework;
 using Transacto.Testing;
+using Transacto.Testing.Http;
 using Transacto.Testing.Comparers;
-using Xunit.Sdk;
 
 namespace Transacto;
 
-internal static class XUnitExtensions {
+internal static class SpecificationExtensions {
 	private static IExceptionComparer CreateExceptionComparer() =>
 		new CompareNetObjectsBasedExceptionComparer(new CompareLogic(new ComparisonConfig {
 			MembersToIgnore =
@@ -60,7 +61,7 @@ internal static class XUnitExtensions {
 			writer.WriteLine("  Expected: {0} event(s),", result.Specification.Thens.Length);
 			writer.WriteLine("  But was:  {0}", exception);
 
-			throw new XunitException(writer.ToString());
+			throw new Exception(writer.ToString());
 		}
 
 		if (result.ButEvents is not Some<Fact[]> { Value: var events }) return;
@@ -74,7 +75,7 @@ internal static class XUnitExtensions {
 				events.Length,
 				string.Join(",", events.Select(_ => _.Event.GetType().Name).ToArray()));
 
-			throw new XunitException(writer.ToString());
+			throw new Exception(writer.ToString());
 		}
 
 		await using (var writer = new StringWriter()) {
@@ -88,7 +89,7 @@ internal static class XUnitExtensions {
 				         .SelectMany(_ => comparer.Compare(_.Item1, _.Item2)))
 				writer.WriteLine("    {0}", difference.Message);
 
-			throw new XunitException(writer.ToString());
+			throw new Exception(writer.ToString());
 		}
 	}
 
@@ -123,7 +124,7 @@ internal static class XUnitExtensions {
 			writer.WriteLine("  Expected: {0},", result.Specification.Throws);
 			writer.WriteLine("  But was:  {0}", exception);
 
-			throw new XunitException(writer.ToString());
+			throw new Exception(writer.ToString());
 		}
 
 		if (result.ButEvents is not Some<Fact[]> { Value: var events }) return;
@@ -134,8 +135,44 @@ internal static class XUnitExtensions {
 				events.Length,
 				string.Join(",", events.Select(_ => _.GetType().Name).ToArray()));
 
-			throw new XunitException(writer.ToString());
+			throw new Exception(writer.ToString());
 		}
+	}
+
+	public static Task Assert(this IHttpCentricTestSpecificationBuilder builder, HttpClient client) {
+		ArgumentNullException.ThrowIfNull(builder);
+		return builder.Build().Assert(client);
+	}
+
+	public static async Task Assert(this HttpSpecification test, HttpClient client) =>
+		await ((HttpCentricTestSpecification)test).Assert(client);
+
+	public static async Task Assert(this HttpCentricTestSpecification specification, HttpClient client) {
+		ArgumentNullException.ThrowIfNull(specification);
+		ArgumentNullException.ThrowIfNull(client);
+		var result = await new HttpCentricTestSpecificationRunner(client).Run(specification);
+
+		if (!result.Failed) return;
+
+		await using var writer = new StringWriter();
+		await writer.WriteLineAsync($"  Step {result.Step + 1} failed.");
+		if (result.Request is not null) {
+			await writer.WriteLineAsync("  Request:");
+			await writer.WriteLineAsync(result.Request.ToString());
+		}
+
+		if (result.Exception is not null) {
+			await writer.WriteLineAsync($"  But was:  {result.Exception}");
+		} else {
+			var diff = UnidiffRenderer.GenerateUnidiff(
+				result.Expected?.ToString(),
+				result.Actual?.ToString(),
+				nameof(result.Expected),
+				nameof(result.Actual));
+			await writer.WriteLineAsync(diff);
+		}
+
+		throw new Exception(writer.ToString());
 	}
 
 	private class JsonDocumentComparer(RootComparer rootComparer) : BaseTypeComparer(rootComparer) {

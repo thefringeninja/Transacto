@@ -1,5 +1,6 @@
 using System.Collections.Immutable;
 using Hallo;
+using NodaTime;
 using Transacto.Framework.Http.Html;
 
 namespace Transacto.Plugins.GeneralLedger.LedgerEntryIndex;
@@ -9,7 +10,7 @@ public delegate Task<SearchResults> SearchJournalEntriesAsync(string prefix,
 
 public record SearchResults(ImmutableArray<SearchResult> Results);
 
-public record SearchResult(string ReferenceNumber, Guid GeneralLedgerEntryId, DateTime CreatedOn);
+public record SearchResult(string ReferenceNumber, Guid GeneralLedgerEntryId, LocalDate CreatedOn);
 
 public class SearchResultsRepresentation(SiteRoot siteRoot) : Hal<SearchResults>,
 	IHalState<SearchResults>,

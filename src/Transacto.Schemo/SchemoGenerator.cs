@@ -77,7 +77,7 @@ public class SchemoGenerator : IIncrementalGenerator {
 
 		var resolverFactory = (JsonSchema jsonSchema) => new JsonReferenceResolver(new JsonSchemaResolver(jsonSchema,
 			new SystemTextJsonSchemaGeneratorSettings {
-				TypeNameGenerator = new TypeNameGenerator()
+				TypeNameGenerator = new TypeNameGenerator(),
 			}));
 
 		context.RegisterSourceOutput(inputs, (spc, tuple) => {
@@ -298,13 +298,31 @@ public class SchemoGenerator : IIncrementalGenerator {
 		private static PropertyDeclarationSyntax BuildProperty(PropertyDeclarationSyntax prop) =>
 			SyntaxFactory
 				.PropertyDeclaration(prop.Type, prop.Identifier)
-				.AddModifiers(prop.Modifiers.ToArray())
-				.AddAttributeLists(prop.AttributeLists.ToArray())
+				.AddModifiers([.. prop.Modifiers])
+				.AddAttributeLists([.. WithoutRegularExpressionOnNonStrings(prop)])
 				.AddAccessorListAccessors(
 					SyntaxFactory.AccessorDeclaration(SyntaxKind.GetAccessorDeclaration)
 						.WithSemicolonToken(SyntaxFactory.Token(SyntaxKind.SemicolonToken)),
 					SyntaxFactory.AccessorDeclaration(SyntaxKind.InitAccessorDeclaration)
 						.WithSemicolonToken(SyntaxFactory.Token(SyntaxKind.SemicolonToken)));
+
+		// `format: uuid` + `pattern` yields a Guid property carrying a RegularExpression attribute,
+		// which makes AutoFixture generate a string for it.
+		private static IEnumerable<AttributeListSyntax> WithoutRegularExpressionOnNonStrings(
+			PropertyDeclarationSyntax prop) {
+			if (prop.Type.ToString() is "string" or "string?") {
+				return prop.AttributeLists;
+			}
+
+			return prop.AttributeLists
+				.Select(list => list.WithAttributes(SyntaxFactory.SeparatedList(list.Attributes.Where(attribute =>
+					attribute.Name.ToString() is not (
+						"RegularExpression"
+						or "RegularExpressionAttribute"
+						or "System.ComponentModel.DataAnnotations.RegularExpression"
+						or "System.ComponentModel.DataAnnotations.RegularExpressionAttribute")))))
+				.Where(list => list.Attributes.Count > 0);
+		}
 	}
 
 	private class CodeGeneratorSettings : CSharpGeneratorSettings {
