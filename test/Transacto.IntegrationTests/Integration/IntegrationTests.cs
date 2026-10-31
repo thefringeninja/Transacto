@@ -5,6 +5,7 @@ using System.Security.Cryptography;
 using System.Text.Json;
 using DotNet.Testcontainers.Builders;
 using DotNet.Testcontainers.Containers;
+using Grpc.Core;
 using KurrentDB.Client;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.TestHost;
@@ -120,12 +121,28 @@ public abstract class IntegrationTests : IAsyncDisposable {
 
 		KurrentDBClient = _app.Services.GetRequiredService<KurrentDBClient>();
 		_app.UseTransacto(plugins);
+		WaitForEventStore(KurrentDBClient);
 		_app.Start();
-		
+
 		var testServer = _app.GetTestServer();
 
 		HttpClient = testServer.CreateClient();
 		return;
+
+		// The first gRPC call to a freshly started container can fail with HTTP_1_1_REQUIRED. Left to the app, that
+		// surfaces as a 500 from the first command, and as projection hosts backing off before they subscribe.
+		// Make that call here, before the app starts, where it is safe to retry.
+		static void WaitForEventStore(KurrentDBClient client) {
+			for (var attempt = 1;; attempt++) {
+				try {
+					client.ReadAllAsync(Direction.Backwards, Position.End, 1).FirstOrDefaultAsync().AsTask()
+						.GetAwaiter().GetResult();
+					return;
+				} catch (RpcException) when (attempt < 10) {
+					Thread.Sleep(TimeSpan.FromMilliseconds(200 * attempt));
+				}
+			}
+		}
 
 		SQLiteConnectionStringBuilder SQLiteInTempFolder(Type projectionType) {
 			var dataSource = Path.Combine(Path.GetTempPath(), $"{projectionType.FullName}-{runId}.db");

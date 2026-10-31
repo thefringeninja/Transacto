@@ -23,5 +23,10 @@ internal class HttpTestSpecificationBuilder : IHttpScenarioWhenStateBuilder, IHt
 		return new HttpTestSpecificationBuilder(_context.Append(request).Append(expected));
 	}
 
+	public IHttpScenarioWhenStateBuilder Wait(TimeSpan delay, CancellationToken cancellationToken = default) {
+		ArgumentOutOfRangeException.ThrowIfLessThan(delay, TimeSpan.Zero);
+		return new HttpTestSpecificationBuilder(_context.Append(new HttpWait(delay, cancellationToken)));
+	}
+
 	public HttpCentricTestSpecification Build() => _context.ToHttpCentricSpecification();
 }

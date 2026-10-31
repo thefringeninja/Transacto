@@ -1,7 +1,6 @@
 using NodaTime;
 using Transacto.Domain;
 using Transacto.Framework.Http.Html;
-using Transacto.Messages;
 using Transacto.Plugins.GeneralLedger;
 using Transacto.Plugins.GeneralLedger.LedgerEntryIndex;
 using Transacto.Testing.Http;
@@ -16,26 +15,28 @@ public class GeneralLedgerHttpSpecifications : HttpSpecifications {
 			.Then(HttpRequest.GetHalJson("/general-ledger/period"),
 				HttpResponse.NotFound())
 			.When(OpenBooks(openedOn))
+			.Wait(TimeSpan.FromSeconds(2))
 			.Then(HttpRequest.GetHalJson("/general-ledger/period"),
-				HttpResponse.HalJson(new CurrentPeriod(openedOn.ToString()), new CurrentPeriodRepresentation())));
+				HttpResponse.HalJson(new CurrentPeriod(AccountingPeriod.Open(openedOn).ToString()),
+					new CurrentPeriodRepresentation())));
 
 	public class SearchEntries(GeneralLedgerEntryIdentifier[] generalLedgerEntryIdentifiers, LocalDate openedOn)
 		: HttpSpecification(
 			new HttpScenario()
 				.When(DefineChartOfAccounts)
 				.When(OpenBooks(openedOn))
-				.When(Array.ConvertAll(generalLedgerEntryIdentifiers, identifier => HttpRequest.Command(
-					new PostGeneralLedgerEntry {
-						GeneralLedgerEntryId = identifier.ToGuid(),
-						CreatedOn = openedOn,
-						Period = AccountingPeriod.Open(openedOn).ToString(),
-						BusinessTransaction = new BusinessTransaction()
-					}, "/general-ledger/entries")))
+				.When(Array.ConvertAll(generalLedgerEntryIdentifiers, identifier => PostGeneralLedgerEntry(
+					identifier, openedOn, new BusinessTransaction()
+				)))
+				.Wait(TimeSpan.FromSeconds(2))
 				.Then(HttpRequest.GetHalJson("/general-ledger/entries/search"),
 					HttpResponse.HalJson(
 						new SearchResults([
 							.. generalLedgerEntryIdentifiers.Select((identifier, i) =>
-								new SearchResult($"b-{i}", identifier.ToGuid(), openedOn))
+								new SearchResult(
+									new GeneralLedgerEntryNumber(JournalEntry.Prefix, new GeneralLedgerEntrySequenceNumber(i + 1))
+										.ToString(),
+									identifier.ToGuid(), openedOn))
 						]), new SearchResultsRepresentation(SiteRoot))));
 
 	private class BusinessTransaction : IBusinessTransaction {

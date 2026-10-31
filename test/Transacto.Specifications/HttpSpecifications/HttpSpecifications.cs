@@ -1,6 +1,7 @@
 using System.Text.Json;
 using NodaTime;
 using Transacto.Domain;
+using Transacto.Framework.Http;
 using Transacto.Messages;
 using Transacto.Testing.Http;
 
@@ -24,6 +25,16 @@ public abstract class HttpSpecifications {
 				AffectsCash = account.AffectsCash
 			}, "/chart-of-accounts"))
 	];
+
+	protected static HttpRequest PostGeneralLedgerEntry(GeneralLedgerEntryIdentifier identifier, LocalDate createdOn,
+		IBusinessTransaction businessTransaction) =>
+		HttpRequest.Command(new PostGeneralLedgerEntry {
+				GeneralLedgerEntryId = identifier.ToGuid(),
+				CreatedOn = createdOn,
+				BusinessTransaction = businessTransaction.ToJournalEntry(ChartOfAccounts.Factory()),
+				Period = AccountingPeriod.Open(createdOn).ToString()
+			}, "/general-ledger/entries",
+			TransactoHttpSerializerOptions.BusinessTransactions(typeof(JournalEntry)));
 
 	protected static HttpRequest OpenBooks(LocalDate openedOn) => HttpRequest.Command(new OpenGeneralLedger {
 		OpenedOn = openedOn

@@ -163,12 +163,16 @@ internal static class SpecificationExtensions {
 
 		if (result.Exception is not null) {
 			await writer.WriteLineAsync($"  But was:  {result.Exception}");
+		} else if (result.Expected is null) {
+			await writer.WriteLineAsync("  Expected a successful response, but was:");
+			await writer.WriteLineAsync(result.Actual?.ToString());
 		} else {
 			var diff = UnidiffRenderer.GenerateUnidiff(
 				result.Expected?.ToString(),
 				result.Actual?.ToString(),
 				nameof(result.Expected),
-				nameof(result.Actual));
+				nameof(result.Actual),
+				ignoreWhitespace: false);
 			await writer.WriteLineAsync(diff);
 		}
 

@@ -18,6 +18,7 @@ public class BalanceSheetHttpSpecifications : HttpSpecifications {
 			.When(HttpRequest.Command(new OpenGeneralLedger {
 				OpenedOn = openedOn
 			}, "/general-ledger"))
+			.Wait(TimeSpan.FromSeconds(2))
 			.Then(HttpRequest.GetHalJson(
 					$"/financial-statements/balance-sheet?thru={LocalDatePattern.Iso.Format(openedOn)}"),
 				HttpResponse.HalJson(new BalanceSheetReports([
@@ -40,35 +41,25 @@ public class BalanceSheetHttpSpecifications : HttpSpecifications {
 		new HttpScenario()
 			.When(DefineChartOfAccounts)
 			.When(OpenBooks(createdOn))
-			.When(HttpRequest.Command(new PostGeneralLedgerEntry {
-				GeneralLedgerEntryId = generalLedgerEntryIdentifier.ToGuid(),
-				CreatedOn = createdOn,
-				BusinessTransaction = new Invoice(subtotal, shipping, tax, inventory)
-					.ToJournalEntry(ChartOfAccounts.Factory()),
-				Period = AccountingPeriod.Open(createdOn).ToString()
-			}, "/general-ledger/entries"))
+			.When(PostGeneralLedgerEntry(generalLedgerEntryIdentifier, createdOn,
+				new Invoice(subtotal, shipping, tax, inventory)))
+			.Wait(TimeSpan.FromSeconds(2))
 			.Then(HttpRequest.GetHalJson(
 					$"/financial-statements/balance-sheet?thru={LocalDatePattern.Iso.Format(createdOn.PlusDays(1))}"),
 				HttpResponse.HalJson(new BalanceSheetReports([
 						new ReportGroup(
 							createdOn.PlusDays(1),
 							new Report.Assets([
-								new Report.Line(new AccountInfo(1100, "Cash on Hand"),
+								new Report.Line(new AccountInfo(1100, "Accounts Receivable"),
 									(subtotal + tax + shipping).ToDecimal()),
-								new Report.Line(new AccountInfo(1220, "Raw Materials Inventory"),
+								new Report.Line(new AccountInfo(1220, "Finished Goods Inventory"),
 									-inventory.ToDecimal())
 							]),
 							new Report.Liabilities([
 								new Report.Line(new AccountInfo(2300, "Accrued Expenses"), tax.ToDecimal())
 							]),
-							new Report.Equity([
-								new Report.Line(new AccountInfo(4000, "Sales Income"), subtotal.ToDecimal()),
-								new Report.Line(new AccountInfo(4050, "Shipping and Handling Income"),
-									shipping.ToDecimal()),
-								new Report.Line(new AccountInfo(5000, "Cost of Goods Sold, Inventory"),
-									inventory.ToDecimal())
-							]),
-							decimal.Zero)
+							new Report.Equity([]),
+							subtotal.ToDecimal() + shipping.ToDecimal() - inventory.ToDecimal())
 					]),
 					new BalanceSheetReportsRepresentation(SiteRoot, GetSettings))));
 

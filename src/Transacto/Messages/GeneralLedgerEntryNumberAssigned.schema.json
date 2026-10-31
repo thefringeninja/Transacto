@@ -19,6 +19,10 @@
 		"generalLedgerEntrySequenceNumber": {
 			"title": "General Ledger Entry Sequence Number",
 			"type": "integer"
+		},
+		"referenceNumber": {
+			"title": "Reference Number",
+			"type": "string"
 		}
 	}
 }

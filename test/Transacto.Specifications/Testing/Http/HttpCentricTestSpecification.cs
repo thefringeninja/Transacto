@@ -9,4 +9,6 @@ public class HttpCentricTestSpecification {
 	public HttpMessage[] Messages { get; }
 }
 
-public union HttpMessage(HttpRequest, HttpResponse);
+public record HttpWait(TimeSpan Delay, CancellationToken CancellationToken = default);
+
+public union HttpMessage(HttpRequest, HttpResponse, HttpWait);

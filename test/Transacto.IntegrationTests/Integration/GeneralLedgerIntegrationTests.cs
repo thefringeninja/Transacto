@@ -9,7 +9,7 @@ public class GeneralLedgerIntegrationTests(TextWriter logOutput) : IntegrationTe
 	public Task period(LocalDate openedOn) => new GeneralLedgerHttpSpecifications.Period(openedOn).Assert(HttpClient);
 
 	[AutoFixtureData(1)]
-	public Task entries(GeneralLedgerEntryIdentifier[] generalLedgerEntryIdentifiers, LocalDate openedOn) =>
+	public Task search_entries(GeneralLedgerEntryIdentifier[] generalLedgerEntryIdentifiers, LocalDate openedOn) =>
 		new GeneralLedgerHttpSpecifications.SearchEntries(generalLedgerEntryIdentifiers, openedOn)
 			.Assert(HttpClient);
 }

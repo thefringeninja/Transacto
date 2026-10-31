@@ -62,7 +62,12 @@ public record HttpResponse(
 			return JsonEquals(this, other);
 		}
 
-		return Body.SequenceEqual(other.Body);
+		if (IsText && other.IsText) {
+			return string.Equals(Encoding.UTF8.GetString(Body ?? []).TrimEnd(),
+				Encoding.UTF8.GetString(other.Body ?? []).TrimEnd());
+		}
+
+		return (Body ?? []).SequenceEqual(other.Body ?? []);
 	}
 
 	public bool IsJson { get; } = Headers is { ContentType: { } contentType } &&
