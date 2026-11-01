@@ -18,6 +18,8 @@ public partial class ScenarioFixture {
 
 		this.CustomizeGeneralLedgerEntryNumberPrefix();
 
+		this.CustomizeDecimalRange();
+
 		this.CustomizeMoney();
 
 		this.CustomizeCredit();

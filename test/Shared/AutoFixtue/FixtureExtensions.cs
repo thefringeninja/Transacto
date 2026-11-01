@@ -1,3 +1,4 @@
+using System.Globalization;
 using AutoFixture;
 using AutoFixture.Kernel;
 using NodaTime;
@@ -65,6 +66,29 @@ internal static class FixtureExtensions {
 
 	public static void CustomizeAccountingPeriod(this IFixture fixture) =>
 		fixture.Customize<AccountingPeriod>(composer => composer.FromFactory<LocalDate>(AccountingPeriod.Open));
+
+	// Schemas allow decimals up to decimal.MaxValue, and AutoFixture honours those [Range] attributes, so
+	// unconstrained fixtures overflow in computed totals such as InvoiceLine.Total.
+	public static void CustomizeDecimalRange(this IFixture fixture) =>
+		fixture.Customizations.Add(new BoundedDecimalRangeSpecimenBuilder());
+
+	private class BoundedDecimalRangeSpecimenBuilder : ISpecimenBuilder {
+		private const decimal Cap = 10_000m;
+
+		public object Create(object request, ISpecimenContext context) {
+			if (request is not RangedNumberRequest { OperandType: var type } ranged ||
+			    type != typeof(decimal)) {
+				return new NoSpecimen();
+			}
+
+			var minimum = Convert.ToDecimal(ranged.Minimum, CultureInfo.InvariantCulture);
+			var maximum = Convert.ToDecimal(ranged.Maximum, CultureInfo.InvariantCulture);
+
+			return maximum <= Cap
+				? new NoSpecimen()
+				: context.Resolve(new RangedNumberRequest(typeof(decimal), Math.Min(minimum, Cap), Cap));
+		}
+	}
 
 	public static void CustomizeMoney(this IFixture fixture) =>
 		fixture.Customize<Money>(composer => composer.FromFactory<decimal>(d => new Money(d)));
