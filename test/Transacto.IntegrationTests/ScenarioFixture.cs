@@ -4,6 +4,8 @@ namespace Transacto;
 
 public partial class ScenarioFixture {
 	public ScenarioFixture() {
+		Customizations.Add(new ImmutableArraySpecimenBuilder());
+
 		this.CustomizeNodaTime();
 
 		this.CustomizeAccountingPeriod();
