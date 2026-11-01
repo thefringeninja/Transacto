@@ -1,0 +1,73 @@
+<Project>
+	<PropertyGroup>
+		<EmitCompilerGeneratedFiles>true</EmitCompilerGeneratedFiles>
+		<PreserveCompilationContext>true</PreserveCompilationContext>
+		<MvcRazorExcludeRefAssembliesFromPublish>false</MvcRazorExcludeRefAssembliesFromPublish>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<EmbeddedResource Include="**\*.sql"/>
+		<None Remove="node_modules\**"/>
+		<EmbeddedResource Remove="node_modules\**"/>
+		<Compile Remove="node_modules\**"/>
+	</ItemGroup>
+
+	<!-- Front end (vite). Enabled for any project with a package.json next to its project file. -->
+	<PropertyGroup>
+		<ClientAppDirectory Condition="'$(ClientAppDirectory)' == ''">$(MSBuildProjectDirectory)</ClientAppDirectory>
+		<ClientAppOutputPath Condition="'$(ClientAppOutputPath)' == ''">dist</ClientAppOutputPath>
+		<ClientAppEnabled Condition="'$(ClientAppEnabled)' == '' And '$(SkipClientApp)' != 'true' And Exists('$(ClientAppDirectory)/package.json')">true</ClientAppEnabled>
+		<BunExecutable Condition="'$(BunExecutable)' == ''">bun</BunExecutable>
+		<ClientAppBuildCommand Condition="'$(ClientAppBuildCommand)' == ''">$(BunExecutable) run build</ClientAppBuildCommand>
+	</PropertyGroup>
+
+	<PropertyGroup Condition="'$(ClientAppEnabled)' == 'true'">
+		<GenerateEmbeddedFilesManifest>true</GenerateEmbeddedFilesManifest>
+		<DefaultItemExcludes>$(DefaultItemExcludes);node_modules/**;$(ClientAppOutputPath)/**</DefaultItemExcludes>
+	</PropertyGroup>
+
+	<ItemGroup Condition="'$(ClientAppEnabled)' == 'true'">
+		<PackageReference Include="Microsoft.Extensions.FileProviders.Embedded" Version="10.0.14"/>
+
+		<ClientAppInput Include="$(ClientAppDirectory)/**/*.ts;$(ClientAppDirectory)/**/*.tsx;$(ClientAppDirectory)/**/*.css;$(ClientAppDirectory)/**/*.schema.json;$(ClientAppDirectory)/**/*.uischema.json;$(ClientAppDirectory)/package.json;$(ClientAppDirectory)/bun.lock;$(ClientAppDirectory)/vite.config.*;$(ClientAppDirectory)/tsconfig*.json"
+										Exclude="$(ClientAppDirectory)/node_modules/**;$(ClientAppDirectory)/$(ClientAppOutputPath)/**;$(ClientAppDirectory)/bin/**;$(ClientAppDirectory)/obj/**"/>
+		<!-- dotnet watch: edits to front-end sources trigger a rebuild, which re-runs vite. -->
+		<Watch Include="@(ClientAppInput)"/>
+	</ItemGroup>
+
+	<!-- Lets the assets endpoint find dist on disk during development. Not stamped into optimized builds. -->
+	<ItemGroup Condition="'$(ClientAppEnabled)' == 'true' And '$(Optimize)' != 'true'">
+		<AssemblyAttribute Include="System.Reflection.AssemblyMetadataAttribute">
+			<_Parameter1>Transacto.ClientAppPath</_Parameter1>
+			<_Parameter2>$(ClientAppDirectory)/$(ClientAppOutputPath)</_Parameter2>
+		</AssemblyAttribute>
+	</ItemGroup>
+
+	<Target Name="InstallClientApp"
+					Condition="'$(ClientAppEnabled)' == 'true' And '$(DesignTimeBuild)' != 'true'"
+					Inputs="$(ClientAppDirectory)/package.json;$(ClientAppDirectory)/bun.lock"
+					Outputs="$(ClientAppDirectory)/node_modules/.transacto-install.stamp">
+		<Exec Command="$(BunExecutable) install --frozen-lockfile" WorkingDirectory="$(ClientAppDirectory)"/>
+		<Touch Files="$(ClientAppDirectory)/node_modules/.transacto-install.stamp" AlwaysCreate="true"/>
+	</Target>
+
+	<Target Name="BuildClientApp"
+					BeforeTargets="PrepareForBuild"
+					DependsOnTargets="InstallClientApp"
+					Condition="'$(ClientAppEnabled)' == 'true' And '$(DesignTimeBuild)' != 'true'"
+					Inputs="@(ClientAppInput)"
+					Outputs="$(IntermediateOutputPath)clientapp.stamp">
+		<Exec Command="$(ClientAppBuildCommand)" WorkingDirectory="$(ClientAppDirectory)"/>
+		<Touch Files="$(IntermediateOutputPath)clientapp.stamp" AlwaysCreate="true"/>
+	</Target>
+
+	<Target Name="EmbedClientApp"
+					AfterTargets="BuildClientApp"
+					Condition="'$(ClientAppEnabled)' == 'true' And '$(DesignTimeBuild)' != 'true'">
+		<ItemGroup>
+			<_ClientAppFile Include="$(ClientAppDirectory)/$(ClientAppOutputPath)/**"/>
+			<EmbeddedResource Include="@(_ClientAppFile)" LogicalName="$(ClientAppOutputPath)/%(_ClientAppFile.RecursiveDir)%(_ClientAppFile.Filename)%(_ClientAppFile.Extension)" TargetPath="$(ClientAppOutputPath)/%(_ClientAppFile.RecursiveDir)%(_ClientAppFile.Filename)%(_ClientAppFile.Extension)" Watch="false"/>
+		</ItemGroup>
+	</Target>
+
+</Project>

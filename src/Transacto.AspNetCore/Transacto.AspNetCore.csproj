@@ -34,6 +34,10 @@
 		some other tool. -->
 		<Compile Remove="$(CompilerGeneratedFilesOutputPath)/*/**/*.cs"/>
 		<None Include="$(OutputPath)/$(AssemblyName).dll" Pack="true" PackagePath="analyzers/dotnet/cs" Visible="false"/>
+		<None Update="build\Transacto.AspNetCore.targets">
+		  <Pack>true</Pack>
+		  <PackagePath>build</PackagePath>
+		</None>
 	</ItemGroup>
 	
 	<ItemGroup>
@@ -44,22 +48,12 @@
 		<ProjectReference Include="..\Transacto\Transacto.csproj"/>
 	</ItemGroup>
 
-	<PropertyGroup>
-		<EmitCompilerGeneratedFiles>true</EmitCompilerGeneratedFiles>
-		<PreserveCompilationContext>true</PreserveCompilationContext>
-		<MvcRazorExcludeRefAssembliesFromPublish>false</MvcRazorExcludeRefAssembliesFromPublish>
-	</PropertyGroup>
+	<Import Project="..\Transacto.Schemo\build\Transacto.Schemo.targets"/>
 
 	<ItemGroup>
-		<EmbeddedResource Include="**\*.uischema.json"/>
 		<Schemo Include="**\*.schema.json" Exclude="bin\**;obj\**;node_modules\**" Namespace="Transacto.Messages"/>
-		<EmbeddedResource Include="**\*.sql"/>
-		<EmbeddedResource Include="**\*.cshtml"/>
-		<None Remove="node_modules\**"/>
-		<EmbeddedResource Remove="node_modules\**"/>
-		<Compile Remove="node_modules\**"/>
 	</ItemGroup>
 
-	<Import Project="..\Transacto.Schemo\build\Transacto.Schemo.targets"/>
+	<Import Project="build\Transacto.AspNetCore.targets"/>
 
 </Project>
