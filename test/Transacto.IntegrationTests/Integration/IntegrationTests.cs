@@ -21,6 +21,7 @@ using SqlStreamStore;
 using Testcontainers.PostgreSql;
 using Transacto.Domain;
 using Transacto.Framework.Http;
+using Transacto.Infrastructure.Npgsql;
 using Transacto.Messages;
 
 namespace Transacto.Integration;
@@ -41,6 +42,7 @@ public abstract class IntegrationTests : IAsyncDisposable {
 
 	static IntegrationTests() {
 		Inflector.Inflector.SetDefaultCultureFunc = () => new CultureInfo("en-US");
+		DapperMapper.Initialize();
 	}
 
 	protected IntegrationTests(TextWriter logOutput, params IPlugin[] plugins) {
@@ -55,7 +57,7 @@ public abstract class IntegrationTests : IAsyncDisposable {
 
 		_postgres = new PostgreSqlBuilder("postgres:18-alpine")
 			.WithUsername("postgres")
-			.WithPassword("Password")
+			.WithPassword("password")
 			.Build();
 
 		Task.WhenAll(_eventStore.StartAsync(), _postgres.StartAsync()).GetAwaiter().GetResult();
