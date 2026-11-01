@@ -32,17 +32,14 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<EmbeddedResource Include="Inventory\**\*.schema.json"/>
-		<AdditionalFiles Include="Inventory\**\*.schema.json" Namespace="SomeCompany.Inventory"/>
+		<Schemo Include="Inventory\**\*.schema.json" Namespace="SomeCompany.Inventory"/>
 
-		<EmbeddedResource Include="PurchaseOrders\**\*.schema.json"/>
-		<AdditionalFiles Include="PurchaseOrders\**\*.schema.json" Namespace="SomeCompany.PurchaseOrders"/>
+		<Schemo Include="PurchaseOrders\**\*.schema.json" Namespace="SomeCompany.PurchaseOrders"/>
 
-		<EmbeddedResource Include="ReceiptOfGoods\**\*.schema.json"/>
-		<AdditionalFiles Include="ReceiptOfGoods\**\*.schema.json" Namespace="SomeCompany.ReceiptOfGoods"/>
+		<Schemo Include="ReceiptOfGoods\**\*.schema.json" Namespace="SomeCompany.ReceiptOfGoods"/>
 
-		<CompilerVisibleProperty Include="RootNamespace"/>
-		<CompilerVisibleItemMetadata Include="AdditionalFiles" MetadataName="Namespace" Visible="false"/>
 	</ItemGroup>
+
+	<Import Project="..\..\..\..\src\Transacto.Schemo\build\Transacto.Schemo.targets"/>
 
 </Project>
