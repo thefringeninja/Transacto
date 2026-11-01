@@ -10,22 +10,11 @@ public partial record PurchaseOrder : IBusinessTransaction {
 	public GeneralLedgerEntryNumber? ReferenceNumber =>
 		SequenceNumber.HasValue ? new GeneralLedgerEntryNumber(Prefix, SequenceNumber.Value) : null;
 
-	public IEnumerable<object> GetTransactionItems(ChartOfAccounts chartOfAccounts) {
+	public IEnumerable<TransactionItem> GetTransactionItems(ChartOfAccounts chartOfAccounts) {
 		var (accountsPayable, inventoryInTransit) = Aggregate();
 
 		yield return accountsPayable;
 		yield return inventoryInTransit;
-		yield return new PurchaseOrderPlaced {
-			PurchaseOrderId = PurchaseOrderId,
-			VendorId = VendorId,
-			PurchaseOrderNumber = PurchaseOrderNumber,
-			Items = ImmutableArray.CreateRange(PurchaseOrderItems,
-				x => new PurchaseOrderPlaced.PurchaseOrderItem {
-					Quantity = (decimal)x.Quantity,
-					UnitPrice = (decimal)x.UnitPrice,
-					InventoryItemId = x.ItemId
-				})
-		};
 	}
 
 	private static (Credit, Debit) Accumulate(

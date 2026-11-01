@@ -46,7 +46,7 @@ public class GeneralLedgerHttpSpecifications : HttpSpecifications {
 		public GeneralLedgerEntryNumber? ReferenceNumber =>
 			SequenceNumber.HasValue ? new GeneralLedgerEntryNumber(Prefix, SequenceNumber.Value) : null;
 
-		public IEnumerable<object> GetTransactionItems(ChartOfAccounts chartOfAccounts) {
+		public IEnumerable<TransactionItem> GetTransactionItems(ChartOfAccounts chartOfAccounts) {
 			yield return new Debit(new AccountNumber(1000), new Money(10m));
 			yield return new Credit(new AccountNumber(1200), new Money(10m));
 		}

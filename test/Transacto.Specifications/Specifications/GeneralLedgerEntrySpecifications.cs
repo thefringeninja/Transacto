@@ -191,8 +191,8 @@ public static class GeneralLedgerEntrySpecifications {
 		public GeneralLedgerEntryNumber? ReferenceNumber =>
 			SequenceNumber.HasValue ? new GeneralLedgerEntryNumber(Prefix, SequenceNumber.Value) : null;
 
-		public IEnumerable<object> GetTransactionItems(ChartOfAccounts chartOfAccounts) =>
-			_credits.Cast<object>().Concat(_debits.Cast<object>());
+		public IEnumerable<TransactionItem> GetTransactionItems(ChartOfAccounts chartOfAccounts) =>
+			_credits.Select(x => (TransactionItem)x).Concat(_debits.Select(x => (TransactionItem)x));
 
 		public override string ToString() => GetTransactionItems(ChartOfAccounts.Factory())
 			.Aggregate(new StringBuilder("Test transaction ").Append(SequenceNumber).AppendLine(),
@@ -208,7 +208,7 @@ public static class GeneralLedgerEntrySpecifications {
 		public GeneralLedgerEntryNumber? ReferenceNumber =>
 			SequenceNumber.HasValue ? new GeneralLedgerEntryNumber(Prefix, SequenceNumber.Value) : null;
 
-		public IEnumerable<object> GetTransactionItems(ChartOfAccounts chartOfAccounts) {
+		public IEnumerable<TransactionItem> GetTransactionItems(ChartOfAccounts chartOfAccounts) {
 			yield return new Credit(Account, new Money(1m));
 		}
 
