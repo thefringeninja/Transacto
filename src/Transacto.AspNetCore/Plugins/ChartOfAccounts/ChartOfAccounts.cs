@@ -11,14 +11,56 @@ using Transacto.Messages;
 namespace Transacto.Plugins.ChartOfAccounts;
 
 public class ChartOfAccounts : IPlugin {
+	public static readonly LinkRelation SearchRelation = new("chart-of-accounts:search", "Search Chart of Accounts");
+
 	public string Name { get; } = nameof(ChartOfAccounts);
 
 	public void Configure(IEndpointRouteBuilder builder) {
-		builder.MapGet(string.Empty,
+		builder.MapGet("",
 			([FromServices] InMemoryProjectionDatabase database,
-				[FromServices] ChartOfAccountsRepresentation representation) => database.Get<ReadModel>() switch {
-				Some<ReadModel> some => Results.Hal(some.Value, some.Value.Position.ToCheckpoint(), representation),
-				_ => Results.Hal(ReadModel.None, Checkpoint.None, representation)
+				[FromServices] ChartOfAccountsRepresentation representation) => {
+				return database.Get<ReadModel>() switch {
+					Some<ReadModel> some => Results.Hal(some.Value, some.Value.Position.ToCheckpoint(), representation),
+					_ => Results.Hal(ReadModel.None, Checkpoint.None, representation)
+				};
+			});
+
+		builder.MapGet("/search",
+			([FromQuery(Name = "t")] string? term,
+				[FromQuery(Name = "at")] int[] accountTypes,
+				[FromServices] InMemoryProjectionDatabase database,
+				[FromServices] ChartOfAccountsSearchResultsRepresentation representation) => {
+				if (database.Get<ReadModel>() is not Some<ReadModel> { Value: var readModel }) {
+					return Results.Hal(ReadModel.None, Checkpoint.None, representation);
+				}
+
+				var query = readModel.ChartOfAccounts.Where(x => x.Value.Active);
+
+				if (!string.IsNullOrWhiteSpace(term)) {
+					query = query.Where(x =>
+						x.Value.AccountName.Contains(term, StringComparison.OrdinalIgnoreCase) ||
+						x.Key.ToString().StartsWith(term.Trim(), StringComparison.Ordinal));
+				}
+
+				if (accountTypes.Length > 0) {
+					query = query.Where(x => accountTypes.Any(at => StartsWithDigit(x.Key, at)));
+				}
+
+				var results = query.Take(25);
+
+				return Results.Hal(results, readModel.Position.ToCheckpoint(), representation);
+
+				static bool StartsWithDigit(int number, int targetDigit) {
+					// Handle negative numbers
+					int absolute = Math.Abs(number);
+
+					// Reduce the number to its first single digit
+					while (absolute >= 10) {
+						absolute /= 10;
+					}
+
+					return absolute == targetDigit;
+				}
 			});
 
 		builder.MapCommands(string.Empty,
@@ -44,26 +86,49 @@ public class ChartOfAccounts : IPlugin {
 				_ => readModel.ChartOfAccounts
 			}
 		})
-		.AddSingleton<ChartOfAccountsRepresentation>();
+		.AddSingleton<ChartOfAccountsRepresentation>()
+		.AddSingleton<ChartOfAccountsSearchResultsRepresentation>();
 
 	public IEnumerable<Type> MessageTypes => [];
-	
-	public IEnumerable<LinkRelation> LinkRelations => [];
 
-	private class ChartOfAccountsRepresentation(SiteRoot siteRoot)
-		: Hal<ReadModel>, IHalLinks<ReadModel>, IHalState<ReadModel> {
-		public IEnumerable<Link> LinksFor(ReadModel resource) {
+	public IEnumerable<LinkRelation> LinkRelations => [SearchRelation];
+
+	private abstract class ChartOfAccountsRepresentationBase<T>(SiteRoot siteRoot) : Hal<T> {
+		protected IEnumerable<Link> LinksFor() {
 			yield return new Link("index", "../", title: "Home");
 			yield return new Link("self", $"{siteRoot.Uri.AbsolutePath}", title: "Chart of Accounts");
 			yield return new Link("index", $"{siteRoot.Uri.AbsolutePath}", title: "Chart of Accounts");
+		}
+	}
+
+	private class ChartOfAccountsRepresentation(SiteRoot siteRoot)
+		: ChartOfAccountsRepresentationBase<ReadModel>(siteRoot), IHalState<ReadModel>, IHalLinks<ReadModel> {
+		private readonly SiteRoot _siteRoot = siteRoot;
+
+		public object StateFor(ReadModel resource) => new SortedDictionary<string, AccountInfo>(
+			resource.ChartOfAccounts.ToDictionary(x => x.Key.ToString(), x => x.Value), StringComparer.Ordinal);
+
+		public IEnumerable<Link> LinksFor(ReadModel resource) {
+			foreach (var link in LinksFor()) {
+				yield return link;
+			}
+
 			foreach (var (accountNumber, (accountName, _)) in resource.ChartOfAccounts) {
-				yield return new Link("self", $"{siteRoot.Uri.AbsolutePath}/{accountNumber}",
+				yield return new Link("self", $"{_siteRoot.Uri.AbsolutePath}/{accountNumber}",
 					title: $"{accountNumber} - {accountName}");
 			}
 		}
+	}
 
-		public object StateFor(ReadModel resource) => new SortedDictionary<string, AccountInfo>(
-			resource.ChartOfAccounts.ToDictionary(x => x.Key.ToString(), x => x.Value));
+	private class ChartOfAccountsSearchResultsRepresentation(SiteRoot siteRoot)
+		: ChartOfAccountsRepresentationBase<IEnumerable<KeyValuePair<int, AccountInfo>>>(siteRoot),
+			IHalState<IEnumerable<KeyValuePair<int, AccountInfo>>>,
+			IHalLinks<IEnumerable<KeyValuePair<int, AccountInfo>>> {
+		public object StateFor(IEnumerable<KeyValuePair<int, AccountInfo>> resource) => new {
+			items = resource.Select(x => new { key = x.Key, value = $"{x.Key} - {x.Value.AccountName}" }).ToArray()
+		};
+
+		public IEnumerable<Link> LinksFor(IEnumerable<KeyValuePair<int, AccountInfo>> resource) => LinksFor();
 	}
 
 	public record ReadModel : MemoryReadModel {

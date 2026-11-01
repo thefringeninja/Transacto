@@ -35,15 +35,19 @@ public class SchemoGenerator : IIncrementalGenerator {
 		//SpinWait.SpinUntil(() => Debugger.IsAttached);
 
 		var items = schemata
+			.Combine(context.AnalyzerConfigOptionsProvider)
 			.Combine(rootNamespaceProvider)
 			.Combine(projectDirectoryProvider)
 			.Select((item, ct) => {
-				var ((text, rootNamespace), projectDirectory) = item;
+				var (((text, options), rootNamespace), projectDirectory) = item;
 
-				return (text, rootNamespace, projectDirectory);
+				// An AdditionalFiles Namespace metadata value overrides the folder-derived namespace.
+				options.GetOptions(text).TryGetValue("build_metadata.AdditionalFiles.Namespace", out var namespaceOverride);
+
+				return (text, rootNamespace, projectDirectory, namespaceOverride);
 			})
 			.Select((item, ct) => {
-				var (text, rootNamespace, projectDirectory) = item;
+				var (text, rootNamespace, projectDirectory, namespaceOverride) = item;
 
 				var pieces = text.Path[(projectDirectory.Length + 1)..].Split('/', '\\').AsSpan();
 
@@ -53,7 +57,7 @@ public class SchemoGenerator : IIncrementalGenerator {
 				}
 
 				f.AddRange(pieces[..^1].ToArray());
-				var @namespace = string.Join(".", f);
+				var @namespace = string.IsNullOrEmpty(namespaceOverride) ? string.Join(".", f) : namespaceOverride!;
 				var name = pieces[^1].Split('.')[0];
 				var subpath = $"{@namespace}.{name}";
 				var unit = (name, path: text.Path, subpath, @namespace, source: text.GetText(ct)!.ToString());

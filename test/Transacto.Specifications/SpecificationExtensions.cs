@@ -9,7 +9,7 @@ using Transacto.Testing.Comparers;
 
 namespace Transacto;
 
-internal static class SpecificationExtensions {
+public static class SpecificationExtensions {
 	private static IExceptionComparer CreateExceptionComparer() =>
 		new CompareNetObjectsBasedExceptionComparer(new CompareLogic(new ComparisonConfig {
 			MembersToIgnore =
@@ -24,14 +24,11 @@ internal static class SpecificationExtensions {
 			}
 		});
 
-	public static Task Assert(this IEventCentricTestSpecificationBuilder builder, object handler,
-		IFactRecorder factRecorder) => builder.Assert(CreateComparer(), handler, factRecorder);
+	public static async Task Assert(this EventSpecification test, object handler, IFactRecorder factRecorder) =>
+		await ((EventCentricTestSpecification)test).Assert(handler, factRecorder);
 
 	public static Task Assert(this EventCentricTestSpecification specification, object handler,
 		IFactRecorder factRecorder) => specification.Assert(CreateComparer(), handler, factRecorder);
-
-	public static async Task Assert(this EventSpecification test, object handler, IFactRecorder factRecorder) =>
-		await ((EventCentricTestSpecification)test).Assert(handler, factRecorder);
 
 	/// <summary>
 	///     Asserts that the specification is met.
@@ -93,15 +90,11 @@ internal static class SpecificationExtensions {
 		}
 	}
 
-
-	public static Task Assert(this IExceptionCentricTestSpecificationBuilder builder, object handler,
-		IFactRecorder factRecorder) => builder.Assert(CreateExceptionComparer(), handler, factRecorder);
+	public static async Task Assert(this ExceptionSpecification test, object handler, IFactRecorder factRecorder) =>
+		await ((ExceptionCentricTestSpecification)test).Assert(handler, factRecorder);
 
 	public static Task Assert(this ExceptionCentricTestSpecification specification, object handler,
 		IFactRecorder factRecorder) => specification.Assert(CreateExceptionComparer(), handler, factRecorder);
-
-	public static async Task Assert(this ExceptionSpecification test, object handler, IFactRecorder factRecorder) =>
-		await ((ExceptionCentricTestSpecification)test).Assert(handler, factRecorder);
 
 	public static async Task Assert(this IExceptionCentricTestSpecificationBuilder builder,
 		IExceptionComparer comparer, object handler, IFactRecorder factRecorder) {
@@ -137,11 +130,6 @@ internal static class SpecificationExtensions {
 
 			throw new Exception(writer.ToString());
 		}
-	}
-
-	public static Task Assert(this IHttpCentricTestSpecificationBuilder builder, HttpClient client) {
-		ArgumentNullException.ThrowIfNull(builder);
-		return builder.Build().Assert(client);
 	}
 
 	public static async Task Assert(this HttpSpecification test, HttpClient client) =>

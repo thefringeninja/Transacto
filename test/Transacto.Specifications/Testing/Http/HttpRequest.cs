@@ -30,6 +30,14 @@ public record HttpRequest(HttpMethod Method, string Url, RequestHeaders? Headers
 			Accept = [new("application/hal+json")]
 		});
 
+	public static HttpRequest PutJson(object resource, string url, JsonSerializerOptions? serializerOptions = null) =>
+		new(HttpMethod.Put, url,
+			new RequestHeaders(new HeaderDictionary()) {
+				ContentType = new MediaTypeHeaderValue("application/json")
+			},
+			JsonSerializer.SerializeToUtf8Bytes(resource, resource.GetType(),
+				serializerOptions ?? TransactoSerializerOptions.Messages));
+
 	public static HttpRequest Command(object command, string url, JsonSerializerOptions? serializerOptions = null) {
 		var content = new MultipartFormDataContent {
 			{ new StringContent(command.GetType().Name), nameof(command) }, {
