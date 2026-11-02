@@ -139,7 +139,13 @@ static partial class ApplicationBuilderExtensions {
 	private class ProblemDetailsEndpointFilter : IEndpointFilter {
 		public async ValueTask<object?> InvokeAsync(EndpointFilterInvocationContext context,
 			EndpointFilterDelegate next) {
-			var result = await next(context);
+			object? result;
+			try {
+				result = await next(context);
+			} catch (PreconditionFailedException) {
+				return new PreconditionFailedResult();
+			}
+
 			if (result is not EmptyHttpResult || context.HttpContext.Response.StatusCode != 400) {
 				return result;
 			}

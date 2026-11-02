@@ -14,6 +14,7 @@ using SqlStreamStore;
 using Transacto.Domain;
 using Transacto.Framework;
 using Transacto.Framework.CommandHandling;
+using Transacto.Framework.Http;
 using Transacto.Framework.Http.Html;
 using Transacto.Framework.Logging;
 using Transacto.Framework.Projections;
@@ -75,6 +76,22 @@ public static partial class WebApplicationBuilderExtensions {
 				.AddHostedService<EventLogging>()
 				.AddHostedService<PluginInformationLogger>()
 				.AddRouting()
+				.ConfigureHttpJsonOptions(options => {
+					// [FromBody] documents must be read with the converters the repositories write them with
+					// (NodaTime dates, Money, ...), or binding fails with a 400.
+					var commands = TransactoHttpSerializerOptions.Commands;
+					var serializerOptions = options.SerializerOptions;
+
+					serializerOptions.PropertyNamingPolicy = commands.PropertyNamingPolicy;
+					serializerOptions.PropertyNameCaseInsensitive = commands.PropertyNameCaseInsensitive;
+					serializerOptions.IncludeFields = commands.IncludeFields;
+					serializerOptions.NumberHandling = commands.NumberHandling;
+					serializerOptions.TypeInfoResolver = commands.TypeInfoResolver;
+
+					foreach (var converter in commands.Converters) {
+						serializerOptions.Converters.Add(converter);
+					}
+				})
 				.AddTransactoProblemDetails()
 				.AddOutputCache()
 				.AddSingleton<ISettingsRepository, EventStoreSettingsRepository>()
