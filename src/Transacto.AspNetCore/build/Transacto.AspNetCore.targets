@@ -19,16 +19,19 @@
 		<ClientAppEnabled Condition="'$(ClientAppEnabled)' == '' And '$(SkipClientApp)' != 'true' And Exists('$(ClientAppDirectory)/package.json')">true</ClientAppEnabled>
 		<BunExecutable Condition="'$(BunExecutable)' == ''">bun</BunExecutable>
 		<ClientAppBuildCommand Condition="'$(ClientAppBuildCommand)' == ''">$(BunExecutable) run build</ClientAppBuildCommand>
+		<GenerateEmbeddedFilesManifest>true</GenerateEmbeddedFilesManifest>
 	</PropertyGroup>
 
+	<!-- The package's build assets don't flow transitively, so every consuming project must reference it itself. -->
+	<ItemGroup>
+		<PackageReference Include="Microsoft.Extensions.FileProviders.Embedded" Version="10.0.14"/>
+	</ItemGroup>
+
 	<PropertyGroup Condition="'$(ClientAppEnabled)' == 'true'">
-		<GenerateEmbeddedFilesManifest>true</GenerateEmbeddedFilesManifest>
 		<DefaultItemExcludes>$(DefaultItemExcludes);node_modules/**;$(ClientAppOutputPath)/**</DefaultItemExcludes>
 	</PropertyGroup>
 
 	<ItemGroup Condition="'$(ClientAppEnabled)' == 'true'">
-		<PackageReference Include="Microsoft.Extensions.FileProviders.Embedded" Version="10.0.14"/>
-
 		<ClientAppInput Include="$(ClientAppDirectory)/**/*.ts;$(ClientAppDirectory)/**/*.tsx;$(ClientAppDirectory)/**/*.css;$(ClientAppDirectory)/**/*.schema.json;$(ClientAppDirectory)/**/*.uischema.json;$(ClientAppDirectory)/package.json;$(ClientAppDirectory)/bun.lock;$(ClientAppDirectory)/vite.config.*;$(ClientAppDirectory)/tsconfig*.json"
 										Exclude="$(ClientAppDirectory)/node_modules/**;$(ClientAppDirectory)/$(ClientAppOutputPath)/**;$(ClientAppDirectory)/bin/**;$(ClientAppDirectory)/obj/**"/>
 		<!-- dotnet watch: edits to front-end sources trigger a rebuild, which re-runs vite. -->

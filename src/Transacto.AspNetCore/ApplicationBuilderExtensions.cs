@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.AspNetCore.Http.Features;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.StaticFiles;
 using Serilog.Context;
 using Transacto;
 using Transacto.Domain;
@@ -42,6 +43,7 @@ static partial class ApplicationBuilderExtensions {
 							plugin.Configure(group);
 							group.AddEndpointFilter(new ProblemDetailsEndpointFilter());
 						})
+						.UseAssets(plugin)
 						.UseProjectionStatus()
 				))
 				.Map("", inner => inner.UseTransactoIndex(plugins));
@@ -126,6 +128,12 @@ static partial class ApplicationBuilderExtensions {
 				}
 			})
 			.UseStatusCodePages();
+
+		private IApplicationBuilder UseAssets(IPlugin plugin) => app.Map("/assets", inner =>
+			inner.UseStaticFiles(new StaticFileOptions {
+				ContentTypeProvider = new FileExtensionContentTypeProvider(),
+				FileProvider = ClientApp.FileProvider(plugin.GetType().Assembly)
+			}));
 	}
 
 	private class ProblemDetailsEndpointFilter : IEndpointFilter {

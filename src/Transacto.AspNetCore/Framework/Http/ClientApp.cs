@@ -9,7 +9,11 @@ public static class ClientApp {
 	/// copy embedded in <paramref name="assembly"/>.
 	/// </summary>
 	public static IFileProvider FileProvider(Assembly assembly, string root = "dist") {
-		var embedded = new ManifestEmbeddedFileProvider(assembly, root);
+		var hasEmbeddedApp = assembly.GetManifestResourceNames()
+			.Any(name => name.StartsWith(root + "/", StringComparison.Ordinal));
+		IFileProvider embedded = hasEmbeddedApp
+			? new ManifestEmbeddedFileProvider(assembly, root)
+			: new NullFileProvider();
 		var path = assembly.GetCustomAttributes<AssemblyMetadataAttribute>()
 			.FirstOrDefault(a => a.Key == "Transacto.ClientAppPath")?.Value;
 
