@@ -1,6 +1,8 @@
 namespace Transacto.Testing.Http;
 
 internal class HttpTestSpecificationBuilder : IHttpScenarioWhenStateBuilder, IHttpScenarioThenStateBuilder {
+	private static readonly TimeSpan DefaultEventuallyTimeout = TimeSpan.FromSeconds(10);
+
 	private readonly HttpTestSpecificationBuilderContext _context;
 
 	public HttpTestSpecificationBuilder() {
@@ -21,6 +23,14 @@ internal class HttpTestSpecificationBuilder : IHttpScenarioWhenStateBuilder, IHt
 		ArgumentNullException.ThrowIfNull(request);
 		ArgumentNullException.ThrowIfNull(expected);
 		return new HttpTestSpecificationBuilder(_context.Append(request).Append(expected));
+	}
+
+	public IHttpScenarioThenStateBuilder ThenEventually(HttpRequest request, HttpResponse expected,
+		TimeSpan? timeout = null) {
+		ArgumentNullException.ThrowIfNull(request);
+		ArgumentNullException.ThrowIfNull(expected);
+		return new HttpTestSpecificationBuilder(
+			_context.Append(new HttpEventually(request, expected, timeout ?? DefaultEventuallyTimeout)));
 	}
 
 	public IHttpScenarioWhenStateBuilder Wait(TimeSpan delay, CancellationToken cancellationToken = default) {

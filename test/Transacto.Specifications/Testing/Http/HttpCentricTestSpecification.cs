@@ -11,4 +11,10 @@ public class HttpCentricTestSpecification {
 
 public record HttpWait(TimeSpan Delay, CancellationToken CancellationToken = default);
 
-public union HttpMessage(HttpRequest, HttpResponse, HttpWait);
+/// <summary>
+///     A request whose response is expected to match eventually, e.g. once a projection has caught up. The request
+///     is re-sent on every attempt, so it should be safe to repeat (typically a GET).
+/// </summary>
+public record HttpEventually(HttpRequest Request, HttpResponse Expected, TimeSpan Timeout);
+
+public union HttpMessage(HttpRequest, HttpResponse, HttpWait, HttpEventually);

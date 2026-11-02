@@ -17,4 +17,7 @@ public class HttpScenario : IHttpScenarioInitialStateBuilder {
 	public IHttpScenarioThenStateBuilder Then(HttpRequest request, HttpResponse expected) {
 		return new HttpTestSpecificationBuilder().Then(request, expected);
 	}
+
+	public IHttpScenarioThenStateBuilder ThenEventually(HttpRequest request, HttpResponse expected,
+		TimeSpan? timeout = null) => new HttpTestSpecificationBuilder().ThenEventually(request, expected, timeout);
 }

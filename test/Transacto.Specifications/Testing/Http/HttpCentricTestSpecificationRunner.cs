@@ -1,8 +1,11 @@
+using System.Diagnostics;
 using System.Net;
 
 namespace Transacto.Testing.Http;
 
 public class HttpCentricTestSpecificationRunner(HttpClient client) : IHttpCentricTestSpecificationRunner {
+	private static readonly TimeSpan EventuallyInterval = TimeSpan.FromMilliseconds(100);
+
 	public async Task<HttpCentricTestResult> Run(HttpCentricTestSpecification specification) {
 		ArgumentNullException.ThrowIfNull(specification);
 
@@ -33,6 +36,35 @@ public class HttpCentricTestSpecificationRunner(HttpClient client) : IHttpCentri
 					if (actual is null || !expected.Equals(actual)) {
 						return new HttpCentricTestResult(specification, TestResultState.Failed, step, request,
 							expected, actual);
+					}
+
+					break;
+				case HttpEventually eventually:
+					request = eventually.Request;
+					var stopwatch = Stopwatch.StartNew();
+					while (true) {
+						Exception? failure = null;
+						try {
+							using var message = (HttpRequestMessage)eventually.Request;
+							using var response = await client.SendAsync(message);
+							actual = response;
+						} catch (Exception ex) {
+							failure = ex;
+						}
+
+						if (failure is null && eventually.Expected.Equals(actual)) {
+							break;
+						}
+
+						if (stopwatch.Elapsed >= eventually.Timeout) {
+							return failure is null
+								? new HttpCentricTestResult(specification, TestResultState.Failed, step, request,
+									eventually.Expected, actual)
+								: new HttpCentricTestResult(specification, TestResultState.Failed, step, request,
+									exception: failure);
+						}
+
+						await Task.Delay(EventuallyInterval);
 					}
 
 					break;
