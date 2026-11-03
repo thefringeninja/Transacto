@@ -125,7 +125,8 @@ public partial class NpgsqlProjectionHost(
 
 					using var ers = logger.BeginScope(Scopes.EventRecord.From(resolvedEvent.Event));
 
-					if (!messageTypeMap.TryMap(resolvedEvent.Event.EventType, out _)) {
+					if (!plugin.ConsumedMessageTypes.ContainsKey(resolvedEvent.Event.EventType) &&
+					    !messageTypeMap.TryMap(resolvedEvent.Event.EventType, out _)) {
 						LogDidNotUnderstandMessageType(logger);
 						continue;
 					}
@@ -148,7 +149,9 @@ public partial class NpgsqlProjectionHost(
 					stopwatch.Restart();
 
 					var messages = batch.Select(re => JsonSerializer.Deserialize(re.Event.Data.Span,
-							messageTypeMap.Map(re.Event.EventType),
+							plugin.ConsumedMessageTypes.TryGetValue(re.Event.EventType, out var consumed)
+								? consumed
+								: messageTypeMap.Map(re.Event.EventType),
 							TransactoSerializerOptions.Messages) ?? throw new InvalidOperationException())
 						.ToArray();
 
