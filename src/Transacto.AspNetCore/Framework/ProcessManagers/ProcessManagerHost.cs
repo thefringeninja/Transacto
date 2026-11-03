@@ -65,7 +65,8 @@ public partial class ProcessManagerHost(
 
 			using var ers = logger.BeginScope(Scopes.EventRecord.From(resolvedEvent.Event));
 
-			if (!messageTypeMapper.TryMap(resolvedEvent.Event.EventType, out var type)) {
+			if (!plugin.ConsumedMessageTypes.TryGetValue(resolvedEvent.Event.EventType, out var type) &&
+			    !messageTypeMapper.TryMap(resolvedEvent.Event.EventType, out type)) {
 				LogDidNotUnderstandMessageType(logger);
 				continue;
 			}
