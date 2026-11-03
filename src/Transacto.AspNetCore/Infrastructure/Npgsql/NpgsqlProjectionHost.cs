@@ -201,11 +201,18 @@ public partial class NpgsqlProjectionHost(
 		}
 	}
 
+	private const long CreateSchemaLockKey = 0x5472616e73616374;
+
 	private async Task CreateSchema(CancellationToken ct) {
 		await using var connection = await dataSource.OpenConnectionAsync(ct);
 		await using var transaction = await connection.BeginTransactionAsync(ct);
 
 		var executor = new ConnectedTransactionalSqlCommandExecutor(transaction);
+
+		// Every plugin's host creates the shared checkpoints table, and two of them doing it at once stalls the second.
+		await executor.ExecuteNonQueryAsync(
+			new SqlNonQueryCommand("SELECT pg_advisory_xact_lock(@key)",
+				[new NpgsqlParameter<long>("@key", CreateSchemaLockKey)], CommandType.Text), ct);
 
 		await executor.ExecuteNonQueryAsync(
 			new SqlNonQueryCommand(NpgsqlScripts.CreateCheckpoints, [], CommandType.Text), ct);
