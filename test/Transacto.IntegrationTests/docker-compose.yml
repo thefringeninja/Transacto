@@ -1,0 +1,19 @@
+services:
+  eventstore:
+    image: ghcr.io/kurrent-io/eventstore:23.10.8-alpine
+    environment:
+      EVENTSTORE_ENABLE_ATOM_PUB_OVER_HTTP: "True"
+      EVENTSTORE_INSECURE: "True"
+    ports:
+      - "2113"
+  postgres:
+    image: postgres:18-alpine
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+    ports:
+      - "5432"
+#  streamstore:
+#    image: ghcr.io/thefringeninja/sqlstreamstore-server:1.2.0-beta.8-alpine3.9
+#    ports:
+#      - "80"

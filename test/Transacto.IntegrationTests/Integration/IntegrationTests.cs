@@ -18,7 +18,6 @@ using Serilog;
 using Serilog.Events;
 using Serilog.Extensions.Logging;
 using SqlStreamStore;
-using Testcontainers.PostgreSql;
 using Transacto.Domain;
 using Transacto.Framework.Http;
 using Transacto.Infrastructure.Npgsql;
@@ -31,8 +30,8 @@ public abstract class IntegrationTests : IAsyncDisposable {
 	private readonly HttpClientSqlStreamStore _streamStoreClient;
 	private readonly WebApplication _app;
 
-	private readonly IContainer _eventStore;
-	private readonly PostgreSqlContainer _postgres;
+	private readonly ComposeContainer _compose;
+	private readonly DirectoryInfo _composeDirectory;
 	//private readonly IContainerService _streamStore;
 	//private readonly IntegrationTestFactory _webApplicationFactory;
 
@@ -48,19 +47,26 @@ public abstract class IntegrationTests : IAsyncDisposable {
 	protected IntegrationTests(TextWriter logOutput, params IPlugin[] plugins) {
 		var runId = Convert.ToHexStringLower(Guid.NewGuid().ToByteArray()[..4]);
 
-		_eventStore = new ContainerBuilder("ghcr.io/kurrent-io/eventstore:23.10.8-alpine")
-			.WithPortBinding(2113, true)
-			.WithEnvironment("EVENTSTORE_ENABLE_ATOM_PUB_OVER_HTTP", "True")
-			.WithEnvironment("EVENTSTORE_INSECURE", "True")
-			.WithWaitStrategy(Wait.ForUnixContainer().UntilMessageIsLogged("IS LEADER... SPARTA!"))
+		// Testcontainers copies the compose file's whole directory into the compose container, so it gets a directory of its own.
+		_composeDirectory = Directory.CreateTempSubdirectory($"transacto-it-{runId}-");
+		var composeFilePath = Path.Combine(_composeDirectory.FullName, "docker-compose.yml");
+		using (var composeResource = typeof(IntegrationTests).Assembly.GetManifestResourceStream(
+			       typeof(IntegrationTests), "docker-compose.yml") ??
+		       throw new InvalidOperationException("The docker-compose.yml embedded resource is missing.")) {
+			using var composeFile = File.Create(composeFilePath);
+			composeResource.CopyTo(composeFile);
+		}
+
+		_compose = new ComposeBuilder("docker:29.8.1-cli")
+			.WithProjectNamePrefix("transacto-it-")
+			.WithComposeFile(composeFilePath)
+			.WithExposedService("eventstore", 2113,
+				Wait.ForUnixContainer().UntilMessageIsLogged("IS LEADER... SPARTA!"))
+			.WithExposedService("postgres", 5432,
+				Wait.ForUnixContainer().UntilCommandIsCompleted("pg_isready", "-h", "127.0.0.1", "-U", "postgres"))
 			.Build();
 
-		_postgres = new PostgreSqlBuilder("postgres:18-alpine")
-			.WithUsername("postgres")
-			.WithPassword("password")
-			.Build();
-
-		Task.WhenAll(_eventStore.StartAsync(), _postgres.StartAsync()).GetAwaiter().GetResult();
+		_compose.StartAsync().GetAwaiter().GetResult();
 		// _streamStore = new Builder()
 		// 	.UseContainer()
 		// 	.WithName("transacto-sss-test")
@@ -84,7 +90,8 @@ public abstract class IntegrationTests : IAsyncDisposable {
 		var eventStoreClientSettings = new KurrentDBClientSettings {
 			ConnectivitySettings = {
 				Address = new UriBuilder {
-					Port = _eventStore.GetMappedPublicPort(2113)
+					Host = _compose.GetServiceHost("eventstore", 2113),
+					Port = _compose.GetServicePort("eventstore", 2113)
 				}.Uri,
 				Insecure = true
 			},
@@ -114,7 +121,13 @@ public abstract class IntegrationTests : IAsyncDisposable {
 		
 		builder.Services.AddTransacto(
 			eventStoreClientSettings,
-			new NpgsqlConnectionStringBuilder(_postgres.GetConnectionString()),
+			new NpgsqlConnectionStringBuilder {
+				Host = _compose.GetServiceHost("postgres", 5432),
+				Port = _compose.GetServicePort("postgres", 5432),
+				Username = "postgres",
+				Password = "password",
+				Database = "postgres"
+			},
 			SQLiteInTempFolder,
 			_streamStoreClient,
 			plugins);
@@ -212,7 +225,7 @@ public abstract class IntegrationTests : IAsyncDisposable {
 
 		_sqliteDatabases.ForEach(fileInfo => fileInfo.Delete());
 		//_streamStore.Dispose();
-		await _eventStore.DisposeAsync();
-		await _postgres.DisposeAsync();
+		await _compose.DisposeAsync();
+		_composeDirectory.Delete(true);
 	}
 }
