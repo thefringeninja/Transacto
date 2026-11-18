@@ -10,7 +10,6 @@
 
 	<ItemGroup>
 	  <EmbeddedResource Include="Integration\ChartOfAccounts.json" />
-	  <EmbeddedResource Include="docker-compose.yml" LogicalName="Transacto.Integration.docker-compose.yml" />
 	</ItemGroup>
 
 	<ItemGroup>

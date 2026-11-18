@@ -26,18 +26,30 @@ using Transacto.Messages;
 namespace Transacto.Integration;
 
 public abstract class IntegrationTests : IAsyncDisposable {
+	private const string PostgresPassword = "password";
 
-	private readonly HttpClientSqlStreamStore _streamStoreClient;
-	private readonly WebApplication _app;
+	// One Postgres per process, one database per test. The Testcontainers reaper removes it when the process exits.
+	private static readonly Lazy<Task<IContainer>> SharedPostgres = new(StartPostgres);
 
-	private readonly ComposeContainer _compose;
-	private readonly DirectoryInfo _composeDirectory;
-	//private readonly IContainerService _streamStore;
-	//private readonly IntegrationTestFactory _webApplicationFactory;
+	// Each stack needs a KurrentDB of its own, so cap how many are alive at once.
+	private static readonly SemaphoreSlim Stacks = new(MaxConcurrentStacks());
 
+	private readonly TextWriter _logOutput;
+	private readonly IPlugin[] _plugins;
+	private readonly string _runId = Convert.ToHexStringLower(Guid.NewGuid().ToByteArray()[..4]);
 	private readonly List<FileInfo> _sqliteDatabases = [];
-	protected HttpClient HttpClient { get; }
-	protected KurrentDBClient KurrentDBClient { get; }
+
+	private HttpClientSqlStreamStore? _streamStoreClient;
+	private WebApplication? _app;
+	private IContainer? _eventStore;
+	private NpgsqlConnectionStringBuilder? _postgresConnectionStringBuilder;
+	private bool _holdsStackSlot;
+
+	private HttpClient? _httpClient;
+	protected HttpClient HttpClient => _httpClient!;
+
+	private KurrentDBClient? _kurrentDBClient;
+	protected KurrentDBClient KurrentDBClient => _kurrentDBClient!;
 
 	static IntegrationTests() {
 		Inflector.Inflector.SetDefaultCultureFunc = () => new CultureInfo("en-US");
@@ -45,44 +57,34 @@ public abstract class IntegrationTests : IAsyncDisposable {
 	}
 
 	protected IntegrationTests(TextWriter logOutput, params IPlugin[] plugins) {
-		var runId = Convert.ToHexStringLower(Guid.NewGuid().ToByteArray()[..4]);
+		_logOutput = logOutput;
+		_plugins = plugins;
+	}
 
-		// Testcontainers copies the compose file's whole directory into the compose container, so it gets a directory of its own.
-		_composeDirectory = Directory.CreateTempSubdirectory($"transacto-it-{runId}-");
-		var composeFilePath = Path.Combine(_composeDirectory.FullName, "docker-compose.yml");
-		using (var composeResource = typeof(IntegrationTests).Assembly.GetManifestResourceStream(
-			       typeof(IntegrationTests), "docker-compose.yml") ??
-		       throw new InvalidOperationException("The docker-compose.yml embedded resource is missing.")) {
-			using var composeFile = File.Create(composeFilePath);
-			composeResource.CopyTo(composeFile);
-		}
+	public virtual async Task InitializeAsync() {
+		await Stacks.WaitAsync();
+		_holdsStackSlot = true;
 
-		_compose = new ComposeBuilder("docker:29.8.1-cli")
-			.WithProjectNamePrefix("transacto-it-")
-			.WithComposeFile(composeFilePath)
-			.WithExposedService("eventstore", 2113,
-				Wait.ForUnixContainer().UntilMessageIsLogged("IS LEADER... SPARTA!"))
-			.WithExposedService("postgres", 5432,
-				Wait.ForUnixContainer().UntilCommandIsCompleted("pg_isready", "-h", "127.0.0.1", "-U", "postgres"))
+		var postgresTask = CreatePostgresDatabase();
+
+		_eventStore = new ContainerBuilder("ghcr.io/kurrent-io/eventstore:23.10.8-alpine")
+			.WithEnvironment("EVENTSTORE_ENABLE_ATOM_PUB_OVER_HTTP", "True")
+			.WithEnvironment("EVENTSTORE_INSECURE", "True")
+			.WithPortBinding(2113, true)
+			.WithWaitStrategy(Wait.ForUnixContainer().UntilMessageIsLogged("IS LEADER... SPARTA!"))
 			.Build();
+		await Task.WhenAll(_eventStore.StartAsync(), postgresTask);
 
-		_compose.StartAsync().GetAwaiter().GetResult();
-		// _streamStore = new Builder()
-		// 	.UseContainer()
-		// 	.WithName("transacto-sss-test")
-		// 	.UseImage("ghcr.io/thefringeninja/sqlstreamstore-server:1.2.0-beta.8-alpine3.9")
-		// 	.ReuseIfExists()
-		// 	.ExposePort(5000, 80)
-		// 	.WaitForHttp("http://localhost:5000", contentType: "application/hal+json")
-		// 	.Build();
+		_postgresConnectionStringBuilder = postgresTask.Result;
 
 		var serilogLoggerProvider = new SerilogLoggerProvider(new LoggerConfiguration()
 			.MinimumLevel.Verbose()
 			.MinimumLevel.Override("KurrentDB", LogEventLevel.Warning)
 			.MinimumLevel.Override("Microsoft", LogEventLevel.Warning)
 			.MinimumLevel.Override("Grpc", LogEventLevel.Warning)
+			.MinimumLevel.Override("Npgsql", LogEventLevel.Warning)
 			.Enrich.FromLogContext()
-			.WriteTo.TextWriter(logOutput,
+			.WriteTo.TextWriter(_logOutput,
 				outputTemplate:
 				"[{Timestamp:HH:mm:ss} {Level:u3}] [{SourceContext}] {Message:lj} {Properties:j}{NewLine}{Exception}")
 			.CreateLogger());
@@ -90,8 +92,8 @@ public abstract class IntegrationTests : IAsyncDisposable {
 		var eventStoreClientSettings = new KurrentDBClientSettings {
 			ConnectivitySettings = {
 				Address = new UriBuilder {
-					Host = _compose.GetServiceHost("eventstore", 2113),
-					Port = _compose.GetServicePort("eventstore", 2113)
+					Host = _eventStore.Hostname,
+					Port = _eventStore.GetMappedPublicPort(2113)
 				}.Uri,
 				Insecure = true
 			},
@@ -118,49 +120,40 @@ public abstract class IntegrationTests : IAsyncDisposable {
 
 		var builder = WebApplication.CreateBuilder();
 		builder.Logging.ClearProviders().AddProvider(serilogLoggerProvider);
-		
+
 		builder.Services.AddTransacto(
 			eventStoreClientSettings,
-			new NpgsqlConnectionStringBuilder {
-				Host = _compose.GetServiceHost("postgres", 5432),
-				Port = _compose.GetServicePort("postgres", 5432),
-				Username = "postgres",
-				Password = "password",
-				Database = "postgres"
-			},
+			_postgresConnectionStringBuilder!,
 			SQLiteInTempFolder,
 			_streamStoreClient,
-			plugins);
+			_plugins);
 		builder.WebHost.UseTestServer();
 		_app = builder.Build();
 
-		KurrentDBClient = _app.Services.GetRequiredService<KurrentDBClient>();
-		_app.UseTransacto(plugins);
-		WaitForEventStore(KurrentDBClient);
-		_app.Start();
+		_kurrentDBClient = _app.Services.GetRequiredService<KurrentDBClient>();
+		_app.UseTransacto(_plugins);
+		await WaitForEventStore(_kurrentDBClient);
+		await _app.StartAsync();
 
-		var testServer = _app.GetTestServer();
-
-		HttpClient = testServer.CreateClient();
+		_httpClient = _app.GetTestServer().CreateClient();
 		return;
 
 		// The first gRPC call to a freshly started container can fail with HTTP_1_1_REQUIRED. Left to the app, that
 		// surfaces as a 500 from the first command, and as projection hosts backing off before they subscribe.
 		// Make that call here, before the app starts, where it is safe to retry.
-		static void WaitForEventStore(KurrentDBClient client) {
+		static async Task WaitForEventStore(KurrentDBClient client) {
 			for (var attempt = 1;; attempt++) {
 				try {
-					client.ReadAllAsync(Direction.Backwards, Position.End, 1).FirstOrDefaultAsync().AsTask()
-						.GetAwaiter().GetResult();
+					await client.ReadAllAsync(Direction.Backwards, Position.End, 1).FirstOrDefaultAsync();
 					return;
 				} catch (RpcException) when (attempt < 10) {
-					Thread.Sleep(TimeSpan.FromMilliseconds(200 * attempt));
+					await Task.Delay(TimeSpan.FromMilliseconds(200 * attempt));
 				}
 			}
 		}
 
 		SQLiteConnectionStringBuilder SQLiteInTempFolder(Type projectionType) {
-			var dataSource = Path.Combine(Path.GetTempPath(), $"{projectionType.FullName}-{runId}.db");
+			var dataSource = Path.Combine(Path.GetTempPath(), $"{projectionType.FullName}-{_runId}.db");
 			_sqliteDatabases.Add(new FileInfo(dataSource));
 			return new SQLiteConnectionStringBuilder {
 				JournalMode = SQLiteJournalModeEnum.Wal,
@@ -170,6 +163,59 @@ public abstract class IntegrationTests : IAsyncDisposable {
 		}
 	}
 
+	private static int MaxConcurrentStacks() =>
+		int.TryParse(Environment.GetEnvironmentVariable("TRANSACTO_IT_PARALLELISM"), out var parallelism) &&
+		parallelism > 0
+			? parallelism
+			: Math.Clamp(Environment.ProcessorCount / 4, 2, 4);
+
+	private static async Task<IContainer> StartPostgres() {
+		var container = new ContainerBuilder("postgres:18-alpine")
+			.WithEnvironment("POSTGRES_USER", "postgres")
+			.WithEnvironment("POSTGRES_PASSWORD", PostgresPassword)
+			.WithPortBinding(5432, true)
+			.WithWaitStrategy(Wait.ForUnixContainer()
+				.UntilCommandIsCompleted("pg_isready", "-h", "127.0.0.1", "-U", "postgres"))
+			.Build();
+		await container.StartAsync();
+		return container;
+	}
+
+	private static NpgsqlConnectionStringBuilder PostgresConnection(IContainer container, string database) => new() {
+		Host = container.Hostname,
+		Port = container.GetMappedPublicPort(5432),
+		Username = "postgres",
+		Password = PostgresPassword,
+		Database = database,
+		Pooling = false
+	};
+
+	private async Task<NpgsqlConnectionStringBuilder> CreatePostgresDatabase() {
+		var container = await SharedPostgres.Value;
+		var database = $"it_{_runId}";
+
+		await using var connection = new NpgsqlConnection(PostgresConnection(container, "postgres").ConnectionString);
+		await connection.OpenAsync();
+		await using var command = connection.CreateCommand();
+		command.CommandText = $"CREATE DATABASE {database}";
+		await command.ExecuteNonQueryAsync();
+
+		return PostgresConnection(container, database);
+	}
+
+	private async Task DropPostgresDatabase() {
+		if (_postgresConnectionStringBuilder is null) {
+			return;
+		}
+
+		NpgsqlConnection.ClearAllPools();
+		var container = await SharedPostgres.Value;
+		await using var connection = new NpgsqlConnection(PostgresConnection(container, "postgres").ConnectionString);
+		await connection.OpenAsync();
+		await using var command = connection.CreateCommand();
+		command.CommandText = $"DROP DATABASE IF EXISTS it_{_runId} WITH (FORCE)";
+		await command.ExecuteNonQueryAsync();
+	}
 
 	protected async IAsyncEnumerable<Account> OpenBooks(LocalDate now) {
 		await HttpClient.SendCommand("/chart-of-accounts", new ConfigureChartOfAccounts {
@@ -195,7 +241,7 @@ public abstract class IntegrationTests : IAsyncDisposable {
 		await Task.Delay(TimeSpan.FromMilliseconds(500));
 	}
 
-	private async IAsyncEnumerable<Account> GetChartOfAccounts() {
+	private static async IAsyncEnumerable<Account> GetChartOfAccounts() {
 		await using var stream =
 			typeof(IntegrationTests).Assembly.GetManifestResourceStream(typeof(IntegrationTests),
 				"ChartOfAccounts.json") ??
@@ -218,14 +264,32 @@ public abstract class IntegrationTests : IAsyncDisposable {
 	}
 
 	public async ValueTask DisposeAsync() {
-		await _app.StopAsync();
-		await _app.DisposeAsync();
-		await KurrentDBClient.DisposeAsync();
-		_streamStoreClient.Dispose();
+		GC.SuppressFinalize(this);
 
-		_sqliteDatabases.ForEach(fileInfo => fileInfo.Delete());
-		//_streamStore.Dispose();
-		await _compose.DisposeAsync();
-		_composeDirectory.Delete(true);
+		try {
+			if (_app is { } app) {
+				await app.StopAsync();
+				await app.DisposeAsync();
+			}
+
+			if (_kurrentDBClient is { } kurrentDbClient) {
+				await kurrentDbClient.DisposeAsync();
+			}
+
+			_streamStoreClient?.Dispose();
+
+			_sqliteDatabases.ForEach(fileInfo => fileInfo.Delete());
+
+			await DropPostgresDatabase();
+
+			if (_eventStore is { } eventStore) {
+				await eventStore.DisposeAsync();
+			}
+		} finally {
+			if (_holdsStackSlot) {
+				_holdsStackSlot = false;
+				Stacks.Release();
+			}
+		}
 	}
 }
