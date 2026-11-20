@@ -10,6 +10,7 @@
 
 	<ItemGroup>
 	  <EmbeddedResource Include="Integration\ChartOfAccounts.json" />
+	  <EmbeddedResource Include="Integration\docker-compose.yml" />
 	</ItemGroup>
 
 	<ItemGroup>

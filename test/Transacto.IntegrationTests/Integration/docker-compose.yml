@@ -1,0 +1,35 @@
+services:
+    certs:
+        image: eventstore/es-gencert-cli:latest
+        entrypoint: /bin/sh
+        command: >
+            -c "
+            es-gencert-cli create-ca -out /certs/ca &&
+            es-gencert-cli create-node -ca-certificate /certs/ca/ca.crt -ca-key /certs/ca/ca.key -out /certs/node1 -ip-addresses 127.0.0.1 -dns-names localhost &&
+            es-gencert-cli create-node -ca-certificate /certs/ca/ca.crt -ca-key /certs/ca/ca.key -out /certs/client -dns-names transacto &&
+            cp /certs/client/node.crt /certs/client.transacto.crt &&
+            cp /certs/client/node.key /certs/client.transacto.key &&
+            chmod -R 755 /certs
+            "
+        volumes:
+            - ./.certs:/certs
+    
+    eventstore:
+        image: ghcr.io/kurrent-io/eventstore:23.10.8-alpine
+        depends_on:
+            certs:
+                condition: service_completed_successfully
+        environment:
+            - EVENTSTORE_TRUSTED_ROOT_CERTIFICATES_PATH=/etc/eventstore/certs/ca
+            - EVENTSTORE_CERTIFICATE_FILE=/etc/eventstore/certs/node1/node.crt
+            - EVENTSTORE_CERTIFICATE_PRIVATE_KEY_FILE=/etc/eventstore/certs/node1/node.key
+        ports:
+            - "2113"
+        volumes: [ ./.certs:/etc/eventstore/certs:ro, data:/var/lib/eventstore ]
+ 
+#  streamstore:
+#    image: ghcr.io/thefringeninja/sqlstreamstore-server:1.2.0-beta.8-alpine3.9
+#    ports:
+#      - "80"
+volumes:
+    data:

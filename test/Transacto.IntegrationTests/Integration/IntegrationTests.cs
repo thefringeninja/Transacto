@@ -1,7 +1,7 @@
 using System.Data.SQLite;
 using System.Globalization;
 using System.Net;
-using System.Security.Cryptography;
+using System.Security.Cryptography.X509Certificates;
 using System.Text.Json;
 using DotNet.Testcontainers.Builders;
 using DotNet.Testcontainers.Containers;
@@ -10,7 +10,6 @@ using KurrentDB.Client;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using NodaTime;
 using Npgsql;
@@ -41,8 +40,6 @@ public abstract class IntegrationTests : IAsyncDisposable {
 
 	private HttpClientSqlStreamStore? _streamStoreClient;
 	private WebApplication? _app;
-	private IContainer? _eventStore;
-	private NpgsqlConnectionStringBuilder? _postgresConnectionStringBuilder;
 	private bool _holdsStackSlot;
 
 	private HttpClient? _httpClient;
@@ -51,14 +48,52 @@ public abstract class IntegrationTests : IAsyncDisposable {
 	private KurrentDBClient? _kurrentDBClient;
 	protected KurrentDBClient KurrentDBClient => _kurrentDBClient!;
 
+	private readonly DirectoryInfo _composeDirectory;
+	private readonly ComposeContainer _compose;
+	private NpgsqlConnectionStringBuilder? _postgresConnectionStringBuilder;
+
+	private static readonly string EventStoreReadyLogMessage =
+		Environment.GetEnvironmentVariable("TRANSACTO_IT_EVENTSTORE_READY_LOG_MESSAGE")
+		?? "IS LEADER... SPARTA!";
+
 	static IntegrationTests() {
 		Inflector.Inflector.SetDefaultCultureFunc = () => new CultureInfo("en-US");
 		DapperMapper.Initialize();
 	}
 
+	private static Stream GetComposeFileResource() {
+		if (Environment.GetEnvironmentVariable("TRANSACTO_IT_DOCKER_COMPOSE_PATH") is {
+			    Length: > 0
+		    } path) {
+			return File.OpenRead(path);
+		}
+
+		return typeof(IntegrationTests).Assembly.GetManifestResourceStream(typeof(IntegrationTests),
+			       "docker-compose.yml") ??
+		       throw new InvalidOperationException("The docker-compose.yml embedded resource is missing.");
+	}
+
 	protected IntegrationTests(TextWriter logOutput, params IPlugin[] plugins) {
 		_logOutput = logOutput;
 		_plugins = plugins;
+
+		var runId = Convert.ToHexStringLower(Guid.NewGuid().ToByteArray()[..4]);
+
+		// Testcontainers copies the compose file's whole directory into the compose container, so it gets a directory of its own.
+		_composeDirectory = Directory.CreateTempSubdirectory($"transacto-it-{runId}-");
+		_composeDirectory.CreateSubdirectory(".certs");
+		var composeFilePath = Path.Combine(_composeDirectory.FullName, "docker-compose.yml");
+		using (var composeResource = GetComposeFileResource()) {
+			using var composeFile = File.Create(composeFilePath);
+			composeResource.CopyTo(composeFile);
+		}
+
+		_compose = new ComposeBuilder("docker:29.8.1-cli")
+			.WithProjectNamePrefix("transacto-it-")
+			.WithComposeFile(composeFilePath)
+			.WithExposedService("eventstore", 2113,
+				Wait.ForUnixContainer().UntilMessageIsLogged(EventStoreReadyLogMessage))
+			.Build();
 	}
 
 	public virtual async Task InitializeAsync() {
@@ -66,17 +101,7 @@ public abstract class IntegrationTests : IAsyncDisposable {
 		_holdsStackSlot = true;
 
 		var postgresTask = CreatePostgresDatabase();
-
-		_eventStore = new ContainerBuilder("ghcr.io/kurrent-io/eventstore:23.10.8-alpine")
-			.WithEnvironment("EVENTSTORE_ENABLE_ATOM_PUB_OVER_HTTP", "True")
-			.WithEnvironment("EVENTSTORE_INSECURE", "True")
-			.WithPortBinding(2113, true)
-			.WithWaitStrategy(Wait.ForUnixContainer().UntilMessageIsLogged("IS LEADER... SPARTA!"))
-			.Build();
-		await Task.WhenAll(_eventStore.StartAsync(), postgresTask);
-
 		_postgresConnectionStringBuilder = postgresTask.Result;
-
 		var serilogLoggerProvider = new SerilogLoggerProvider(new LoggerConfiguration()
 			.MinimumLevel.Verbose()
 			.MinimumLevel.Override("KurrentDB", LogEventLevel.Warning)
@@ -89,25 +114,33 @@ public abstract class IntegrationTests : IAsyncDisposable {
 				"[{Timestamp:HH:mm:ss} {Level:u3}] [{SourceContext}] {Message:lj} {Properties:j}{NewLine}{Exception}")
 			.CreateLogger());
 
+		await _compose.StartAsync();
+
+		var clientCertificate = LoadClientCertificate(_composeDirectory);
 		var eventStoreClientSettings = new KurrentDBClientSettings {
 			ConnectivitySettings = {
 				Address = new UriBuilder {
-					Host = _eventStore.Hostname,
-					Port = _eventStore.GetMappedPublicPort(2113)
+					Scheme = Uri.UriSchemeHttps,
+					Host = _compose.GetServiceHost("eventstore", 2113),
+					Port = _compose.GetServicePort("eventstore", 2113)
 				}.Uri,
-				Insecure = true
+				Insecure = false
 			},
+			// KurrentDB 23.10 authenticates with credentials and ignores the client certificate; ampdb does the reverse.
+			DefaultCredentials = new UserCredentials("admin", "changeit"),
 			OperationOptions = {
 				ThrowOnAppendFailure = true
 			},
 			CreateHttpMessageHandler = () => new SocketsHttpHandler {
 				SslOptions = {
+					ClientCertificates = [clientCertificate],
 					RemoteCertificateValidationCallback = delegate {
 						return true;
 					}
 				}
 			}
 		};
+
 		_streamStoreClient = new HttpClientSqlStreamStore(new HttpClientSqlStreamStoreSettings {
 			CreateHttpClient = () => new HttpClient(new SocketsHttpHandler {
 				SslOptions = {
@@ -163,11 +196,25 @@ public abstract class IntegrationTests : IAsyncDisposable {
 		}
 	}
 
-	private static int MaxConcurrentStacks() =>
-		int.TryParse(Environment.GetEnvironmentVariable("TRANSACTO_IT_PARALLELISM"), out var parallelism) &&
-		parallelism > 0
-			? parallelism
-			: Math.Clamp(Environment.ProcessorCount / 4, 2, 4);
+	// The compose file generates the client certificate into .certs, next to itself.
+	private static X509Certificate2 LoadClientCertificate(DirectoryInfo composeDirectory) {
+		var certificate = Path.Combine(composeDirectory.FullName, ".certs", "client.transacto.crt");
+		var key = Path.Combine(composeDirectory.FullName, ".certs", "client.transacto.key");
+		return File.Exists(certificate) && File.Exists(key)
+			? X509Certificate2.CreateFromPemFile(certificate, key)
+			: throw new InvalidOperationException(
+				"The compose file must generate .certs/client.transacto.crt and .certs/client.transacto.key.");
+	}
+
+	private static int MaxConcurrentStacks() {
+		if (!int.TryParse(Environment.GetEnvironmentVariable("TRANSACTO_IT_THREADS_PER_DB"), out var threadsPerDb) ||
+		    threadsPerDb <= 0) {
+			// esdb has 1 writer and 3 reader threads
+			threadsPerDb = 4;
+		}
+
+		return Math.Clamp(Environment.ProcessorCount / threadsPerDb, 2, Environment.ProcessorCount);
+	}
 
 	private static async Task<IContainer> StartPostgres() {
 		var container = new ContainerBuilder("postgres:18-alpine")
@@ -281,10 +328,7 @@ public abstract class IntegrationTests : IAsyncDisposable {
 			_sqliteDatabases.ForEach(fileInfo => fileInfo.Delete());
 
 			await DropPostgresDatabase();
-
-			if (_eventStore is { } eventStore) {
-				await eventStore.DisposeAsync();
-			}
+			await _compose.DisposeAsync();
 		} finally {
 			if (_holdsStackSlot) {
 				_holdsStackSlot = false;
