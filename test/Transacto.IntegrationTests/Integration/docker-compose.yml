@@ -9,7 +9,7 @@ services:
             es-gencert-cli create-node -ca-certificate /certs/ca/ca.crt -ca-key /certs/ca/ca.key -out /certs/client -dns-names transacto &&
             cp /certs/client/node.crt /certs/client.transacto.crt &&
             cp /certs/client/node.key /certs/client.transacto.key &&
-            chmod -R 755 /certs
+            chmod -R 755 /certs/*
             "
         volumes:
             - ./.certs:/certs
