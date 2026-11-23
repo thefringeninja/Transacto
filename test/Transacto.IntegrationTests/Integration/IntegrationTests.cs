@@ -81,7 +81,13 @@ public abstract class IntegrationTests : IAsyncDisposable {
 
 		// Testcontainers copies the compose file's whole directory into the compose container, so it gets a directory of its own.
 		_composeDirectory = Directory.CreateTempSubdirectory($"transacto-it-{runId}-");
-		_composeDirectory.CreateSubdirectory(".certs");
+		var certs = _composeDirectory.CreateSubdirectory(".certs");
+		if (!OperatingSystem.IsWindows()) {
+			// The cert generator runs as uid 1000, which needn't match the uid running the tests (1001 on GitHub runners).
+			certs.UnixFileMode = UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute |
+			                     UnixFileMode.GroupRead | UnixFileMode.GroupWrite | UnixFileMode.GroupExecute |
+			                     UnixFileMode.OtherRead | UnixFileMode.OtherWrite | UnixFileMode.OtherExecute;
+		}
 		var composeFilePath = Path.Combine(_composeDirectory.FullName, "docker-compose.yml");
 		using (var composeResource = GetComposeFileResource()) {
 			using var composeFile = File.Create(composeFilePath);
