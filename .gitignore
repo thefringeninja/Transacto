@@ -257,3 +257,5 @@ paket-files/
 
 **/.coverage
 **/.coverage-reports
+
+docker-compose.*.yml

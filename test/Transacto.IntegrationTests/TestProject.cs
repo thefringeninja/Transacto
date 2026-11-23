@@ -2,7 +2,7 @@ using Fixie;
 
 namespace Transacto;
 
-partial class TestProject {
+public partial class TestProject {
 	partial class TestDiscovery {
 		public TestDiscovery() : this(
 			concreteClasses => concreteClasses

@@ -11,20 +11,11 @@ partial record ReceiptOfGoods : IBusinessTransaction {
 	public GeneralLedgerEntryNumber? ReferenceNumber =>
 		SequenceNumber.HasValue ? new GeneralLedgerEntryNumber(Prefix, SequenceNumber.Value) : null;
 
-	public IEnumerable<object> GetTransactionItems(ChartOfAccounts chartOfAccounts) {
+	public IEnumerable<TransactionItem> GetTransactionItems(ChartOfAccounts chartOfAccounts) {
 		var (inventoryInTransit, inventoryOnHand) = Aggregate();
 
 		yield return inventoryInTransit;
 		yield return inventoryOnHand;
-		yield return new GoodsReceived {
-			ReceiptId = ReceiptOfGoodsId,
-			ReceiptNumber = ReceiptOfGoodsNumber,
-			Items = ImmutableArray.CreateRange(ReceiptOfGoodsItems, item => new GoodsReceived.ReceiptItem {
-				Quantity = Convert.ToDecimal(item.Quantity),
-				InventoryItemId = item.ItemId,
-				UnitPrice = Convert.ToDecimal(item.UnitPrice)
-			})
-		};
 	}
 
 	private (Credit inventoryInTransit, Debit inventoryOnHand) Aggregate() => ReceiptOfGoodsItems.Aggregate(

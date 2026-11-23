@@ -117,6 +117,6 @@ public class CommandSerializerOptionTests {
 		public GeneralLedgerEntryNumber? ReferenceNumber =>
 			SequenceNumber.HasValue ? new GeneralLedgerEntryNumber(Prefix, SequenceNumber.Value) : null;
 
-		public IEnumerable<object> GetTransactionItems(ChartOfAccounts chartOfAccounts) => [];
+		public IEnumerable<TransactionItem> GetTransactionItems(ChartOfAccounts chartOfAccounts) => [];
 	}
 }

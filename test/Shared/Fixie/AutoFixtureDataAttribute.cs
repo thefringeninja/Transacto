@@ -4,8 +4,9 @@ using Fixie;
 
 namespace Transacto;
 
+
 [AttributeUsage(AttributeTargets.Method)]
-internal class AutoFixtureDataAttribute(int count = 3) : DataAttribute {
+public class AutoFixtureDataAttribute(int count = 3) : DataAttribute {
 	private readonly Fixture _fixture = new ScenarioFixture();
 
 	public override IEnumerable<object[]> GetParameters(Test test) {

@@ -14,5 +14,9 @@ public class LedgerEntryIndexProjection : SQLiteProjection {
 				Sql.DateTime(createdOn).ToDbParameter(nameof(createdOn).Underscore())
 			];
 		});
+		When<GeneralLedgerEntryNumberAssigned>(e => [
+			Sql.Guid(e.GeneralLedgerEntryId).ToDbParameter(nameof(e.GeneralLedgerEntryId).Underscore()),
+			Sql.String(e.ReferenceNumber).ToDbParameter(nameof(e.ReferenceNumber).Underscore())
+		]);
 	}
 }

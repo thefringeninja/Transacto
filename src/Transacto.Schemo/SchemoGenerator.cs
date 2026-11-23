@@ -35,15 +35,19 @@ public class SchemoGenerator : IIncrementalGenerator {
 		//SpinWait.SpinUntil(() => Debugger.IsAttached);
 
 		var items = schemata
+			.Combine(context.AnalyzerConfigOptionsProvider)
 			.Combine(rootNamespaceProvider)
 			.Combine(projectDirectoryProvider)
 			.Select((item, ct) => {
-				var ((text, rootNamespace), projectDirectory) = item;
+				var (((text, options), rootNamespace), projectDirectory) = item;
 
-				return (text, rootNamespace, projectDirectory);
+				// An AdditionalFiles Namespace metadata value overrides the folder-derived namespace.
+				options.GetOptions(text).TryGetValue("build_metadata.AdditionalFiles.Namespace", out var namespaceOverride);
+
+				return (text, rootNamespace, projectDirectory, namespaceOverride);
 			})
 			.Select((item, ct) => {
-				var (text, rootNamespace, projectDirectory) = item;
+				var (text, rootNamespace, projectDirectory, namespaceOverride) = item;
 
 				var pieces = text.Path[(projectDirectory.Length + 1)..].Split('/', '\\').AsSpan();
 
@@ -53,7 +57,7 @@ public class SchemoGenerator : IIncrementalGenerator {
 				}
 
 				f.AddRange(pieces[..^1].ToArray());
-				var @namespace = string.Join(".", f);
+				var @namespace = string.IsNullOrEmpty(namespaceOverride) ? string.Join(".", f) : namespaceOverride!;
 				var name = pieces[^1].Split('.')[0];
 				var subpath = $"{@namespace}.{name}";
 				var unit = (name, path: text.Path, subpath, @namespace, source: text.GetText(ct)!.ToString());
@@ -77,7 +81,7 @@ public class SchemoGenerator : IIncrementalGenerator {
 
 		var resolverFactory = (JsonSchema jsonSchema) => new JsonReferenceResolver(new JsonSchemaResolver(jsonSchema,
 			new SystemTextJsonSchemaGeneratorSettings {
-				TypeNameGenerator = new TypeNameGenerator()
+				TypeNameGenerator = new TypeNameGenerator(),
 			}));
 
 		context.RegisterSourceOutput(inputs, (spc, tuple) => {
@@ -298,13 +302,31 @@ public class SchemoGenerator : IIncrementalGenerator {
 		private static PropertyDeclarationSyntax BuildProperty(PropertyDeclarationSyntax prop) =>
 			SyntaxFactory
 				.PropertyDeclaration(prop.Type, prop.Identifier)
-				.AddModifiers(prop.Modifiers.ToArray())
-				.AddAttributeLists(prop.AttributeLists.ToArray())
+				.AddModifiers([.. prop.Modifiers])
+				.AddAttributeLists([.. WithoutRegularExpressionOnNonStrings(prop)])
 				.AddAccessorListAccessors(
 					SyntaxFactory.AccessorDeclaration(SyntaxKind.GetAccessorDeclaration)
 						.WithSemicolonToken(SyntaxFactory.Token(SyntaxKind.SemicolonToken)),
 					SyntaxFactory.AccessorDeclaration(SyntaxKind.InitAccessorDeclaration)
 						.WithSemicolonToken(SyntaxFactory.Token(SyntaxKind.SemicolonToken)));
+
+		// `format: uuid` + `pattern` yields a Guid property carrying a RegularExpression attribute,
+		// which makes AutoFixture generate a string for it.
+		private static IEnumerable<AttributeListSyntax> WithoutRegularExpressionOnNonStrings(
+			PropertyDeclarationSyntax prop) {
+			if (prop.Type.ToString() is "string" or "string?") {
+				return prop.AttributeLists;
+			}
+
+			return prop.AttributeLists
+				.Select(list => list.WithAttributes(SyntaxFactory.SeparatedList(list.Attributes.Where(attribute =>
+					attribute.Name.ToString() is not (
+						"RegularExpression"
+						or "RegularExpressionAttribute"
+						or "System.ComponentModel.DataAnnotations.RegularExpression"
+						or "System.ComponentModel.DataAnnotations.RegularExpressionAttribute")))))
+				.Where(list => list.Attributes.Count > 0);
+		}
 	}
 
 	private class CodeGeneratorSettings : CSharpGeneratorSettings {

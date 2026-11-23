@@ -16,7 +16,8 @@ public abstract class SmokeTests : IntegrationTests {
 		Period = AccountingPeriod.Open(OpenDate);
 	}
 
-	public async Task InitializeAsync() {
+	public override async Task InitializeAsync() {
+		await base.InitializeAsync();
 		Accounts = await OpenBooks(OpenDate).ToArrayAsync();
 	}
 }

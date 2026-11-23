@@ -1,0 +1,37 @@
+<Project>
+	<!--
+		Declare schemas with:
+			<Schemo Include="**/*.schema.json" Exclude="bin/**;obj/**" Namespace="Optional.Namespace" />
+		Each item becomes an AdditionalFiles (for the generator) and an EmbeddedResource, and sibling
+		.cs, .uischema.json and .tsx files are nested under the schema.
+		Import this file after the Schemo items are declared (NuGet's build/ import already is).
+	-->
+	<ItemGroup Condition="'@(Schemo)' != ''">
+		<CompilerVisibleProperty Include="RootNamespace"/>
+		<CompilerVisibleProperty Include="MSBuildProjectDirectory"/>
+		<CompilerVisibleItemMetadata Include="AdditionalFiles" MetadataName="Namespace" Visible="false"/>
+
+		<Schemo Update="@(Schemo)">
+			<SchemoBase>$([System.String]::Copy('%(Filename)').Replace('.schema', ''))</SchemoBase>
+		</Schemo>
+
+		<AdditionalFiles Include="@(Schemo)"/>
+
+		<!-- Web SDKs also add *.json as Content; the schema is already embedded, and a second item type confuses file nesting in IDEs. -->
+		<Content Remove="@(Schemo)"/>
+
+		<!-- The logical name mirrors the namespace SchemoGenerator picks, so GetManifestResourceStream(type, name) finds it. -->
+		<EmbeddedResource Include="@(Schemo)">
+			<LogicalName>$([System.String]::Copy('$([MSBuild]::ValueOrDefault('%(Namespace)', '$(RootNamespace).%(RelativeDir)'))').Replace('\', '.').Replace('/', '.').TrimEnd('.')).%(Filename)%(Extension)</LogicalName>
+		</EmbeddedResource>
+
+		<Compile Update="@(Schemo->'%(RelativeDir)%(SchemoBase).cs')"
+		         DependentUpon="$([System.String]::Copy('%(Filename)').Replace('.uischema', '')).schema.json"/>
+		<None Update="@(Schemo->'%(RelativeDir)%(SchemoBase).tsx');@(Schemo->'%(RelativeDir)%(SchemoBase).uischema.json')"
+		      DependentUpon="$([System.String]::Copy('%(Filename)').Replace('.uischema', '')).schema.json"/>
+		<Content Update="@(Schemo->'%(RelativeDir)%(SchemoBase).tsx');@(Schemo->'%(RelativeDir)%(SchemoBase).uischema.json')"
+		         DependentUpon="$([System.String]::Copy('%(Filename)').Replace('.uischema', '')).schema.json"/>
+		<EmbeddedResource Update="@(Schemo->'%(RelativeDir)%(SchemoBase).uischema.json')"
+		                  DependentUpon="$([System.String]::Copy('%(Filename)').Replace('.uischema', '')).schema.json"/>
+	</ItemGroup>
+</Project>

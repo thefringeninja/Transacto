@@ -1,6 +1,6 @@
 using Transacto.Domain;
 
-namespace Transacto.Integration;
+namespace Transacto;
 
 internal static class BusinessTransactionExtensions {
 	public static JournalEntry ToJournalEntry(this IBusinessTransaction businessTransaction,

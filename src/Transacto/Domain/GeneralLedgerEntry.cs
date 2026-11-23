@@ -135,7 +135,9 @@ public class GeneralLedgerEntry : AggregateRoot, IAggregateRoot<GeneralLedgerEnt
 
 		Apply(new GeneralLedgerEntryNumberAssigned {
 			GeneralLedgerEntryId = _state.Identifier.ToGuid(),
-			GeneralLedgerEntrySequenceNumber = sequenceNumber.ToInt32()
+			GeneralLedgerEntrySequenceNumber = sequenceNumber.ToInt32(),
+			ReferenceNumber = _state.AssignSequenceNumber(sequenceNumber).BusinessTransaction?.ReferenceNumber
+				?.ToString()
 		});
 	}
 

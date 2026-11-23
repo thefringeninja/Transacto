@@ -2,8 +2,10 @@ using AutoFixture;
 
 namespace Transacto;
 
-partial class ScenarioFixture {
+public partial class ScenarioFixture {
 	public ScenarioFixture() {
+		Customizations.Add(new ImmutableArraySpecimenBuilder());
+
 		this.CustomizeNodaTime();
 
 		this.CustomizeAccountingPeriod();
@@ -15,6 +17,8 @@ partial class ScenarioFixture {
 		this.CustomizeAccount();
 
 		this.CustomizeGeneralLedgerEntryNumberPrefix();
+
+		this.CustomizeDecimalRange();
 
 		this.CustomizeMoney();
 

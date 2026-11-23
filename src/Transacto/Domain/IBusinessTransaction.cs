@@ -3,7 +3,7 @@ using System.Text.Json.Serialization;
 namespace Transacto.Domain;
 
 public interface IBusinessTransaction {
-	public IEnumerable<object> GetTransactionItems(ChartOfAccounts chartOfAccounts);
+	public IEnumerable<TransactionItem> GetTransactionItems(ChartOfAccounts chartOfAccounts);
 	
 	public GeneralLedgerEntrySequenceNumber? SequenceNumber { get; set; }
 	

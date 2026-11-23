@@ -10,7 +10,7 @@ public class InMemoryProjection<T>(Func<T, object, T> handler) : InMemoryProject
 			var optional = target.Get<T>();
 			var (message, position) = envelope;
 			
-			var model = optional switch{
+			var model = optional switch {
 				Some<T> some => some.Value,
 				None => new T()
 			};

@@ -14,6 +14,7 @@
 	
 	<ItemGroup>
 		<EmbeddedResource Include="Templates/*.liquid"/>
+		<None Include="build\**" Pack="true" PackagePath="build"/>
 	</ItemGroup>
 
 	<ItemGroup>
@@ -37,7 +38,7 @@
 	<PropertyGroup>
 		<GetTargetPathDependsOn>$(GetTargetPathDependsOn);GetDependencyTargetPaths</GetTargetPathDependsOn>
 	</PropertyGroup>
-	<Target Name="GetDependencyTargetPaths" AfterTargets="ResolvePackageDependenciesForBuild">
+	<Target Name="GetDependencyTargetPaths" DependsOnTargets="ResolvePackageDependenciesForBuild">
 		<ItemGroup>
 			<TargetPathWithTargetPlatformMoniker Include="@(ResolvedCompileFileDefinitions)" IncludeRuntimeDependency="false" />
 		</ItemGroup>

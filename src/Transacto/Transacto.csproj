@@ -17,19 +17,12 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<EmbeddedResource Include="**\*.schema.json">
-			<DependentUpon>$([System.String]::Copy('%(Filename)').Replace('.schema', '.cs'))</DependentUpon>
-			<!-- DependentUpon changes the manifest resource name to the dependent class's name, which collides
-			when both a .schema.json and .uischema.json exist; LogicalName restores the path-based name. -->
-			<LogicalName>$(RootNamespace).$([System.String]::Copy('%(RelativeDir)').Replace('\', '.').Replace('/', '.'))%(Filename)%(Extension)</LogicalName>
-		</EmbeddedResource>
+		<Schemo Include="**\*.schema.json" Exclude="bin\**;obj\**"/>
 		<EmbeddedResource Include="**\*.uischema.json">
-			<DependentUpon>$([System.String]::Copy('%(Filename)').Replace('.uischema', '.cs'))</DependentUpon>
 			<LogicalName>$(RootNamespace).$([System.String]::Copy('%(RelativeDir)').Replace('\', '.').Replace('/', '.'))%(Filename)%(Extension)</LogicalName>
 		</EmbeddedResource>
-		<AdditionalFiles Include="**\*.schema.json"/>
-		<CompilerVisibleProperty Include="RootNamespace"/>
-		<CompilerVisibleProperty Include="MSBuildProjectDirectory" />
 	</ItemGroup>
+
+	<Import Project="..\Transacto.Schemo\build\Transacto.Schemo.targets"/>
 
 </Project>

@@ -14,8 +14,8 @@ internal static class StreamSubscriptionResultExtensions {
 				SingleReader = true
 			});
 
-			await using var timer = new System.Threading.Timer(async state => {
-				var channel = (state as Channel<SubscriptionControlMessage>)!;
+			await using var timer = new Timer(async state => {
+				var channel = (Channel<SubscriptionControlMessage>)state!;
 				try {
 					await channel.Writer.WriteAsync(SubscriptionControlMessage.Flush.Instance, cancellationToken);
 				} catch (Exception ex) {

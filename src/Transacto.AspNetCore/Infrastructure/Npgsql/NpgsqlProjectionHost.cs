@@ -125,7 +125,8 @@ public partial class NpgsqlProjectionHost(
 
 					using var ers = logger.BeginScope(Scopes.EventRecord.From(resolvedEvent.Event));
 
-					if (!messageTypeMap.TryMap(resolvedEvent.Event.EventType, out _)) {
+					if (!plugin.ConsumedMessageTypes.ContainsKey(resolvedEvent.Event.EventType) &&
+					    !messageTypeMap.TryMap(resolvedEvent.Event.EventType, out _)) {
 						LogDidNotUnderstandMessageType(logger);
 						continue;
 					}
@@ -148,7 +149,9 @@ public partial class NpgsqlProjectionHost(
 					stopwatch.Restart();
 
 					var messages = batch.Select(re => JsonSerializer.Deserialize(re.Event.Data.Span,
-							messageTypeMap.Map(re.Event.EventType),
+							plugin.ConsumedMessageTypes.TryGetValue(re.Event.EventType, out var consumed)
+								? consumed
+								: messageTypeMap.Map(re.Event.EventType),
 							TransactoSerializerOptions.Messages) ?? throw new InvalidOperationException())
 						.ToArray();
 
@@ -201,11 +204,18 @@ public partial class NpgsqlProjectionHost(
 		}
 	}
 
+	private const long CreateSchemaLockKey = 0x5472616e73616374;
+
 	private async Task CreateSchema(CancellationToken ct) {
 		await using var connection = await dataSource.OpenConnectionAsync(ct);
 		await using var transaction = await connection.BeginTransactionAsync(ct);
 
 		var executor = new ConnectedTransactionalSqlCommandExecutor(transaction);
+
+		// Every plugin's host creates the shared checkpoints table, and two of them doing it at once stalls the second.
+		await executor.ExecuteNonQueryAsync(
+			new SqlNonQueryCommand("SELECT pg_advisory_xact_lock(@key)",
+				[new NpgsqlParameter<long>("@key", CreateSchemaLockKey)], CommandType.Text), ct);
 
 		await executor.ExecuteNonQueryAsync(
 			new SqlNonQueryCommand(NpgsqlScripts.CreateCheckpoints, [], CommandType.Text), ct);

@@ -5,7 +5,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Headers;
 using Microsoft.Net.Http.Headers;
 
-namespace Transacto.Http;
+namespace Transacto.Testing.Http;
 
 public record HttpRequest(HttpMethod Method, string Url, RequestHeaders? Headers = null, byte[]? Body = null) {
 	public static implicit operator HttpRequestMessage(HttpRequest request) {
@@ -30,11 +30,20 @@ public record HttpRequest(HttpMethod Method, string Url, RequestHeaders? Headers
 			Accept = [new("application/hal+json")]
 		});
 
-	public static HttpRequest Command(object command, string url, JsonSerializerOptions serializerOptions) {
+	public static HttpRequest PutJson(object resource, string url, JsonSerializerOptions? serializerOptions = null) =>
+		new(HttpMethod.Put, url,
+			new RequestHeaders(new HeaderDictionary()) {
+				ContentType = new MediaTypeHeaderValue("application/json")
+			},
+			JsonSerializer.SerializeToUtf8Bytes(resource, resource.GetType(),
+				serializerOptions ?? TransactoSerializerOptions.Messages));
+
+	public static HttpRequest Command(object command, string url, JsonSerializerOptions? serializerOptions = null) {
 		var content = new MultipartFormDataContent {
 			{ new StringContent(command.GetType().Name), nameof(command) }, {
 				new ReadOnlyMemoryContent(
-					JsonSerializer.SerializeToUtf8Bytes(command, serializerOptions)),
+					JsonSerializer.SerializeToUtf8Bytes(command,
+						serializerOptions ?? TransactoSerializerOptions.Messages)),
 				"data", "data"
 			}
 		};

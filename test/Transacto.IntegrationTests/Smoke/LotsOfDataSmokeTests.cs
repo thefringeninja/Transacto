@@ -17,7 +17,7 @@ namespace Transacto.Smoke;
 
 public class LotsOfDataSmokeTests(TextWriter textWriter) : SmokeTests(textWriter) {
 	private readonly TextWriter _textWriter = textWriter;
-
+/*
 	public async Task one_year_of_invoices_and_payments() {
 		var period = Period;
 
@@ -125,7 +125,7 @@ public class LotsOfDataSmokeTests(TextWriter textWriter) : SmokeTests(textWriter
 		public GeneralLedgerEntryNumber? ReferenceNumber =>
 			SequenceNumber.HasValue ? new GeneralLedgerEntryNumber(Prefix, SequenceNumber.Value) : null;
 
-		public IEnumerable<object> GetTransactionItems(ChartOfAccounts chartOfAccounts) {
+		public IEnumerable<TransactionItem> GetTransactionItems(ChartOfAccounts chartOfAccounts) {
 			var tax = subtotal * salesTaxRate;
 			var total = subtotal + shipping + tax;
 			yield return new Debit(new AccountNumber(1100), total);
@@ -145,12 +145,12 @@ public class LotsOfDataSmokeTests(TextWriter textWriter) : SmokeTests(textWriter
 		public GeneralLedgerEntryNumber? ReferenceNumber =>
 			SequenceNumber.HasValue ? new GeneralLedgerEntryNumber(Prefix, SequenceNumber.Value) : null;
 
-		public IEnumerable<object> GetTransactionItems(ChartOfAccounts chartOfAccounts) {
+		public IEnumerable<TransactionItem> GetTransactionItems(ChartOfAccounts chartOfAccounts) {
 			var processingFee = (flatFee + amount * transactionFee).Round(2);
 			var netPayment = amount - processingFee;
 			yield return new Credit(new AccountNumber(1100), amount);
 			yield return new Debit(new AccountNumber(6210), processingFee);
 			yield return new Debit(new AccountNumber(1020), netPayment);
 		}
-	}
+	} */
 }

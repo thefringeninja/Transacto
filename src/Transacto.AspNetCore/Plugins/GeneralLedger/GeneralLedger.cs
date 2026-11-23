@@ -4,6 +4,7 @@ using System.Data.SQLite;
 using Hallo;
 using KurrentDB.Client;
 using Microsoft.AspNetCore.Mvc;
+using NodaTime;
 using Transacto.Domain;
 using Transacto.Framework;
 using Transacto.Framework.Http;
@@ -92,9 +93,10 @@ internal class GeneralLedger : IPlugin {
 
 				await using var command = new SQLiteCommand(connection) {
 					CommandText = """
-					              SELECT '' as reference_number, general_ledger_entry_id, created_on 
-					              FROM ledger_entry_index 
-					              --WHERE reference_number LIKE CONCAT(@prefix, '%')
+					              SELECT COALESCE(reference_number, '') AS reference_number, general_ledger_entry_id, created_on
+					              FROM ledger_entry_index
+					              WHERE COALESCE(reference_number, '') LIKE @prefix || '%'
+					              ORDER BY rowid
 					              LIMIT 25
 					              """
 				};
@@ -105,7 +107,7 @@ internal class GeneralLedger : IPlugin {
 					results.Add(new LedgerEntryIndex.SearchResult(
 						reader.GetString(0),
 						reader.GetGuid(1),
-						reader.GetDateTime(2)));
+						LocalDate.FromDateTime(reader.GetDateTime(2))));
 				}
 
 				return new LedgerEntryIndex.SearchResults([.. results]);
