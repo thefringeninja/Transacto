@@ -4,8 +4,10 @@ using Transacto.Framework;
 namespace Transacto.Infrastructure.EventStore;
 
 internal static class PositionExtensions {
-	public static Checkpoint ToCheckpoint(this Optional<Position> position) =>
-		!position.HasValue ? Checkpoint.None : position.Value.ToCheckpoint();
+	public static Checkpoint ToCheckpoint(this Option<Position> position) => position switch {
+		Some<Position> some => some.Value.ToCheckpoint(),
+		None => Checkpoint.None,
+	};
 
 	public static Checkpoint ToCheckpoint(this Position position) {
 		Span<byte> checkpoint = stackalloc byte[8];

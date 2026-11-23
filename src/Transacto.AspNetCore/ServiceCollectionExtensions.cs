@@ -137,7 +137,7 @@ public static partial class WebApplicationBuilderExtensions {
 						.AddSingleton<GetFormatter>(provider => () => provider
 							.GetRequiredService<InMemoryProjectionDatabase>()
 							.Get<FormatSettingsReadModel>() switch {
-							{ HasValue: true } readModel => readModel.Value.Formatter,
+							Some<FormatSettingsReadModel> readModel => readModel.Value.Formatter,
 							_ => Formatter.Default
 						})
 						.AddScoped<Formatter>(provider => provider.GetRequiredService<GetFormatter>()())

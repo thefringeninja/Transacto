@@ -3,12 +3,12 @@
 namespace Transacto.Testing;
 
 internal static class Catch {
-	public static Optional<Exception> Exception(Action action) {
-		var result = Optional<Exception>.Empty;
+	public static Option<Exception> Exception(Action action) {
+		var result = Option<Exception>.None;
 		try {
 			action();
 		} catch (Exception exception) {
-			result = new Optional<Exception>(exception);
+			result = Option<Exception>.Some(exception);
 		}
 
 		return result;

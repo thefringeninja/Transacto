@@ -33,20 +33,20 @@ public class EventCentricTestSpecificationRunner : IEventCentricTestSpecificatio
 
 		_factRecorder.Record(specification.Givens);
 
-		var optionalException = Optional<Exception>.Empty;
+		var optionalException = Option<Exception>.None;
 
 		try {
 			await Handler(specification.When, CancellationToken.None);
 		} catch (Exception ex) {
-			optionalException = ex;
+			optionalException = Option<Exception>.Some(ex);
 		}
 
 		var then = _factRecorder.GetFacts().Skip(specification.Givens.Length).ToArray();
 		return new EventCentricTestResult(specification,
-			!optionalException.HasValue &&
+			optionalException.IsNone &&
 			specification.Thens.SequenceEqual(then, new FactEqualityComparer(_comparer))
 				? TestResultState.Passed
 				: TestResultState.Failed,
-			then, optionalException);
+			Option<Fact[]>.Some(then), optionalException);
 	}
 }

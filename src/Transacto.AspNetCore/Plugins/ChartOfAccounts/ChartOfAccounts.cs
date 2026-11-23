@@ -17,8 +17,7 @@ public class ChartOfAccounts : IPlugin {
 		builder.MapGet(string.Empty,
 			([FromServices] InMemoryProjectionDatabase database,
 				[FromServices] ChartOfAccountsRepresentation representation) => database.Get<ReadModel>() switch {
-				{ HasValue: true } optional => Results.Hal(optional.Value,
-					optional.Value.Position.ToCheckpoint(), representation),
+				Some<ReadModel> some => Results.Hal(some.Value, some.Value.Position.ToCheckpoint(), representation),
 				_ => Results.Hal(ReadModel.None, Checkpoint.None, representation)
 			});
 

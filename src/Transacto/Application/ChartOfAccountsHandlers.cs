@@ -1,4 +1,5 @@
 using Transacto.Domain;
+using Transacto.Framework;
 using Transacto.Messages;
 
 namespace Transacto.Application;
@@ -7,7 +8,7 @@ public class ChartOfAccountsHandlers(IChartOfAccountsRepository chartOfAccounts)
 	public async ValueTask Handle(ConfigureChartOfAccounts command, CancellationToken cancellationToken = default) {
 		var optionalChart = await chartOfAccounts.GetOptional(cancellationToken);
 
-		if (optionalChart.HasValue)
+		if (optionalChart is not None)
 			throw new ChartOfAccountsAlreadyConfiguredException();
 
 		var chart = ChartOfAccounts.Configure(new ChartOfAccountsSettings(

@@ -9,15 +9,16 @@ public class EventStoreRepository<TAggregateRoot>(
 	IMessageTypeMapper messageTypeMapper,
 	JsonSerializerOptions? serializerOptions = null)
 	where TAggregateRoot : AggregateRoot, IAggregateRoot<TAggregateRoot> {
-	private readonly JsonSerializerOptions _serializerOptions = serializerOptions ?? TransactoSerializerOptions.Messages;
+	private readonly JsonSerializerOptions
+		_serializerOptions = serializerOptions ?? TransactoSerializerOptions.Messages;
 
-	public async ValueTask<Optional<TAggregateRoot>> GetById(string identifier,
+	public async ValueTask<Option<TAggregateRoot>> GetById(string identifier,
 		CancellationToken cancellationToken = default) {
 		if (UnitOfWork.Current.TryGet(identifier, out var a) && a is TAggregateRoot aggregate) {
 			return new(aggregate);
 		}
 
-		var version = Optional<StreamState>.Empty;
+		var version = Option<StreamState>.None;
 
 		aggregate = TAggregateRoot.Factory();
 
@@ -25,22 +26,23 @@ public class EventStoreRepository<TAggregateRoot>(
 			               cancellationToken: cancellationToken).Messages.WithCancellation(cancellationToken)) {
 			switch (message) {
 				case StreamMessage.NotFound:
-					return Optional<TAggregateRoot>.Empty;
+					return Option<TAggregateRoot>.None;
 				case StreamMessage.Unknown:
 					throw new InvalidOperationException();
 				case StreamMessage.Event (var e):
 					aggregate.ReadFromHistory(JsonSerializer.Deserialize(e.OriginalEvent.Data.Span,
 						messageTypeMapper.Map(e.OriginalEvent.EventType),
 						_serializerOptions) ?? throw new InvalidOperationException());
-					version = version == Optional<StreamState>.Empty
-						? StreamState.StreamRevision(0)
-						: version.Value.Next();
+					version = version switch {
+						Some<StreamState> some => Option<StreamState>.Some(some.Value.Next()),
+						_ => Option<StreamState>.Some(StreamState.StreamRevision(0))
+					};
 					break;
 			}
 		}
 
 		var expected = version switch {
-			{ HasValue: true } => StreamState.StreamRevision((ulong)version.Value.ToInt64()),
+			Some<StreamState> some => StreamState.StreamRevision((ulong)some.Value.ToInt64()),
 			_ => StreamState.NoStream
 		};
 

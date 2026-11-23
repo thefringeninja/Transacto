@@ -1,4 +1,5 @@
 using Transacto.Domain;
+using Transacto.Framework;
 using Transacto.Messages;
 
 namespace Transacto.Application;
@@ -10,11 +11,9 @@ public class GeneralLedgerEntrySequenceNumberAllocatorHandlers(
 		var generalLedgerEntryIdentifier = new GeneralLedgerEntryIdentifier(@event.GeneralLedgerEntryId);
 		var optional = await generalLedgerEntries.GetOptional(generalLedgerEntryIdentifier, cancellationToken);
 
-		if (!optional.HasValue) {
+		if (optional is not Some<GeneralLedgerEntry> { Value: var generalLedgerEntry }) {
 			return;
 		}
-
-		var generalLedgerEntry = optional.Value;
 
 		if (generalLedgerEntry.BusinessTransaction is not { } businessTransaction) {
 			return;
@@ -34,11 +33,9 @@ public class GeneralLedgerEntrySequenceNumberAllocatorHandlers(
 			await generalLedgerEntries.GetOptional(new GeneralLedgerEntryIdentifier(@event.GeneralLedgerEntryId),
 				cancellationToken);
 
-		if (!optional.HasValue) {
+		if (optional is not Some<GeneralLedgerEntry> { Value: var generalLedgerEntry }) {
 			return;
 		}
-
-		var generalLedgerEntry = optional.Value;
 
 		generalLedgerEntry.AssignSequenceNumber(
 			new GeneralLedgerEntrySequenceNumber(@event.GeneralLedgerEntrySequenceNumber));

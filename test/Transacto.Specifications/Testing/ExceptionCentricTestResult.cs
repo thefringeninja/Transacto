@@ -16,8 +16,8 @@ public class ExceptionCentricTestResult {
 	/// <param name="actualException">The actual exception.</param>
 	/// <param name="actualEvents">The actual events.</param>
 	internal ExceptionCentricTestResult(ExceptionCentricTestSpecification specification, TestResultState state,
-		Optional<Exception> actualException,
-		Optional<Fact[]> actualEvents) {
+		Option<Exception> actualException,
+		Option<Fact[]> actualEvents) {
 		Specification = specification;
 		_state = state;
 		ButException = actualException;
@@ -54,7 +54,7 @@ public class ExceptionCentricTestResult {
 	/// <value>
 	///     The exception.
 	/// </value>
-	public Optional<Exception> ButException { get; }
+	public Option<Exception> ButException { get; }
 
 	/// <summary>
 	///     Gets the events that happened instead of the expected exception, or empty if none happened at all.
@@ -62,5 +62,5 @@ public class ExceptionCentricTestResult {
 	/// <value>
 	///     The events.
 	/// </value>
-	public Optional<Fact[]> ButEvents { get; }
+	public Option<Fact[]> ButEvents { get; }
 }

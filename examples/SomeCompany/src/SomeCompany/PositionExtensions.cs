@@ -3,8 +3,10 @@ using Transacto.Framework;
 namespace SomeCompany;
 
 internal static class PositionExtensions {
-	public static Checkpoint ToCheckpoint(this Optional<int> revision) =>
-		!revision.HasValue ? Checkpoint.None : revision.Value.ToCheckpoint();
+	public static Checkpoint ToCheckpoint(this Option<int> revision) => revision switch {
+		Some<int> some => some.Value.ToCheckpoint(),
+		None => Checkpoint.None,
+	};
 
 	public static Checkpoint ToCheckpoint(this int revision) {
 		Span<byte> checkpoint = stackalloc byte[4];

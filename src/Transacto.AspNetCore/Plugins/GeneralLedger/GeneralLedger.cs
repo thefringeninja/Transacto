@@ -34,23 +34,22 @@ internal class GeneralLedger : IPlugin {
 			var optionalPeriod = database.Get<CurrentPeriod>();
 			var optionalEntries = database.Get<UnclosedGeneralLedgerEntries>();
 
-			var period = optionalPeriod.ToObject<CurrentPeriod>();
-			var entries = optionalEntries.HasValue ? optionalEntries.Value.NotClosed : [];
-
-			var checkpoint = period?.Position.HasValue ?? false
-				? period.Position.Value.ToCheckpoint()
-				: Checkpoint.None;
-			return Results.Hal(new Index(entries, period?.Period, checkpoint.ToString()), checkpoint, representation);
-		});
-		builder.MapGet("/period", ([FromServices] InMemoryProjectionDatabase database) => {
-			var optional = database.Get<CurrentPeriod>();
-
-			return optional switch {
-				{ HasValue: true, Value.Period: { } period } => Results.Hal(
-					new Plugins.GeneralLedger.CurrentPeriod(period),
-					optional.Value.Position.ToCheckpoint(), new CurrentPeriodRepresentation()),
-				_ => Results.NotFound()
+			var (period, checkpoint) = optionalPeriod switch {
+				Some<CurrentPeriod> some => (some.Value.Period, some.Value.Position.ToCheckpoint()),
+				None => (null, Checkpoint.None)
 			};
+			var entries = optionalEntries switch {
+				Some<UnclosedGeneralLedgerEntries> some => some.Value.NotClosed,
+				_ => ImmutableHashSet<Guid>.Empty
+			};
+
+			return Results.Hal(new Index(entries, period, checkpoint.ToString()), checkpoint, representation);
+		});
+		builder.MapGet("/period", ([FromServices] InMemoryProjectionDatabase database) => database.Get<CurrentPeriod>() switch {
+			Some<CurrentPeriod> { Value: { Period: { } period, Position: var position } } => Results.Hal(
+				new Plugins.GeneralLedger.CurrentPeriod(period),
+				position.ToCheckpoint(), new CurrentPeriodRepresentation()),
+			_ => Results.NotFound()
 		});
 		builder.MapGet("/entries/search", async ([FromQuery] string? prefix,
 			[FromServices] LedgerEntryIndex.SearchJournalEntriesAsync search,
@@ -65,12 +64,12 @@ internal class GeneralLedger : IPlugin {
 			async (Guid id, [FromServices] IGeneralLedgerEntryRepository repository, CancellationToken ct) => {
 				using (UnitOfWork.Start()) {
 					var optional = await repository.GetOptional(new GeneralLedgerEntryIdentifier(id), ct);
-					if (!optional.HasValue) {
-						return Results.NotFound();
-					}
-
-					return Results.Hal(JournalLedgerEntry.FromGeneralLedgerEntry(optional.Value),
-						Checkpoint.None, new JournalEntryRepresentation());
+					return optional switch {
+						Some<GeneralLedgerEntry> some => Results.Hal(
+							JournalLedgerEntry.FromGeneralLedgerEntry(some.Value),
+							Checkpoint.None, new JournalEntryRepresentation()),
+						_ => Results.NotFound()
+					};
 				}
 			});
 	}
@@ -109,7 +108,7 @@ internal class GeneralLedger : IPlugin {
 						reader.GetDateTime(2)));
 				}
 
-				return new LedgerEntryIndex.SearchResults([..results]);
+				return new LedgerEntryIndex.SearchResults([.. results]);
 			};
 		})
 		.AddSingleton<LedgerEntryIndex.SearchResultsRepresentation>()
@@ -142,7 +141,7 @@ internal class GeneralLedger : IPlugin {
 			var database = provider.GetRequiredService<InMemoryProjectionDatabase>();
 
 			return _ => new ValueTask<AccountingPeriod?>(database.Get<CurrentPeriod>() switch {
-				{ HasValue: true } p => AccountingPeriod.TryParse(p.Value.Period, out var period)
+				Some<CurrentPeriod> p => AccountingPeriod.TryParse(p.Value.Period, out var period)
 					? period
 					: null,
 				_ => new AccountingPeriod?()
@@ -162,7 +161,8 @@ internal class GeneralLedger : IPlugin {
 					provider);
 			};
 		})
-		.AddProcessManager<GeneralLedgerEntrySequenceNumberAllocatorModule>("generalLedgerEntrySequenceNumberAllocatorCheckpoint");
+		.AddProcessManager<GeneralLedgerEntrySequenceNumberAllocatorModule>(
+			"generalLedgerEntrySequenceNumberAllocatorCheckpoint");
 
 	private record DeactivatedAccounts : MemoryReadModel {
 		public ImmutableHashSet<int> AccountNumbers { get; init; } = ImmutableHashSet<int>.Empty;

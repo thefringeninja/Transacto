@@ -44,8 +44,8 @@ public static class PurchaseOrderMiddleware {
 				[FromServices] PurchaseOrderRepository purchaseOrders,
 				CancellationToken ct) =>
 			await purchaseOrders.Get(purchaseOrderId, ct) switch {
-				{ BusinessTransaction.HasValue: true } envelope => Results.Hal(
-					envelope.BusinessTransaction.Value, envelope.ExpectedRevision.ToCheckpoint(),
+				{ BusinessTransaction: Some<PurchaseOrder> { Value: var value } } envelope => Results.Hal(
+					value, envelope.ExpectedRevision.ToCheckpoint(),
 					PurchaseOrderRepresentation.Instance),
 				_ => Results.Hal<PurchaseOrder>(null, Checkpoint.None,
 					PurchaseOrderRepresentation.Instance, HttpStatusCode.NotFound)
@@ -60,10 +60,13 @@ public static class PurchaseOrderMiddleware {
 			purchaseOrder = purchaseOrder with {
 				PurchaseOrderId = purchaseOrderId
 			};
+			
+			var expectedRevision = documentRevision.Value switch{
+				Some<int> { Value: var value } => value + 1,
+				None => -1
+			};
 
-			await purchaseOrders.Save(purchaseOrder, documentRevision.Value.HasValue
-				? documentRevision.Value.Value + 1
-				: -1, ct);
+			await purchaseOrders.Save(purchaseOrder, expectedRevision, ct);
 
 			return Results.Hal(purchaseOrder, Checkpoint.None, PurchaseOrderRepresentation.Instance);
 		});
