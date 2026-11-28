@@ -25,5 +25,7 @@ partial class ScenarioFixture {
 		this.CustomizeDebit();
 		
 		this.CustomizeCashFlowCategory();
+
+		this.CustomizeChartOfAccountsSettings();
 	}
 }

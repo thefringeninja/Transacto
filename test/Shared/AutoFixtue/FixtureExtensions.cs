@@ -19,6 +19,12 @@ internal static class FixtureExtensions {
 				new AccountNumberWidth((int)new SpecimenContext(fixture).Resolve(new RangedNumberRequest(typeof(int),
 					AccountNumberWidth.Min.ToInt32(), AccountNumberWidth.Max.ToInt32())))));
 	
+	public static void CustomizeChartOfAccountsSettings(this IFixture fixture) =>
+		fixture.Customize<ChartOfAccountsSettings>(composer =>
+			composer.FromFactory<AccountNumberWidth, int, int, int>((width, receivable, payable, retained) =>
+				new ChartOfAccountsSettings(width, new AccountNumber(1000 + receivable % 1000),
+					new AccountNumber(2000 + payable % 1000), new AccountNumber(3000 + retained % 1000))));
+
 	public static void CustomizeCashFlowCategory(this IFixture fixture) =>
 		fixture.Customize<CashFlowCategory>(composer =>
 			composer.FromFactory<int>(number => CashFlowCategory.All[number % CashFlowCategory.All.Length]));
