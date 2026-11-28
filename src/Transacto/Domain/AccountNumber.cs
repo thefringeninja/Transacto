@@ -17,9 +17,15 @@ public readonly struct AccountNumber : IEquatable<AccountNumber>, IComparable<Ac
 	public override int GetHashCode() => Value.GetHashCode();
 	public static bool operator ==(AccountNumber left, AccountNumber right) => left.Equals(right);
 	public static bool operator !=(AccountNumber left, AccountNumber right) => !left.Equals(right);
+
+	public int CompareTo(AccountNumber other) => Value.CompareTo(other.Value);
+	public static bool operator <(AccountNumber left, AccountNumber right) => left.CompareTo(right) < 0;
+	public static bool operator <=(AccountNumber left, AccountNumber right) => left.CompareTo(right) <= 0;
+	public static bool operator >(AccountNumber left, AccountNumber right) => left.CompareTo(right) > 0;
+	public static bool operator >=(AccountNumber left, AccountNumber right) => left.CompareTo(right) >= 0;
+
 	public override string ToString() => Value.ToString();
 	public int ToInt32() => Value;
-	public int CompareTo(AccountNumber other) => Value.CompareTo(other.Value);
 
 	private static int GetAccountType(int accountNumber) {
 		accountNumber = Math.Abs(accountNumber);
